@@ -239,7 +239,7 @@
       <div class="title-row">
         <h1>cs26July HTML 资源</h1>
         <div class="stats" aria-label="站点概况">
-          <span class="pill">12 篇 HTML</span>
+          <span class="pill">18 篇 HTML</span>
           <span class="pill">GitHub Pages</span>
           <span class="pill">更新：2026-06-07</span>
         </div>
@@ -249,7 +249,7 @@
 
     <div class="toolbar">
       <input class="search" id="search" type="search" placeholder="搜索标题、主题或 arXiv 编号" autocomplete="off" aria-label="搜索 HTML 资源">
-      <div class="count" id="count">显示 12 / 12</div>
+      <div class="count" id="count">显示 18 / 18</div>
     </div>
 
     <div class="empty" id="empty">没有匹配的 HTML 资源。</div>
@@ -271,6 +271,11 @@
           <h3>HEXAGENT：工作流感知与异构感知调度</h3>
           <p>异构资源、SLO、agentic LLM serving 调度。</p>
           <div class="meta"><span class="tag">Agent</span><span>2605.16637</span></div>
+        </a>
+        <a class="resource" href="writing/fate-2605.07238-zh.html" data-search="fate 2605.07238 future-state aware scheduling heterogeneous llm workflow prefix reuse">
+          <h3>FATE：面向异构 LLM 工作流的未来状态感知调度</h3>
+          <p>前缀复用、未来状态感知、异构 LLM 工作流调度。</p>
+          <div class="meta"><span class="tag">Agent</span><span>2605.07238</span></div>
         </a>
         <a class="resource" href="writing/parrot-osdi-2024-zh.html" data-search="parrot osdi 2024 semantic variable llm applications serving">
           <h3>Parrot：基于 Semantic Variable 的 LLM 应用高效服务</h3>
@@ -317,17 +322,48 @@
     </section>
 
     <section class="section" data-section>
-      <h2>DAG 与概率分析</h2>
+      <h2>DAG 与异构任务调度</h2>
       <div class="grid">
+        <a class="resource" href="writing/heft-tpds-2002-zh.html" data-search="heft tpds 2002 heterogeneous computing task scheduling dag">
+          <h3>HEFT：面向异构计算系统的任务调度</h3>
+          <p>经典异构任务调度算法、DAG 排序与处理器选择。</p>
+          <div class="meta"><span class="tag alt">Scheduling</span><span>TPDS 2002</span></div>
+        </a>
         <a class="resource" href="writing/probabilistic-dag-longest-paths-2504.03754-zh.html" data-search="probabilistic dag longest paths 2504.03754 response time analysis">
           <h3>利用最长路径不确定性：概率 DAG 任务的响应时间分析</h3>
           <p>概率 DAG、最长路径分布、响应时间分析。</p>
           <div class="meta"><span class="tag alt">DAG</span><span>2504.03754</span></div>
         </a>
-        <a class="resource" href="writing/fate-2605.07238-zh.html" data-search="fate 2605.07238 scheduling prefix reuse solver overhead llm">
-          <h3>FATE：面向前缀复用与调度信号的 LLM Serving 研究</h3>
-          <p>前缀复用、调度信号、消融与鲁棒性实验。</p>
-          <div class="meta"><span class="tag alt">Scheduling</span><span>2605.07238</span></div>
+        <a class="resource" href="writing/probabilistic-cdag-rtss-2021-zh.html" data-search="probabilistic conditional parallel dag response time analysis optimization rtss 2021">
+          <h3>概率条件并行 DAG 任务的响应时间分析与优化</h3>
+          <p>条件并行 DAG、概率响应时间、实时系统优化。</p>
+          <div class="meta"><span class="tag alt">DAG</span><span>RTSS 2021</span></div>
+        </a>
+        <a class="resource" href="writing/s-bottleneck-stochcdag-rtss-2021-zh.html" data-search="s-bottleneck stochastic conditional dag safety performance tradeoff scheduling rtss 2021">
+          <h3>S-Bottleneck：随机条件 DAG 的安全-性能权衡调度</h3>
+          <p>随机条件 DAG、瓶颈识别、安全与性能权衡。</p>
+          <div class="meta"><span class="tag alt">DAG</span><span>RTSS 2021</span></div>
+        </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <h2>多模型路由与异构服务</h2>
+      <div class="grid">
+        <a class="resource" href="writing/routellm-iclr-2025-zh.html" data-search="routellm iclr 2025 preference data llm router routing">
+          <h3>RouteLLM：用偏好数据学习 LLM 路由器</h3>
+          <p>ICLR 2025，面向成本与质量权衡的 LLM 路由。</p>
+          <div class="meta"><span class="tag">Routing</span><span>ICLR 2025</span></div>
+        </a>
+        <a class="resource" href="writing/chimera-2603.22206-zh.html" data-search="chimera 2603.22206 heterogeneous llm latency performance aware multi-agent serving">
+          <h3>Chimera：延迟与性能感知的多智能体服务</h3>
+          <p>异构 LLM、多智能体服务、延迟与性能权衡。</p>
+          <div class="meta"><span class="tag">Serving</span><span>2603.22206</span></div>
+        </a>
+        <a class="resource" href="writing/coral-2605.04357-zh.html" data-search="coral 2605.04357 low cost multi llm serving heterogeneous cloud gpu">
+          <h3>Coral：异构云 GPU 上的低成本多 LLM 服务</h3>
+          <p>异构云 GPU、多 LLM serving、成本优化。</p>
+          <div class="meta"><span class="tag">Serving</span><span>2605.04357</span></div>
         </a>
       </div>
     </section>

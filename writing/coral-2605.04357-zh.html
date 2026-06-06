@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coral：异构云 GPU 上的低成本多 LLM 服务中文翻译稿</title>
+<style>
+:root{--ink:#171717;--muted:#5e6874;--rule:#dde3ea;--paper:#fff;--bg:#f4f6f8;--accent:#17636f;--soft:#f7fafb}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e8ee;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:890px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:850px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:850px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}p{margin:0 0 13px;overflow-wrap:anywhere}ul{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e6ec;border-radius:4px;background:#fff}.caption{max-width:790px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+</style>
+</head>
+<body>
+<main class="paper">
+<h1>Coral：异构云 GPU 上的低成本多 LLM 服务中文翻译稿</h1>
+<div class="authors">Yixuan Mei, Zikun Li, Zixuan Chen, Shiqi Pan, Mengdi Wu, Xupeng Miao, Zhihao Jia, K. V. Rashmi</div>
+<div class="meta">源文件：my-documents/coral-2605.04357.pdf | arXiv 2026 | 保留术语：multi-LLM serving, heterogeneous cloud GPUs, Serving Template, Resource Allocator, goodput, SLO</div>
+<section class="columns">
+
+<section class="abstract"><p><strong>摘要。</strong>Coral 研究异构云 GPU 上的多 LLM serving。现实中没有单一模型主导所有任务，服务商需要同时部署多个模型；云平台也提供从 L4、A10G、A100、L40S 到 H100 等多种价格、显存和吞吐能力不同的 GPU。Coral 的核心思想是联合优化资源分配和每个模型副本的 serving strategy：离线生成 Serving Template，在线 Resource Allocator 根据模型需求、SLO、价格和可用性选择最低成本资源组合。通过两阶段分解，Coral 在保持联合最优性的同时把在线求解从数小时降到几十秒。实验显示，Coral 在 6 个模型和 20 种 GPU 配置上可比最佳基线最多降低 2.79 倍成本，并在资源稀缺时提高 2.39 倍 goodput。</p></section>
+
+<h2>1 动机</h2>
+<p>LLM 服务越来越碎片化。不同模型家族和模型规模适合不同任务，实际平台往往同时服务几十个模型。与此同时，云 GPU 资源也高度异构：顶级 GPU 性能强但贵且供给紧张，中低端或旧代 GPU 更便宜、更容易获得，并且在某些模型或阶段上有更好的性能/成本比。</p>
+<p>因此，多 LLM serving 不能只问“买多少块同一种 GPU”，而要同时决定：每个模型放在哪些 GPU 上，是否拆成不同 pipeline stage，prefill 和 decode 如何分配，怎样满足每个模型的吞吐需求和 latency SLO，并在价格和可用性变化时周期性重算。</p>
+<figure class="figure wide"><img src="../assets/coral-2605.04357/figures/fig1-2-heterogeneity-opportunities.png" alt="异构 GPU 带来的机会"><figcaption class="caption">图 1-2：不同 GPU 在不同模型、batch 和阶段上的性能/成本差异明显，联合优化能利用这种异构性。</figcaption></figure>
+
+<h2>2 两阶段设计</h2>
+<p>直接联合求解模型 placement 和资源 allocation 很难，因为节点组合、模型切分、SLO 和负载都在变化。Coral 的关键是把可复用部分离线化。Serving Template Generator 针对每个（model, SLO）枚举一组候选节点组合，并用优化器计算每种组合下可达到的吞吐和成本特征。在线阶段不再从零搜索所有部署方案，而是在预计算模板中挑选。</p>
+<figure class="figure wide"><img src="../assets/coral-2605.04357/figures/fig3-two-stage-workflow.png" alt="Coral 两阶段工作流"><figcaption class="caption">图 3：离线阶段生成 Serving Template，在线阶段根据需求、价格和可用资源做 Resource Allocation。</figcaption></figure>
+<p>Serving Template 记录模型在异构节点上的执行布局。它可以表达不同 layer 或 pipeline stage 放在不同 GPU 上，节点之间有数据传输，多个请求按阶段流动。这样，online allocator 可以把模板看作“带吞吐能力和成本的候选服务单元”。</p>
+<figure class="figure wide"><img src="../assets/coral-2605.04357/figures/fig4-serving-template.png" alt="Serving Template 示例"><figcaption class="caption">图 4：Serving Template 描述模型层在异构节点上的划分与请求流动。</figcaption></figure>
+
+<h2>3 Runtime System</h2>
+<p>Coral runtime 把请求先分发到 prefill serving instance，再转到 decode serving instance。中心 coordinator 负责资源分配和请求路由；每个 serving instance 内部有 scheduler；KV cache 可以在 prefill 和 decode 阶段之间转移。这样的结构允许系统分别优化 prefill 密集和 decode 密集阶段，而不是把整个模型副本绑定在单一 GPU 类型上。</p>
+<figure class="figure wide"><img src="../assets/coral-2605.04357/figures/fig5-runtime-system.png" alt="Coral runtime system"><figcaption class="caption">图 5：Coral runtime 用 coordinator、scheduler、prefill instance 和 decode instance 协同执行请求。</figcaption></figure>
+
+<h2>4 实验结果</h2>
+<p>实验覆盖多个模型、SLO、吞吐需求和云 GPU 配置，基线包括同构部署、Cauchy 等异构资源方案。Coral 在成本和 goodput 上均取得优势：当 GPU 充足时，它能以更低成本满足同样服务需求；当部分 GPU 稀缺或价格变化时，它能迁移到更合适的异构组合，保持更高 goodput。</p>
+<figure class="figure wide"><img src="../assets/coral-2605.04357/figures/fig7-9-cost-goodput.png" alt="成本和 goodput 实验结果"><figcaption class="caption">图 7-9：Coral 在资源充足、资源稀缺和不同 decode goodput 需求下通常优于 Homo 与 Cauchy。</figcaption></figure>
+
+<h2>5 局限与启发</h2>
+<p>Coral 主要处理多模型、多 GPU 配置和 SLO 下的资源优化，并不直接研究请求语义、agent workflow 依赖或模型回答质量。它的模板生成依赖离线 profiling 和候选组合枚举，若模型结构、硬件环境或负载分布变化很快，维护成本会上升。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>Coral 适合作为“异构硬件 placement + 多模型 serving + prefill/decode 分离”的系统参考。若后续研究 agent workflow，可把 Chimera/RouteLLM 的模型选择与 Coral 的资源模板结合起来：上层决定哪个阶段用哪个模型，下层决定该模型阶段放在哪类 GPU、如何转移 KV cache、如何满足 SLO。</p></div>
+
+<h2>参考说明</h2>
+<pre class="refs-block">参考文献保留在原 PDF 中。本文覆盖摘要、问题背景、Serving Template、Resource Allocator、runtime、实验结果和研究启发。</pre>
+
+</section>
+</main>
+</body>
+</html>

@@ -6,7 +6,7 @@ Public GitHub Pages mirror for selected HTML resources from the private
 This repository intentionally contains only:
 
 - `index.html`
-- `writing/*.html`
+- 18 `writing/*.html` paper pages
 - image assets referenced by those HTML files
 
 It does not include PDFs, private notes, experiment files, or manual-only files.

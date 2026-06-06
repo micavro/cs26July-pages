@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RouteLLM：用偏好数据学习 LLM 路由器中文翻译稿</title>
+<style>
+:root{--ink:#171717;--muted:#5e6874;--rule:#dde3ea;--paper:#fff;--bg:#f4f6f8;--accent:#17636f;--soft:#f7fafb}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e8ee;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:890px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:850px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:850px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}p{margin:0 0 13px;overflow-wrap:anywhere}ul{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e6ec;border-radius:4px;background:#fff}.caption{max-width:790px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+</style>
+</head>
+<body>
+<main class="paper">
+<h1>RouteLLM：用偏好数据学习 LLM 路由器中文翻译稿</h1>
+<div class="authors">Isaac Ong, Amjad Almahairi, Vincent Wu, Wei-Lin Chiang, Tianhao Wu, Joseph E. Gonzalez, M. Waleed Kadous, Ion Stoica</div>
+<div class="meta">源文件：my-documents/routellm-iclr-2025.pdf | ICLR 2025 | 保留术语：LLM routing, preference data, strong/weak model, CPT, APGR, data augmentation</div>
+<section class="columns">
+
+<section class="abstract"><p><strong>摘要。</strong>RouteLLM 研究如何在推理时动态选择强模型和弱模型，以在质量和成本之间折中。强模型质量高但昂贵，弱模型便宜但能力有限。论文提出一个用偏好数据训练路由器的框架：给定用户 query，路由器判断弱模型是否足以回答；若足够，则调用弱模型节省成本，否则调用强模型保证质量。作者引入数据增强方法提高路由效果，并用 CPT（call-performance threshold）和 APGR（average performance gain recovered）评估成本-性能前沿。实验表明，RouteLLM 可在基本不牺牲回答质量的情况下将成本降低超过 2 倍，并且能泛化到训练中未出现的模型组合。</p></section>
+
+<h2>1 动机</h2>
+<p>LLM 部署中的核心矛盾是质量与成本。把所有请求都交给 GPT-4 这类强模型能保证较高质量，但成本很高；全部交给 Mixtral、Llama 等较弱或较小模型则便宜得多，但复杂问题容易失败。LLM routing 的目标是在每个请求级别判断“这个问题是否真的需要强模型”。</p>
+<p>一个理想路由器需要满足三点：只调用一个模型，避免多模型投票带来的额外延迟和成本；能泛化到训练分布外的问题；能迁移到新的强/弱模型组合，而不必每换一组模型都重新收集大量标注。</p>
+<figure class="figure wide"><img src="../assets/routellm-iclr-2025/figures/fig1-routing-tradeoff.png" alt="RouteLLM 的成本-性能权衡"><figcaption class="caption">图 1：RouteLLM 学到的路由器在 GSM8K、MT Bench 和 MMLU 上形成优于随机路由的成本-性能曲线。</figcaption></figure>
+
+<h2>2 偏好数据与训练框架</h2>
+<p>RouteLLM 把路由问题转化为偏好预测问题。对于同一个 query，若人类或 judge 偏好强模型回答，则路由器应倾向调用强模型；若弱模型回答足够好，则应调用弱模型。论文使用 preference data，并通过数据增强扩充训练信号，包括让 GPT-4 等 judge 比较不同模型回答。</p>
+<p>作者尝试多种路由模型：matrix factorization、BERT classifier、causal LLM router 和 similarity-weighted ranking 等。它们的共同目标是估计 query 对强模型的“必要性”，再根据成本预算或目标质量阈值决定路由边界。</p>
+
+<h2>3 评估指标</h2>
+<p>论文强调只报告平均准确率不足以评价路由器，因为路由器本质上输出一条成本-性能曲线。CPT 表示在达到某个目标性能时需要调用强模型的比例，越低越省钱；APGR 衡量路由器恢复了强模型相对于弱模型的多少性能增益，越高说明少量强模型调用带来更多质量收益。</p>
+<p>这两个指标比单点成本或单点准确率更适合比较路由系统，因为用户可以根据预算选择不同 operating point。</p>
+
+<h2>4 实验结果</h2>
+<p>实验覆盖 MT Bench、MMLU、GSM8K 等基准，并考察训练数据量、数据增强、跨模型组合迁移和 routing overhead。结果显示，基于偏好数据的路由器明显优于随机路由和简单启发式；数据增强能进一步改善 MT Bench 等任务上的曲线；部分路由器能迁移到训练中未见过的强/弱模型组合。</p>
+<figure class="figure wide"><img src="../assets/routellm-iclr-2025/figures/table1-2-main-results.png" alt="RouteLLM 在 MT Bench 和 MMLU 上的主要结果"><figcaption class="caption">表 1-2：RouteLLM 在 MT Bench 和 MMLU 上对比多个路由方法，报告 CPT、APGR 和改进幅度。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/routellm-iclr-2025/figures/table6-7-cost-overhead.png" alt="RouteLLM 路由开销"><figcaption class="caption">表 7：不同路由器的推理开销。路由器本身的成本和延迟需要计入真实 serving 系统。</figcaption></figure>
+
+<h2>5 局限与启发</h2>
+<p>RouteLLM 主要解决单请求的强/弱模型选择，不直接考虑并发负载、队列拥塞、workflow 依赖、KV cache 复用或多阶段任务的端到端延迟。它依赖偏好数据和 judge 质量，若偏好标注偏向某些任务类型，路由器也会继承偏差。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>RouteLLM 是“模型选择/语义路由”的核心参考。它可以和 Chimera 形成上下游关系：RouteLLM 解决单 query 是否需要强模型，Chimera 进一步把模型选择放入多智能体 workflow 和系统负载中。后续选题可研究 preference-aware routing 与 cache-aware scheduling、SLO-aware load balancing 的联合优化。</p></div>
+
+<h2>参考说明</h2>
+<pre class="refs-block">参考文献保留在原 PDF 中。本文覆盖摘要、路由动机、偏好数据训练、指标、实验结果和研究启发。</pre>
+
+</section>
+</main>
+</body>
+</html>

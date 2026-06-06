@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HEFT：面向异构计算系统的高性能低复杂度任务调度中文翻译稿</title>
+<style>
+:root{--ink:#171717;--muted:#5e6874;--rule:#dde3ea;--paper:#fff;--bg:#f4f6f8;--accent:#17636f;--soft:#f7fafb}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e8ee;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:890px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:850px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:850px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}p{margin:0 0 13px;overflow-wrap:anywhere}ul{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e6ec;border-radius:4px;background:#fff}.caption{max-width:790px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+</style>
+</head>
+<body>
+<main class="paper">
+<h1>HEFT：面向异构计算系统的高性能低复杂度任务调度中文翻译稿</h1>
+<div class="authors">Haluk Topcuoglu, Salim Hariri, Min-You Wu</div>
+<div class="meta">源文件：my-documents/heft-tpds-2002.pdf | IEEE TPDS 2002 | 保留术语：DAG scheduling, upward rank, insertion-based scheduling, HEFT, CPOP, SLR</div>
+<section class="columns">
+
+<section class="abstract"><p><strong>摘要。</strong>本文研究异构计算环境中的静态任务调度问题。应用被建模为带权有向无环图（DAG），节点代表任务，边代表任务之间的数据依赖和通信开销；目标是在有限数量的异构处理器上为任务选择执行顺序和处理器，使总完成时间尽可能短。作者提出两个启发式算法：Heterogeneous Earliest-Finish-Time（HEFT）和 Critical-Path-on-a-Processor（CPOP）。HEFT 用 upward rank 给任务排序，再用 insertion-based earliest finish time 为任务选处理器；CPOP 用 upward rank 与 downward rank 的和识别关键路径，并倾向把关键任务放在同一处理器上。随机图和真实应用图上的实验表明，这两个算法在 schedule length ratio、speedup、最佳结果次数和调度时间上明显优于当时的多个基线，其中 HEFT 通常最稳健。</p></section>
+
+<h2>1 引言</h2>
+<p>异构计算系统由性能不同、互联方式不同的处理资源构成。对并行和分布式应用来说，仅有资源还不够，关键是把应用中的任务放到合适的处理器，并安排满足依赖关系的执行顺序。静态调度假设任务执行时间、任务间通信量和依赖关系在编译期或调度前已知，因此可以把应用表示为 DAG。</p>
+<p>一般任务调度问题是 NP-complete，即使在某些受限情形下也很难求精确最优解。因此，实际系统依赖启发式算法。已有许多算法面向同构处理器，或在异构处理器上需要较高调度开销。本文的目标是在调度质量和调度复杂度之间取得更好的平衡。</p>
+
+<h2>2 问题模型</h2>
+<p>每个任务节点在不同处理器上有不同计算成本，边表示前驱任务输出到后继任务所需的通信成本。如果两个相邻任务被放在同一处理器上，通信成本可视为零；若放在不同处理器上，则需要计入数据传输时间。一个合法 schedule 必须满足所有前驱约束，并且每个处理器同一时刻只能执行一个任务。</p>
+<p>论文主要用 <span class="term">schedule length</span>、<span class="term">schedule length ratio（SLR）</span>、speedup、最佳结果频率和调度时间来评估算法。SLR 用实际调度长度除以关键路径的理论下界，越接近 1 越好。</p>
+<figure class="figure wide"><img src="../assets/heft-tpds-2002/figures/fig3-task-graph-costs.png" alt="示例任务图与异构处理器计算成本"><figcaption class="caption">图 3：论文使用的示例 DAG。边权是通信成本，右侧表格给出每个任务在不同处理器上的计算成本。</figcaption></figure>
+
+<h2>3 HEFT 算法</h2>
+<p>HEFT 分为两阶段。第一阶段是任务排序。算法先计算每个任务的 upward rank：它等于该任务平均计算成本加上从该任务到出口任务的最长后继路径成本。rank 越高，说明任务越靠近关键路径前部、越可能影响整体完成时间。HEFT 按 upward rank 从大到小生成任务列表。</p>
+<p>第二阶段是处理器选择。对任务列表中的每个任务，算法尝试把它插入到每个处理器当前空闲片段中，计算满足前驱约束后的 earliest finish time，然后选择使完成时间最早的处理器和时间槽。这个 insertion-based 策略比简单追加到处理器末尾更灵活，因为它能利用已有任务之间的空洞。</p>
+<figure class="figure wide"><img src="../assets/heft-tpds-2002/figures/fig2-heft-algorithm.png" alt="HEFT 算法伪代码"><figcaption class="caption">图 2：HEFT 的伪代码。核心是按 upward rank 选任务，并用 earliest finish time 做处理器分配。</figcaption></figure>
+
+<h2>4 CPOP 与对比</h2>
+<p>CPOP 同样是列表调度，但排序依据是 upward rank 与 downward rank 的和。这个值在关键路径任务上相对稳定，因此可用来识别 critical path。CPOP 的处理器选择与 HEFT 不同：关键路径上的任务会被映射到使关键路径总执行时间最小的同一处理器上，非关键任务再按 earliest finish time 安排。</p>
+<figure class="figure wide"><img src="../assets/heft-tpds-2002/figures/fig4-heft-cpop-schedules.png" alt="HEFT 与 CPOP 的示例调度结果"><figcaption class="caption">图 4：同一任务图在 HEFT 和 CPOP 下的调度结果。HEFT 在示例中得到更短的 schedule length。</figcaption></figure>
+<p>这种设计说明了两种思路的差异：HEFT 更强调每一步的局部最早完成，CPOP 更强调保持关键路径一致性。实验中 CPOP 有时有效，但在处理器异构性和通信成本较复杂时，把关键任务固定到同一处理器并不总是最优。</p>
+
+<h2>5 实验结果</h2>
+<p>作者使用可控的随机 DAG 生成器，改变任务数、图形结构、通信计算比（CCR）、处理器异构程度等参数，并加入真实应用图进行验证。对比算法包括 MCP、ETF、DLS、MH、LMT 等。整体结果显示，HEFT 在大多数情形下有更低 SLR、更高 speedup 和更短调度时间；CPOP 在部分场景表现接近 HEFT，但稳定性略弱。</p>
+<figure class="figure wide"><img src="../assets/heft-tpds-2002/figures/fig8-slr-results.png" alt="HEFT 与其它算法的 SLR 对比"><figcaption class="caption">表 2 与相关结果：HEFT 在不同图结构和 CCR 下通常取得更好的 schedule length ratio，并保持较低调度开销。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/heft-tpds-2002/figures/fig10-11-ccr-results.png" alt="不同图结构和通信计算比下的实验结果"><figcaption class="caption">后续实验进一步展示了图结构、CCR、任务数量和异构程度对算法表现的影响。</figcaption></figure>
+
+<h2>6 局限与选题启发</h2>
+<p>HEFT 的前提是 DAG、计算成本和通信成本已知，适合静态工作流。它没有处理运行时分支概率、输出长度不确定、在线负载波动、KV cache 状态或 LLM serving 中的排队效应。尽管如此，HEFT 仍是异构 DAG 调度的经典基线，后续很多 workflow scheduling、cloud scheduling 和 heterogeneous serving 工作都可与它建立联系。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>如果后续研究 agentic workflow、conditional DAG 或多模型 LLM serving，HEFT 可作为“已知 DAG + 异构 executor + makespan 最小化”的基础参照。新的工作可以在它之上加入概率分支、动态 token 长度、cache locality、GPU/CPU/SSD 多级状态和在线负载预测。</p></div>
+
+<h2>参考说明</h2>
+<pre class="refs-block">参考文献保留在原 PDF 中。本文覆盖摘要、问题模型、HEFT/CPOP 方法、实验结论和与本仓库研究方向相关的启发。</pre>
+
+</section>
+</main>
+</body>
+</html>
