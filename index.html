@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cs26July HTML 资源</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #18202f;
+      --muted: #5f6b7a;
+      --line: #dfe4ec;
+      --accent: #146c63;
+      --accent-soft: #e6f3f1;
+      --warn: #9b4d1c;
+      --warn-soft: #fff0e4;
+      --shadow: 0 14px 40px rgba(32, 41, 56, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      display: grid;
+      gap: 18px;
+      padding: 28px 0 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .title-row {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 720px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.7);
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin: 22px 0;
+      align-items: center;
+    }
+
+    .search {
+      width: 100%;
+      min-height: 46px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+      box-shadow: 0 1px 2px rgba(32, 41, 56, 0.04);
+    }
+
+    .search:focus {
+      border-color: var(--accent);
+      outline: 3px solid rgba(20, 108, 99, 0.14);
+    }
+
+    .count {
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .section {
+      margin-top: 24px;
+    }
+
+    .section h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .resource {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      min-height: 188px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .resource:hover,
+    .resource:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(20, 108, 99, 0.45);
+      box-shadow: 0 18px 44px rgba(32, 41, 56, 0.12);
+      outline: none;
+    }
+
+    .resource h3 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    .resource p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .tag.alt {
+      background: var(--warn-soft);
+      color: var(--warn);
+    }
+
+    .empty {
+      display: none;
+      padding: 22px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--muted);
+    }
+
+    footer {
+      margin-top: 36px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 680px) {
+      .page {
+        width: min(100% - 22px, 1120px);
+        padding-top: 12px;
+      }
+
+      header {
+        padding-top: 18px;
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .count {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="title-row">
+        <h1>cs26July HTML 资源</h1>
+        <div class="stats" aria-label="站点概况">
+          <span class="pill">12 篇 HTML</span>
+          <span class="pill">GitHub Pages</span>
+          <span class="pill">更新：2026-06-07</span>
+        </div>
+      </div>
+      <p class="subtitle">集中访问当前研究文件夹里的论文翻译稿和阅读材料。</p>
+    </header>
+
+    <div class="toolbar">
+      <input class="search" id="search" type="search" placeholder="搜索标题、主题或 arXiv 编号" autocomplete="off" aria-label="搜索 HTML 资源">
+      <div class="count" id="count">显示 12 / 12</div>
+    </div>
+
+    <div class="empty" id="empty">没有匹配的 HTML 资源。</div>
+
+    <section class="section" data-section>
+      <h2>Agentic Workflow 与调度</h2>
+      <div class="grid">
+        <a class="resource" href="writing/astraea-2512.14142v1-zh.html" data-search="astraea 2512.14142 agent workflow scheduling llm 状态感知 调度">
+          <h3>Astraea：面向 LLM 驱动 Agent 的状态感知调度引擎</h3>
+          <p>多 Agent 工作流、状态感知调度、JCT 优化。</p>
+          <div class="meta"><span class="tag">Agent</span><span>2512.14142v1</span></div>
+        </a>
+        <a class="resource" href="writing/helium-2603.16104-zh.html" data-search="helium 2603.16104 agentic workflows llm serving">
+          <h3>Helium：面向 Agentic Workflows 的高效 LLM Serving</h3>
+          <p>面向 agentic workflow 的服务系统与调度设计。</p>
+          <div class="meta"><span class="tag">Agent</span><span>2603.16104</span></div>
+        </a>
+        <a class="resource" href="writing/hexagent-2605.16637-zh.html" data-search="hexagent 2605.16637 workflow heterogeneous scheduling agentic llm serving">
+          <h3>HEXAGENT：工作流感知与异构感知调度</h3>
+          <p>异构资源、SLO、agentic LLM serving 调度。</p>
+          <div class="meta"><span class="tag">Agent</span><span>2605.16637</span></div>
+        </a>
+        <a class="resource" href="writing/parrot-osdi-2024-zh.html" data-search="parrot osdi 2024 semantic variable llm applications serving">
+          <h3>Parrot：基于 Semantic Variable 的 LLM 应用高效服务</h3>
+          <p>OSDI 2024，语义变量与应用级调度抽象。</p>
+          <div class="meta"><span class="tag">Serving</span><span>OSDI 2024</span></div>
+        </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <h2>KV Cache 与长上下文服务</h2>
+      <div class="grid">
+        <a class="resource" href="writing/cacheblend-2405.16444-zh.html" data-search="cacheblend 2405.16444 rag cached knowledge fusion kv cache">
+          <h3>CacheBlend：面向 RAG 的 Cached Knowledge Fusion</h3>
+          <p>RAG 场景下的缓存复用、选择性重算与系统工作流。</p>
+          <div class="meta"><span class="tag">KV Cache</span><span>2405.16444</span></div>
+        </a>
+        <a class="resource" href="writing/epic-icml-2025-zh.html" data-search="epic icml 2025 position independent caching llm serving">
+          <h3>EPIC：面向 LLM Serving 的 Position-Independent Caching</h3>
+          <p>ICML 2025，位置无关缓存与推理服务设计。</p>
+          <div class="meta"><span class="tag">KV Cache</span><span>ICML 2025</span></div>
+        </a>
+        <a class="resource" href="writing/lmcache-2510.09665-zh.html" data-search="lmcache 2510.09665 enterprise llm inference kv cache layer">
+          <h3>LMCache：企业级 LLM Inference 的 KV Cache Layer</h3>
+          <p>企业级缓存层、动态卸载、端到端性能。</p>
+          <div class="meta"><span class="tag">KV Cache</span><span>2510.09665</span></div>
+        </a>
+        <a class="resource" href="writing/kvdrive-2605.18071-zh.html" data-search="kvdrive 2605.18071 long context llm inference multi-tier kv cache">
+          <h3>KVDrive：长上下文 LLM Inference 的多层 KV Cache 管理</h3>
+          <p>多层缓存、稀疏注意力卸载、长上下文推理。</p>
+          <div class="meta"><span class="tag">KV Cache</span><span>2605.18071</span></div>
+        </a>
+        <a class="resource" href="writing/ttkv-2604.19769-zh.html" data-search="ttkv 2604.19769 temporal tiered kv cache long context inference">
+          <h3>TTKV：长上下文 LLM Inference 的 Temporal-Tiered KV Cache</h3>
+          <p>时间分层 KV 缓存、流式注意力、长上下文优化。</p>
+          <div class="meta"><span class="tag">KV Cache</span><span>2604.19769</span></div>
+        </a>
+        <a class="resource" href="writing/online-kv-scheduling-2502.07115-zh.html" data-search="online kv scheduling 2502.07115 llm inference kv cache constraints">
+          <h3>Online Scheduling for LLM Inference with KV Cache Constraints</h3>
+          <p>KV cache 约束下的在线推理调度。</p>
+          <div class="meta"><span class="tag">Scheduling</span><span>2502.07115</span></div>
+        </a>
+      </div>
+    </section>
+
+    <section class="section" data-section>
+      <h2>DAG 与概率分析</h2>
+      <div class="grid">
+        <a class="resource" href="writing/probabilistic-dag-longest-paths-2504.03754-zh.html" data-search="probabilistic dag longest paths 2504.03754 response time analysis">
+          <h3>利用最长路径不确定性：概率 DAG 任务的响应时间分析</h3>
+          <p>概率 DAG、最长路径分布、响应时间分析。</p>
+          <div class="meta"><span class="tag alt">DAG</span><span>2504.03754</span></div>
+        </a>
+        <a class="resource" href="writing/fate-2605.07238-zh.html" data-search="fate 2605.07238 scheduling prefix reuse solver overhead llm">
+          <h3>FATE：面向前缀复用与调度信号的 LLM Serving 研究</h3>
+          <p>前缀复用、调度信号、消融与鲁棒性实验。</p>
+          <div class="meta"><span class="tag alt">Scheduling</span><span>2605.07238</span></div>
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      <span>路径保持为仓库内相对链接，适合 GitHub Pages 直接发布。</span>
+    </footer>
+  </main>
+
+  <script>
+    const input = document.querySelector("#search");
+    const count = document.querySelector("#count");
+    const empty = document.querySelector("#empty");
+    const resources = [...document.querySelectorAll(".resource")];
+    const sections = [...document.querySelectorAll("[data-section]")];
+
+    function applyFilter() {
+      const query = input.value.trim().toLowerCase();
+      let visible = 0;
+
+      resources.forEach((resource) => {
+        const text = `${resource.textContent} ${resource.dataset.search}`.toLowerCase();
+        const match = query === "" || text.includes(query);
+        resource.hidden = !match;
+        if (match) visible += 1;
+      });
+
+      sections.forEach((section) => {
+        const hasVisibleItem = [...section.querySelectorAll(".resource")].some((item) => !item.hidden);
+        section.hidden = !hasVisibleItem;
+      });
+
+      count.textContent = `显示 ${visible} / ${resources.length}`;
+      empty.style.display = visible === 0 ? "block" : "none";
+    }
+
+    input.addEventListener("input", applyFilter);
+  </script>
+</body>
+</html>

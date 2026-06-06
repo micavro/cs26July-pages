@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Astraea：面向 LLM 驱动 Agent 的状态感知调度引擎</title>
+  <style>
+    :root {
+      --ink: #161616;
+      --muted: #5f6368;
+      --rule: #d9dde3;
+      --paper: #fff;
+      --bg: #f4f6f8;
+      --accent: #184c7f;
+      --soft: #f8fafc;
+    }
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", "Times New Roman", serif;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    main.paper {
+      width: min(1080px, calc(100vw - 36px));
+      margin: 34px auto;
+      padding: 70px 82px 86px;
+      background: var(--paper);
+      border: 1px solid #e4e7eb;
+      box-shadow: 0 18px 46px rgba(20, 28, 38, .10);
+      box-sizing: border-box;
+    }
+    h1 {
+      margin: 0 auto 24px;
+      max-width: 820px;
+      text-align: center;
+      font-size: 32px;
+      line-height: 1.26;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+      text-wrap: balance;
+      letter-spacing: 0;
+    }
+    h1 .title-line {
+      display: block;
+    }
+    .authors {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px 30px;
+      margin: 0 auto 30px;
+      max-width: 820px;
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.38;
+    }
+    .authors .wide { grid-column: 2; }
+    .meta {
+      margin: 0 0 34px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+    .columns {
+      max-width: 820px;
+      margin: 0 auto;
+      font-size: 17px;
+      line-height: 1.76;
+      text-align: left;
+    }
+    h2, h3, h4 {
+      break-after: avoid;
+      text-align: left;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 34px 0 12px;
+      padding-top: 4px;
+      font-size: 24px;
+    }
+    h3 {
+      margin: 26px 0 10px;
+      font-size: 20px;
+    }
+    h4 {
+      margin: 20px 0 8px;
+      font-size: 17px;
+      font-style: normal;
+    }
+    p {
+      margin: 0 0 13px;
+      overflow-wrap: anywhere;
+    }
+    ul, ol {
+      margin: 0 0 16px 1.45em;
+      padding: 0;
+    }
+    li {
+      margin: 0 0 8px;
+      padding-left: .1em;
+    }
+    strong { font-weight: 700; }
+    .abstract, .keywords {
+      break-inside: avoid;
+      margin-bottom: 20px;
+    }
+    .keywords p { text-align: left; }
+    .figure {
+      break-inside: avoid;
+      max-width: 720px;
+      margin: 26px auto 30px;
+      text-align: center;
+    }
+    .figure img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto 10px;
+      border: 1px solid #e1e5ea;
+      border-radius: 4px;
+      background: #fff;
+    }
+    .figure.wide {
+      max-width: 820px;
+      margin: 30px auto 34px;
+    }
+    .caption {
+      max-width: 720px;
+      margin: 0 auto;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.5;
+      text-align: left;
+      color: #202124;
+    }
+    .math {
+      break-inside: avoid;
+      margin: 16px 0 18px;
+      padding: 12px 16px;
+      border-left: 4px solid var(--accent);
+      background: var(--soft);
+      border-radius: 4px;
+      font-family: "Times New Roman", "Cambria Math", serif;
+      font-size: 15.5px;
+      line-height: 1.65;
+      text-align: center;
+      white-space: normal;
+      overflow-x: auto;
+    }
+    .algorithm {
+      break-inside: avoid;
+      margin: 22px 0 26px;
+      padding: 16px 18px;
+      border-top: 2px solid #111;
+      border-bottom: 2px solid #111;
+      background: #fbfcfd;
+      font-size: 14px;
+      line-height: 1.55;
+      text-align: left;
+    }
+    .algorithm pre {
+      margin: 12px 0 0;
+      white-space: pre-wrap;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 13.5px;
+      line-height: 1.55;
+    }
+    .refs {
+      column-count: 2;
+      column-gap: 30px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      text-align: left;
+    }
+    .refs li {
+      break-inside: avoid;
+      margin-bottom: 8px;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: left;
+    }
+    @media (max-width: 820px) {
+      body { overflow-x: hidden; }
+      main.paper {
+        width: 100%;
+        margin: 0;
+        padding: 34px 34px 50px;
+        border: 0;
+        box-shadow: none;
+      }
+      h1 {
+        max-width: 320px;
+        font-size: 22px;
+        line-height: 1.35;
+        margin-bottom: 28px;
+      }
+      .columns {
+        max-width: 100%;
+        font-size: 16px;
+        line-height: 1.82;
+        text-align: left;
+        overflow-wrap: anywhere;
+      }
+      .authors { grid-template-columns: 1fr; }
+      .authors .wide { grid-column: auto; }
+      .meta {
+        max-width: 320px;
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 30px;
+        font-size: 12.5px;
+      }
+      h2 { font-size: 22px; margin-top: 30px; }
+      h3 { font-size: 19px; }
+      h4 { font-size: 16.5px; }
+      .figure { margin: 24px auto 28px; }
+      .figure img { border-radius: 3px; }
+      .refs { column-count: 1; }
+      .caption, li, .algorithm pre { overflow-wrap: anywhere; word-break: break-word; }
+    }
+    @media print {
+      body { background: #fff; }
+      main.paper {
+        width: auto;
+        margin: 0;
+        padding: 36pt 42pt;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+<main class="paper">
+  <h1>
+    <span class="title-line">Astraea：面向 LLM 驱动 Agent 的</span>
+    <span class="title-line">状态感知调度引擎</span>
+  </h1>
+  <section class="authors" aria-label="作者">
+    <div><strong>Hongqiu Ni</strong><br>中国科学技术大学<br>中国</div>
+    <div><strong>Jiabao Zhang</strong><br>中国科学技术大学<br>中国</div>
+    <div><strong>Guopeng Li</strong><br>中国科学技术大学<br>中国</div>
+    <div><strong>Zilong Wang</strong><br>中国科学技术大学<br>中国</div>
+    <div><strong>Ruiqi Wu</strong><br>中国科学技术大学<br>中国</div>
+    <div><strong>Chi Zhang*</strong><br>合肥工业大学<br>中国</div>
+    <div class="wide"><strong>Haisheng Tan†</strong><br>中国科学技术大学<br>中国</div>
+  </section>
+  <p class="meta">arXiv:2512.14142v1 [cs.CL]，2025 年 12 月 16 日。* 通讯作者。† 通讯作者。</p>
+
+  <div class="columns">
+    <section class="abstract">
+      <h2>摘要</h2>
+      <p>Large Language Models（LLMs）正越来越多地被部署为智能 Agent。它们的多阶段工作流在本地计算与对 Web APIs 等外部网络服务的调用之间交替执行，这使其执行模式与 vLLM 等现有推理系统的调度粒度之间出现不匹配。现有系统通常关注逐 segment 优化，这阻止它们最小化完整 agentic workflow 的端到端延迟，即整个请求生命周期上的全局 Job Completion Time（JCT）。为解决这一限制，我们提出 Astraea，这是一种服务引擎，旨在把优化目标从局部 segment 转移到全局请求生命周期。Astraea 采用状态感知的分层调度算法，将请求的历史状态与未来预测结合起来。它根据请求的 I/O 密集性与计算密集性动态分类，并使用增强的 HRRN 策略平衡效率与公平性。Astraea 还实现了一个自适应 KV cache manager，能够根据系统内存压力，在 I/O 等待期间智能处理 Agent 状态。大量实验表明，与基线方法相比，Astraea 可将平均 JCT 最多降低 25.5%。此外，在不同模型规模的高负载条件下，我们的方法表现出很强的鲁棒性和稳定性。</p>
+    </section>
+
+    <section class="keywords">
+      <h2>关键词</h2>
+      <p>LLM Serving Systems；LLM Inference Engine；Agentic workflows；Latency Optimization</p>
+    </section>
+
+    <h2>1 引言</h2>
+    <p>Large Language Models（LLMs）作为云服务通过 Web APIs 被广泛部署，催生了新一代强大的 Web 应用。同时，LLM 正逐渐从语言处理器演进为能够自主规划和执行任务的智能 Agent（LLM Agents）。这些 Agent 通过程序化地向 Web 服务和其他资源发出一系列 API 调用来利用外部工具 [10, 24, 29]，从而完成更复杂的任务，例如自主浏览 Web [11, 46, 51]、解决 GitHub 问题 [16, 39, 44]，以及证明有挑战性的数学问题 [9, 19]。</p>
+
+    <figure class="figure">
+      <img src="../assets/astraea-2512.14142v1/figure1-workflow.png" alt="Agentic inference workflow example extracted from PDF">
+      <figcaption class="caption">图 1：一个 agentic inference workflow 示例。</figcaption>
+    </figure>
+
+    <p>这些 agentic 任务的执行引入了一种多阶段推理工作流，其结构不同于传统 LLM 的处理过程。标准推理过程包含两个不同阶段：计算密集的 Prefill 阶段并行处理输入上下文，随后是受内存限制的 Decode 阶段，以自回归方式生成 token。在整个过程中，key-value（KV）cache 用于存储中间状态，从而加速后续 token 的生成。</p>
+    <p>然而，如图 1 所示，Agent 执行的是更复杂的 agentic workflow，由多个这样的推理过程组成。当用户发出请求时，例如“Make a travel plan to Hawaii in June.”，系统执行第一次推理过程，直到 Agent 生成一个特殊 token 来触发查询天气的 API 调用。此时 LLM 计算暂停，系统进入 I/O 等待状态。一旦 API 返回结果，例如“The weather is sunny.”，这条新信息会被追加到上下文中，流程继续进入另一个 Prefill 和 Decode 周期。这种从单一计算任务到计算与外部 API 调用交替的动态多阶段工作流的演化，为底层服务基础设施带来了前所未有的挑战，要求重新思考如何为这些高级系统调度请求和管理资源。</p>
+    <p>这种新的 agentic workflow 暴露出现有 LLM serving systems 的两个缺陷。第一，当前调度器 [22, 27] 很大程度上没有感知 API 调用时长，从而导致严重的 Head-of-Line（HoL）blocking。这些系统只关注计算阶段建模，例如 𝑆³ [17] 预测 decode 长度，以提升 GPU 利用率并加速推理。然而，在 LLM Agent 场景中，decode 时间往往只是请求总生命周期中可以忽略的一部分。例如，对 SerpAPI 的 Web 搜索 API 调用可能持续数秒，而 decode 阶段只有毫秒级。忽略主导性 API 时长的调度器无法做出有效的资源分配或调度决策。</p>
+    <p>第二，vLLM 等当前系统把 agentic workflow 的每个 segment 视为独立任务。这种方法优化的是局部指标，也就是当前 segment 的响应时间，却不能为整个多阶段请求优化端到端 Job Completion Time（JCT）。这两个缺陷揭示了一个关键研究空白。为设计能够填补该空白的新范式，需要克服两个挑战。</p>
+    <p><strong>挑战 1：状态管理中的高风险权衡。</strong>Agentic workflows 会引入较长的 I/O 等待期，在此期间大型 KV cache 闲置在 GPU 上。这带来了关键的资源管理困境：在 GPU 内存中保留 cache 会占用稀缺资源并降低系统吞吐量，而丢弃 cache 则会在恢复时产生显著的重计算延迟。这形成了单请求延迟与系统级吞吐量之间的内在权衡。</p>
+    <p><strong>挑战 2：面向全局优化的生命周期感知调度。</strong>一个 segment 的局部属性与其对端到端 JCT 的全局影响严重脱耦，因为后者由未来 I/O 阶段决定。这种脱节会引入 HoL blocking 风险，即优先调度一个看似最优的 segment，可能在长时间 API 调用期间饿死其他请求，从而造成灾难性的全局后果。</p>
+    <p>为应对上述挑战，我们提出一种新的调度范式，把请求的历史状态与对其未来行为的预测统一起来，并提出 Astraea，一个以生命周期为中心、面向 LLM agentic workflows 的推理服务引擎。它的目标是优化全局 Job Completion Time（JCT），而不是短视的逐 segment 指标。我们的主要贡献如下：</p>
+    <ul>
+      <li>我们形式化 LLM agent workflows 的调度问题，并证明其为 NP-hard，为启发式算法设计提供理论基础（第 3.1 节）。</li>
+      <li>我们设计了一种新的状态感知分层抢占式调度机制 Astraea，它统一历史工作流行为与未来预测。在宏观层面，请求根据计算与 I/O 特征被动态分类；在微观层面，调度顺序由等待时间和预测服务时长共同决定，从而平衡效率与公平性（第 4 节）。</li>
+      <li>我们基于主流 vLLM 框架实现了 Astraea 原型，并通过实验表明，在混合计算与 I/O 特征的异构负载下，Astraea 与基线方法相比最多可将平均 JCT 降低 25.5%，显著提升对延迟敏感的交互式应用的 Quality of Experience（QoE）。此外，随着系统负载上升，其性能退化幅度比基线低 3.2 倍，表现出更好的鲁棒性（第 5 节）。</li>
+    </ul>
+
+    <h2>2 背景与动机</h2>
+    <p>LLM 作为自主 Agent 的兴起，代表了计算工作负载范式的转变，即从一次性推理转向交错计算与外部工具使用的动态多阶段工作流。这一新范式暴露出现有 LLM serving systems 的关键瓶颈，因为这些系统的架构面向一次性查询。本节通过梳理这一演进、刻画推理工作流，并用具体示例说明为什么新的以调度为中心的方法对 agentic efficiency 至关重要。</p>
+
+    <h3>2.1 背景</h3>
+    <h4>2.1.1 从基础 LLM 到 LLM 驱动 Agent 的演进</h4>
+    <p>早期 LLM 擅长 in-context learning（ICL），但本质上作为独立文本生成器运行，缺乏与外部环境交互或动态验证生成知识的机制。一个关键进展是 Chain-of-Thought（CoT）[41] 等结构化推理框架的出现。它把推理负载从单次查询响应事务转变为更长的顺序推理过程，并隐式引入了早期工作流语义。</p>
+    <p>在此基础上，ReAct [47] 等框架正式整合了推理与外部工具使用，建立了本地计算与远程 I/O 交错的核心 agentic loop。这种能力转变直接对应系统需求的转变：工作负载不再是单体计算，而是具有异构资源需求（计算、内存、I/O）的依赖 segment 动态图。</p>
+    <p>这些 agentic 能力通常通过多种 API 调用模式实现，可分为三类：集成非 LLM 工具，例如翻译器和检索系统；用于复杂问题求解的迭代 self-calls；以及多组件协作，例如由 LLM 编排其他模型。该范式催生了 LangChain [21] 和 AgentGraph [6] 等复杂框架，它们支持多 Agent 工作流，也给 serving infrastructure 的资源管理和调度带来前所未有的挑战。</p>
+    <p>基于此，ReAct [47] 等框架把推理与外部动作结合起来，使模型能够使用工具，并将内部推理锚定在真实世界观测上。从系统角度看，这种整合把负载从连续计算转变为本地推理与远程 I/O 之间的循环，这正是 agentic workflows 的特征。</p>
+    <p>Agent 的“action”能力由多种模式实现，广义上都可以看作 API 调用。根据交互目标，它们可分为三类：（1）<strong>集成非 LLM 工具</strong>，即调用外部专用 API 以弥补 LLM 的不足，例如使用翻译器或信息检索系统；（2）<strong>迭代 self-calls</strong>，即 LLM 多次调用自身来分解任务并维护推理历史；（3）<strong>多组件协作</strong>，即把多个模型和工具组合成由核心 planner LLM 编排的协作系统。该范式催生了 LangChain [21] 和 AgentGraph [6] 等框架，从而支持复杂的多 Agent 协作工作流。</p>
+
+    <h4>2.1.2 LLM 推理工作流</h4>
+    <p>LLM 驱动多种 chatbot 和 AI 应用，主要使用基于 Transformer 的模型，例如 GPT [30]、Claude [4] 和 LLaMA [38]。LLM 推理过程通常包含两个主要阶段：Prefill 和 Decode。</p>
+    <p>在 prefill 阶段，系统处理输入 prompt，通过一次前向传播把它转换为中间 token 状态。该阶段是计算密集型的，因为它需要处理完整输入以生成初始 KV cache，而 KV cache 存储模型生成过程中所需的中间状态信息，用于加速后续 token 生成。</p>
+    <p>随后在 decode 阶段，模型依赖先前生成的 token，以自回归方式逐个生成新 token。该过程是内存带宽密集型的，因为模型频繁访问先前生成的 token 和 KV cache 来生成下一个 token。通过这一机制，模型无需重新计算所有先前 token 即可生成连贯输出，从而显著提升效率。</p>
+    <p>然而，在 LLM agent inference 中，系统可能需要进行外部工具调用，例如查询数据库、执行复杂计算或访问外部 APIs。这些外部调用会中断推理过程，使系统进入等待状态，直到外部工具返回结果。API 调用时间高度不可预测，范围可以从亚毫秒 API 调用到需要数分钟的人类响应。此时，系统必须选择如何管理被中断的 KV cache sequence。常见策略涉及延迟与内存开销之间的权衡。<strong>Preserve</strong> 策略把 KV cache 完全保留在 GPU 内存中，改善恢复延迟，但增加内存压力并降低系统吞吐。另一个极端是 <strong>Discard</strong> 策略，释放全部 KV cache，并在工具返回后重新执行 prefill 阶段；这简化了状态管理，但导致冗余计算。混合方法是 <strong>Swap</strong> 策略，它在中断期间把 KV cache 迁移到 CPU 内存，并在之后迁回，从而在内存压力和计算效率之间折中，但代价是 I/O 传输延迟。</p>
+    <p>API 调用结束后，其响应会被视为额外 token sequence，追加到原始输入 sequence。模型只需对新增部分执行一次前向传播，并把生成的 key-value cache 追加到原 cache。</p>
+
+    <h3>2.2 动机</h3>
+    <p>尽管传统调度器常以最小化端到端延迟为设计目标，但在 agentic workflows 中却可能适得其反。它们把每个计算 segment 视为独立任务，因此采用短视视角。虽然这可能优化局部性能，却忽略了请求生命周期中的链式依赖，导致次优的全局性能并降低总体系统效率。</p>
+
+    <figure class="figure">
+      <img src="../assets/astraea-2512.14142v1/figure2-gantt.png" alt="Gantt chart comparison extracted from PDF">
+      <figcaption class="caption">图 2：四种调度策略下两个请求执行时间线的 Gantt 图。</figcaption>
+    </figure>
+
+    <p>为说明这一限制，我们给出一个包含两个并发请求 A 和 B 的动机示例，其 segment 执行时间见图 2。请求 A 包含三个 segment，每个需要 3 个时间单位。请求 B 包含三个 segment，其处理时间分别为 4、1 和 2 个时间单位。我们比较该场景下四种调度策略的表现：</p>
+    <ul>
+      <li><strong>First-Come-First-Served（FCFS）：</strong>一种基线策略，严格按到达顺序执行 segment。在该示例中，它的任意初始选择，即优先 A1 而非 B1，会因 agentic workflow 的链式依赖对 B 的后续 segment 造成级联延迟，得到较差的平均 JCT 15.0。</li>
+      <li><strong>segment 级 Shortest-Job-First（SJF）：</strong>一种短视策略，总是选择已就绪且处理时间最短的 segment。该策略快速完成请求 A 的全部短 segment，使 A 的局部 JCT 达到优秀的 9.0，但它会完全饿死较长的请求 B，直到 A 完成，导致 B 的 JCT 为糟糕的 16.0，平均 JCT 为一般的 12.5。</li>
+      <li><strong>Least-Attained-Service（LAS）：</strong>一种面向公平性的策略，优先调度累计已获服务量最少的请求。它交错执行 A 和 B，但未能识别出优先执行 B 的短尾部 segment（B2、B3）在全局上更高效，因此平均 JCT 高达 14.5。</li>
+      <li><strong>request 级 Shortest-Job-First（SJF）：</strong>一种 oracle 策略，优先处理总服务时间最短的请求，代表最优情况。它智能地优先完成较短的请求 B，从而将平均 JCT 最小化到 11.5。</li>
+    </ul>
+    <p>分析表明，尽管传统调度策略各有优点，例如 FCFS 的简单性和无饥饿保证、LAS 的请求间公平性，以及 segment 级 SJF 在一次性推理中已被证明有效的贪心优化，但它们共同无法建模多阶段流程，因此会导致严重的级联延迟或 HoL blocking。在本文中，我们提出 Astraea，一个状态感知调度引擎，旨在超越这些限制。通过把历史上下文与预测性预报统一起来，Astraea 在在线环境中近似获得全局、生命周期导向视角的收益。</p>
+
+    <h2>3 系统模型与问题形式化</h2>
+    <p>为应对 LLM agent inference 中“compute-I/O”交替执行带来的调度挑战，本节首先形式化 agentic execution workflow，然后定义调度目标。</p>
+
+    <h3>3.1 问题形式化</h3>
+    <p>LLM agents 通过使用外部工具完成复杂任务，因此其执行天然是多阶段的。我们把由用户发起的端到端推理任务定义为一个 <strong>parent request</strong>（或 complete request），记为 R<sub>i</sub>。它的执行过程不是单一计算过程，而是由若干 segment 组成的动态多阶段工作流。我们把 R<sub>i</sub> 的生命周期形式化表示为有序 segmented requests 序列：</p>
+    <div class="math">R<sub>i</sub> = &lt; S<sub>i</sub><sup>1</sup>, S<sub>i</sub><sup>2</sup>, ..., S<sub>i</sub><sup>k</sup> &gt;</div>
+    <p>其中 k<sub>i</sub> 是请求 R<sub>i</sub> 中 segment 的总数，在请求初始到达时未知。</p>
+    <p>每个 segmented request S<sub>i</sub><sup>j</sup> 的内部执行流可进一步抽象为三个有序阶段，它们具有不同的资源消耗特征：</p>
+    <ul>
+      <li><strong>Prefill Stage：</strong>该阶段负责在当前上下文上执行并行 Attention 计算，以生成初始 KV cache。其执行速度主要受 GPU 每秒浮点运算数（FLOPS）限制。因此，我们把该阶段归类为 <strong>Compute-bound</strong>。</li>
+      <li><strong>Decoding Stage：</strong>该阶段以自回归方式逐个生成 token。其执行速度主要受 GPU 内存带宽限制。我们把该阶段归类为 <strong>Memory-bound</strong>。</li>
+      <li><strong>API Call Stage：</strong>该阶段涉及与外部网络服务交互，在此期间本地计算和内存资源保持空闲。我们把该阶段归类为 <strong>I/O-bound</strong>。</li>
+    </ul>
+    <p>为形式化建模 segmented request S<sub>i</sub><sup>j</sup>，我们把它表示为一个三元组，其中每个元素代表相应阶段的预期服务时间成本：</p>
+    <div class="math">S<sub>i</sub><sup>j</sup> = (T(P<sub>i</sub><sup>j</sup>), T(D<sub>i</sub><sup>j</sup>), T(A<sub>i</sub><sup>j</sup>))</div>
+    <p>请求生命周期中不同资源瓶颈交替出现，是该调度问题的核心挑战。传统调度器通常把每个已就绪计算任务，即 segment S<sub>i</sub><sup>j</sup>，视为独立且无状态的调度单元，这会系统性惩罚包含多次 I/O 中断的请求。</p>
+    <p>本研究的核心调度目标被定义为最小化所有请求的平均端到端 Job Completion Time（JCT）。我们把完整请求 R<sub>i</sub> 的 JCT 定义为从其到达时间 t<sub>arrival</sub>(R<sub>i</sub>) 到其最终 segment 计算完成时间 t<sub>finish</sub>(R<sub>i</sub>) 的总时长。该时长由所有 segment 的实际处理时间和 ready queue 中的等待时间组成。令 C(S<sub>i</sub><sup>j</sup>) 为 segment S<sub>i</sub><sup>j</sup> 的完成时间，则 t<sub>finish</sub>(R<sub>i</sub>) = C(S<sub>i</sub><sup>k</sup>)。segment 的完成时间可递归定义为：</p>
+    <div class="math">C(S<sub>i</sub><sup>j</sup>) = t<sub>arrival</sub>(R<sub>i</sub>) + W(S<sub>i</sub><sup>1</sup>) + T<sub>comp</sub>(S<sub>i</sub><sup>1</sup>)，当 j = 1；<br>C(S<sub>i</sub><sup>j</sup>) = C(S<sub>i</sub><sup>j-1</sup>) + T(A<sub>i</sub><sup>j-1</sup>) + W(S<sub>i</sub><sup>j</sup>) + T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>)，当 j &gt; 1。</div>
+    <p>其中 T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>) 和 T(A<sub>i</sub><sup>j</sup>) 分别表示 segment S<sub>i</sub><sup>j</sup> 在计算阶段（prefill 与 decoding）和 API 调用阶段实际花费的时间。W(S<sub>i</sub><sup>j</sup>) 是该 segment 被调度执行之前在 ready queue 中的等待时间。因此，请求 R<sub>i</sub> 的 JCT 可表示为：</p>
+    <div class="math">JCT(R<sub>i</sub>) = C(S<sub>i</sub><sup>k</sup>) − t<sub>arrival</sub>(R<sub>i</sub>) = Σ<sub>j=1..k</sub>(W(S<sub>i</sub><sup>j</sup>) + T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>)) + Σ<sub>j=1..k−1</sub>T(A<sub>i</sub><sup>j</sup>)。</div>
+    <p>问题的优化目标可形式化定义为：</p>
+    <div class="math">Minimize&nbsp;&nbsp; (1 / |R|) Σ<sub>R<sub>i</sub>∈R</sub> JCT(R<sub>i</sub>)</div>
+    <p>其中 R 表示系统处理的所有请求集合。</p>
+
+    <h3>3.2 问题复杂性</h3>
+    <p>我们证明第 3.1 节定义的调度问题是 NP-hard。</p>
+    <p><strong>定理 3.1。</strong>LLM agent scheduling problem 是 NP-hard。</p>
+    <p><strong>证明。</strong>通过从经典的 1|prec|ΣC<sub>j</sub> 问题进行归约，详细证明见附录 A。□</p>
+
+    <h2>4 调度机制设计</h2>
+    <h3>4.1 总体架构</h3>
+
+    <figure class="figure">
+      <img src="../assets/astraea-2512.14142v1/figure3-architecture.png" alt="Astraea architecture extracted from PDF">
+      <figcaption class="caption">图 3：Astraea 的总体架构。</figcaption>
+    </figure>
+
+    <p>为应对 agentic workflows 的复杂性，我们设计了名为 Astraea 的调度系统。如图 3 所示，其架构由多个协同工作的关键组件组成：统一的 Request Pool、Service Time Predictor、状态感知 Scheduler、LLM Inference Engine，以及自适应 KV Cache Manager。三个核心组件的主要功能如下。</p>
+    <ul>
+      <li><strong>Service Time Predictor（第 4.2 节）：</strong>该组件为 request segments 标注估计计算时间和 API duration。它结合 prefill latency 的离线 profiling、segment 级 generation length oracle，以及基于类别的 API latency 统计信息，为调度决策提供关键元数据。</li>
+      <li><strong>Stateful-MLFQ Scheduler（第 4.3 节）：</strong>作为系统的核心决策器，该调度器实现了 multi-level feedback queue 算法，根据计算和 I/O 行为动态分类请求。它使用 token cost thresholds 进行优先级迁移，并使用增强 HRRN 策略进行队列内排序，以平衡效率和公平性。</li>
+      <li><strong>KV Cache Manager（第 4.4 节）：</strong>该管理器在 I/O 等待期间处理延迟与吞吐之间的权衡，根据 GPU 内存压力动态选择策略，以最小化 memory waste。</li>
+    </ul>
+    <p>这些组件以协调的循环工作流运行：ready segments 被收集到 Request Pool 后，Predictor 会为它们标注关键元数据，包括估计计算时间和 API 调用时长。随后 Scheduler 对它们进行优先级排序和批处理，交由 Inference Engine 执行。一旦某个 segment 触发外部 API 调用，其状态在等待期间由 KV Cache Manager 管理。该编排式工作流使整个请求生命周期上的全局优化成为可能。</p>
+
+    <h3>4.2 Service Time Predictor 设计</h3>
+    <p>调度决策的有效性依赖于对请求每个阶段服务时间的准确预测。Predictor 的设计与调度算法是正交问题。为严格评估调度器性能，并隔离潜在预测误差影响，我们采用一种理想化但实用的预测方法。</p>
+    <p><strong>计算时间预测。</strong>总计算时间 T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>) 由 prefill 时间和 decoding 时间组成。对于 prefill 阶段，由于它是输入长度的确定性函数，我们通过使用不同 sequence lengths 对目标硬件进行离线 profiling，构建数据驱动的性能模型。对于 decoding 阶段，预测生成长度是已知挑战。已有工作表明高精度预测器是可行的。基于此，我们采用 segment 级 oracle 来给出生成 token 数 n<sub>gen</sub>，使用数据集中的 ground-truth 值。需要强调的是，该 oracle 不知道未来 segment，因此保留了调度问题的在线性质。总预测计算时间为：T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>) = f<sub>prefill</sub>(n<sub>in</sub>) + n<sub>gen</sub> · avg_decode_latency_per_token。</p>
+    <p><strong>API latency 预测。</strong>API 调用时长高度可变，并依赖外部因素。静态分析通常不可行。然而，我们观察到同一功能类别内的 APIs 呈现稳定的 latency distributions。例如，与数学相关的 API 调用平均为 9e-5 秒，而图像生成和 chatbot APIs 可能需要几十秒，均值分别为 20.03s 和 28.6s。利用这一点，我们基于这些类别构建统计模型。调度时，我们从 prompt 中提取 API 类别，并使用该类别的平均 latency 作为预测值 T<sub>A</sub>(S<sub>i</sub><sup>j</sup>)。</p>
+
+    <h3>4.3 Stateful-MLFQ 调度算法</h3>
+    <h4>4.3.1 算法设计概览</h4>
+    <p>为落实第 3.1 节定义的全局优化目标，我们设计了状态感知 multi-level feedback queue 调度算法（Stateful-MLFQ），其完整逻辑见 Algorithm 1。该算法的核心在于“Stateful”性质：它不仅评估 segment 的当前特征，例如估计服务时间，还把 parent request 的历史行为，例如累计等待时间、过去的计算与 I/O 模式，与未来预测统一到一个决策框架中。它是一种分层、抢占式调度算法，目标是通过宏观和微观层面的控制在效率与公平性之间取得平衡。</p>
+
+    <h4>4.3.2 宏观控制：事件驱动的优先级迁移</h4>
+    <p>该算法的宏观框架建立在 multi-level feedback queue（MLFQ）结构之上，由 m 个具有严格优先级的队列 Q<sub>0</sub>, ..., Q<sub>m−1</sub> 组成。</p>
+    <p>我们采用 Token Cost 而不是 time slice 作为迁移阈值，因为在 continuous batching 中，time slice 是一个受 batch composition 强烈影响的不稳定指标。相反，Token Cost 是确定性、内在的指标，只衡量请求已经获得的计算工作量。这种稳定性使优先级迁移决策更加公平和鲁棒。</p>
+    <p>请求在队列之间的迁移是事件驱动的，由 Algorithm 1 的事件处理函数定义。</p>
+    <ol>
+      <li><strong>On Request Arrival：</strong>所有新请求被放入最高优先级队列 Q<sub>0</sub>，以确保快速响应。</li>
+      <li><strong>On Segment Completion：</strong>segment 执行结束后，系统根据 parent request 的行为动态调整其优先级。<br><strong>Demotion：</strong>如果某个 segment 的计算成本超过其队列阈值，则 parent request 被识别为计算密集型，并降级到下一个更低优先级队列。<br><strong>Promotion：</strong>如果某个 segment 在耗尽其 token cost quota 之前让出执行并进入 API 调用，则 parent request 被识别为 I/O 密集型，并提升到更高优先级队列。该策略旨在优先处理 I/O-bound 请求，以最小化它们对总 JCT 的影响。</li>
+    </ol>
+
+    <h4>4.3.3 调度周期：batch 构建与队列内排序</h4>
+    <p>在每个调度周期中，核心调度函数 BuildNextBatch 被调用，用于确定下一批要执行的请求。</p>
+    <p>该函数的第一步是处理饥饿（第 1 到 6 行）。它检查最低优先级队列 Q<sub>m−1</sub> 中的所有请求，如果某个请求的 response ratio 超过预定义 aging threshold，则将其抢先提升到最高优先级队列 Q<sub>0</sub>。</p>
+    <p>处理饥饿后，调度器从最高优先级队列 Q<sub>0</sub> 开始向下迭代（第 8 行），找到第一个非空队列 Q<sub>k</sub>。对于该队列中的所有 ready segments，调度器执行微观层面的队列内排序（第 11 到 14 行）。我们采用 Highest Response Ratio Next（HRRN）策略为每个 segment 计算分数：</p>
+    <div class="math">Score<sub>HRRN</sub>(S<sub>i</sub><sup>j</sup>) = (W(R<sub>i</sub>) + T<sub>proc</sub>(S<sub>i</sub><sup>j</sup>)) / T<sub>proc</sub>(S<sub>i</sub><sup>j</sup>)</div>
+    <p>其中 W(R<sub>i</sub>) 是其 parent request 的累计等待时间，T<sub>proc</sub>(S<sub>i</sub><sup>j</sup>) 是当前 segment 的估计服务时间。当等待时间相近时，该机制类似 Shortest Remaining Processing Time（SRPT），可提升效率。随着长作业等待时间累积，其分数增加，从而保证队列内公平性。</p>
+    <p>最后，候选 segments 按 HRRN 分数排序后，调度器将它们依次打包进下一 batch，直到达到 GPU 内存容量（第 15 到 20 行）。</p>
+
+    <div class="algorithm">
+      <strong>Algorithm 1：Stateful-MLFQ Scheduling</strong><br>
+      <strong>Input：</strong>m：队列数量；Q：优先级队列；T：Token thresholds；τ：Aging threshold。<br>
+      <strong>Output：</strong>下一执行 batch B。
+<pre>function BuildNextBatch(Q, T, τ):
+  // 1. Starvation Prevention (Aging)
+  foreach request R ∈ Q[m-1] do
+    if (R.waitTime + R.nextProcTime) / R.nextProcTime &gt; τ then
+      Q[0] ← Q[0] ∪ {R}
+      Q[m-1] ← Q[m-1] \ {R}
+
+  // 2. Batch Construction
+  B ← ∅
+  for k ← 0 to m - 1 do
+    if Q[k] is not empty then
+      C ← GetAllReadySegments(Q[k])
+
+      // 3. Intra-queue sorting using HRRN
+      foreach segment S ∈ C do
+        S.HRRNscore ← (S.totalwaitTime + S.procTime) / S.procTime
+      Csorted ← SortByHRRNScore(C, DESC)
+
+      // 4. Pack batch respecting memory constraints
+      foreach segment S ∈ Csorted do
+        if CanFitInMemory(B ∪ {S}) then
+          B ← B ∪ {S}
+      return B
+  return B</pre>
+    </div>
+
+    <h4>4.3.4 抢占粒度</h4>
+    <p>需要注意的是，我们算法的抢占发生在 segment 级。一旦一批任务开始执行，它会运行到完成，即 batch 中的所有 segments 要么触发 API 调用，要么生成最终响应，而不会在 iteration 级被中断。抢占在每个新的调度周期中实现：新到达或被提升的高优先级请求，可以在构建下一 batch 时“抢占”低优先级请求的执行机会。这一设计避免了细粒度抢占及其相关 KV cache swapping 成本带来的高昂开销。</p>
+
+    <h3>4.4 KV Cache 管理</h3>
+    <p>调度机制的抢占性质要求为所有被抢占但尚未完成的请求保留中间状态（KV cache）。如果没有有效的管理策略，GPU 内存会成为关键瓶颈，限制调度器效果，并可能重新引入我们希望解决的 HoL blocking。为此，Astraea 集成了一种自适应 KV cache 管理策略，旨在动态平衡单请求延迟与整体系统吞吐。该策略由 GPU 内存使用量的 high-watermark threshold 控制，形成两个不同运行模式。在低负载场景，即低于阈值时，系统默认对所有 I/O-bound 请求采用 <strong>Preserve</strong> 策略，以优先降低延迟。相反，当内存压力较高时，目标转向通过最小化 memory-time waste 来最大化资源利用率。系统评估三种候选策略的潜在 waste：Preserve、Discard 和 Swap，并选择成本最低者。按照 Infercept [1] 提出的模型，每种策略的 waste（W）估计如下：</p>
+    <div class="math">W<sub>preserve</sub> = T<sub>api</sub> · C<sub>self</sub> · M<br>W<sub>discard</sub> = T<sub>recompute</sub> · C<sub>batch</sub> · M<br>W<sub>swap</sub> = 2 · T<sub>swap</sub> · C<sub>batch</sub> · M</div>
+    <p>其中 T<sub>api</sub>、T<sub>recompute</sub> 和 T<sub>swap</sub> 分别是 API 调用、KV cache 重计算和 swap I/O 的预测时长。C<sub>self</sub> 是请求自身 cache 的 token 数，C<sub>batch</sub> 是如果释放内存即可被 batch 的其他请求的总 token 数，M 是每个 token 的 KV cache 所需内存。</p>
+    <p>系统随后选择 memory waste 最小的最优策略：</p>
+    <div class="math">Strategy = arg min<sub>s∈{Preserve, Discard, Swap}</sub> W<sub>s</sub></div>
+    <p>该自适应策略在竞争性负载下保证高资源利用率，同时在不拥塞场景中保持响应性。</p>
+
+    <h2>5 实验评估</h2>
+    <h3>5.1 实验设置</h3>
+    <p><strong>Testbed Implementation。</strong>我们在 vLLM 之上实现了 Astraea 系统，保留其高效推理架构，同时改进其原始 KV Cache 管理。Astraea 引入基于 GPU memory utilization 的动态调度策略。当内存可用性充足时，系统通过强制执行 Preserve 策略优先降低请求延迟，以确保快速响应。相反，当内存资源变得稀缺时，系统自动调整策略，优先最大化整体资源利用率，使用 Discard 和 Swap 策略平衡内存占用与系统吞吐。我们在内存管理和调度上的改进高度模块化，可与其他不冲突的 LLM 优化方法无缝集成。</p>
+    <p><strong>Environment。</strong>实验在一台配备两块通过 NVLink 连接的 NVIDIA A100 80GB GPU、28 核 Intel Xeon Gold 6330 2.0GHz CPU 以及 503GB RAM 的机器上进行。为评估所提算法在不同模型规模上的通用性和鲁棒性，我们在两个开源大模型上进行实验：6B 参数 GPT-J [40] 和 Vicuna-13B [49]。GPT-J 在单块 A100 上运行，适合中等推理负载场景；Vicuna-13B 在两块 A100 的 multi-GPU 环境中运行，以制造更高内存压力场景，测试该策略在复杂资源竞争条件下的性能。</p>
+    <p><strong>Dataset。</strong>我们使用 Infercept 发布的数据集进行实验。该数据集包含六个子任务：</p>
+    <ul>
+      <li><strong>Arithmetic Operations：</strong>基于 GSM8K-XL 数据集 [13]，覆盖需要多步推理的数学问题。</li>
+      <li><strong>Knowledge Question Answering：</strong>基于 Multi-Hop QA 数据集 [45]，代表知识库检索请求。</li>
+      <li><strong>Virtual Environment：</strong>基于 ALFWorld 数据集 [35]，模拟 LLM 控制虚拟环境中的实体以完成任务。</li>
+      <li><strong>Multi-turn Dialogue：</strong>基于 ShareGPT 数据集 [5]，模拟多轮人类交互。</li>
+      <li><strong>Image Generation：</strong>使用 ChatGPT [42] 自动生成触发 Stable Diffusion 模型 [31] 调用的 prompt sequences。</li>
+      <li><strong>Text-to-Speech：</strong>使用 ChatGPT 生成触发 Bark TTS 模型 [3] 调用的 prompt sequences。</li>
+    </ul>
+    <p>原始数据集从这六类任务中均匀采样。然而，为更好突出不同调度和内存策略之间的性能差异，我们在实验中人为增加了长延迟 API 请求的采样比例，以构造更具挑战性的系统负载。</p>
+    <p><strong>Baseline Methods。</strong>实验将 Astraea 与以下四种策略比较：（1）使用 FCFS（First-Come-First-Served）调度的 vLLM；（2）使用 SJF（Shortest Job First）调度的 vLLM；（3）使用 LAS（Least Attained Service）调度的 vLLM，这是 Autellix [25] 采用的核心调度思想；（4）Infercept（使用其默认 FCFS 策略）。</p>
+    <p><strong>Metrics。</strong>我们的主要评估指标是平均 Job Completion Time（JCT），它衡量从请求提交到最终完成的端到端延迟。不同于 Time-To-First-Token（TTFT）或 Time-Per-Output-Token（TPOT）等中间指标，JCT 为多阶段 agentic workflows 的系统性能和用户体验提供整体度量。</p>
+
+    <h3>5.2 端到端性能分析</h3>
+    <p>我们在 6B 参数 GPT-J 模型和更大的 13B 参数 Vicuna 模型上进行了一系列实验。为评估不同系统负载和内存压力下的性能，我们在四种不同 GPU memory availability 水平（30%、50%、70% 和 90%）下，测量一系列 Queries Per Second（QPS）的平均 JCT。两个模型的结果见图 4 和图 5。</p>
+
+    <figure class="figure wide">
+      <img src="../assets/astraea-2512.14142v1/figure4-gptj-jct.png" alt="GPT-J average JCT comparison extracted from PDF">
+      <figcaption class="caption">图 4：GPT-J 模型上不同调度策略的平均 JCT 对比。</figcaption>
+    </figure>
+
+    <p>在 GPT-J 模型上（图 4），Astraea 优于所有基线方法。在高内存压力（30% 和 50% 可用性）下，性能优势最明显。在 30% memory availability 的最竞争场景中，所有基线方法的 JCT 都会随着 QPS 增加而急剧上升，表明严重性能退化。相比之下，Astraea 的性能曲线更平缓，显示出更好的稳定性。例如，当 QPS=5 时，Astraea 的 JCT 为 122.88s，比 Infercept 低 19.1%，比 vLLM-FCFS 低 25.5%。</p>
+
+    <figure class="figure wide">
+      <img src="../assets/astraea-2512.14142v1/figure5-vicuna-jct.png" alt="Vicuna average JCT comparison extracted from PDF">
+      <figcaption class="caption">图 5：Vicuna-13B 模型上不同调度策略的平均 JCT 对比。</figcaption>
+    </figure>
+
+    <p>在更大的 Vicuna-13B 模型上，这一性能优势更加关键，因为模型更高的内存占用本身会加剧资源竞争。如图 5 所示，基线方法在内存压力下的性能退化更严重。在 30% memory availability 且高负载 QPS=5 时，Astraea 的 JCT 为 140.02s。相较 vLLM-SJF（171.16s）和 vLLM-LAS（153.96s），这是显著改进，展示了 Astraea 在调度更大模型时的鲁棒性。即使在 90% memory availability 的高可用场景中，Astraea 在 QPS=5 时的 JCT（132.53s）也分别比 Infercept 和 vLLM-FCFS 低 13.4% 和 16.0%。</p>
+    <p>总体而言，两个模型上的结果验证了状态感知调度和自适应 cache 管理的有效性。Astraea 的收益在具有挑战性的资源受限环境和更大规模模型上尤其明显，而这些场景代表真实生产系统。</p>
+
+    <h3>5.3 消融研究</h3>
+    <p>为进一步分解 Astraea 性能优势的来源，我们设计了消融研究，以隔离核心 Stateful-MLFQ 调度算法与自适应 KV cache 管理策略的贡献。为此，我们在原生 vLLM 框架上部署 Stateful-MLFQ 和所有基线调度算法，该框架使用没有 cache swapping 或 discarding 的 PagedAttention memory manager。</p>
+
+    <figure class="figure">
+      <img src="../assets/astraea-2512.14142v1/figure6-ablation.png" alt="Ablation study extracted from PDF">
+      <figcaption class="caption">图 6：在固定负载 QPS=3 下，比较不同调度算法在（a）GPT-J 和（b）Vicuna-13B 模型上的性能。</figcaption>
+    </figure>
+
+    <p>固定系统负载 QPS=3 的结果见图 6。在 GPT-J 模型上（图 6a），Stateful-MLFQ 在所有内存配置中表现最好。其优势在高内存压力下尤其明显。例如，在 30% memory availability 下，Stateful-MLFQ 的 JCT 为 137.66s，比 FCFS 低 2.3%，并比 SJF 显著低 19.3%。这表明，即使没有自适应 cache manager，生命周期感知调度逻辑也能有效缓解排队延迟和 head-of-line blocking。</p>
+    <p>我们进一步在更大的 Vicuna-13B 模型上验证了该算法的有效性（图 6b）。在内存最受限的 30% 场景中，Stateful-MLFQ 的平均 JCT 为 146.24s，相较 FCFS、LAS 和 SJF 分别获得 2.5%、3.8% 和 11.0% 的性能提升。该结果确认，在大规模模型的高内存压力下，状态感知调度策略具有稳健优势。总体而言，消融研究证明 Stateful-MLFQ 本身就是一种有效的调度算法，在不同模型和资源配置中具有良好的通用性与稳定性。</p>
+
+    <h3>5.4 敏感性、开销与稳定性</h3>
+    <p>我们进一步开展分析，评估超参数选择的鲁棒性以及系统的实际开销。参数敏感性研究确认，我们默认选择的 aging mechanism threshold 和 MLFQ token costs 都是有效且接近最优的。此外，我们量化了 Astraea scheduler 的计算开销，发现其可以忽略不计，在高负载场景中仅占平均 JCT 的 0.0006%。</p>
+    <p>我们还通过测量 JCT 随 QPS 增加的退化程度来分析系统稳定性。在高内存压力（30% 可用性）下，vLLM-SJF 等基线方法的 JCT 从低负载到高负载最多增加 51.9%，而 Astraea 的 JCT 仅增加 16.2%。这表明 Astraea 在竞争性环境中具有更好的稳定性和鲁棒性。这些分析的详细结果和相应图见附录 B 和 C。</p>
+
+    <h2>6 相关工作</h2>
+    <p>LLM inference serving 的优化是一个快速发展的领域。我们的工作位于面向多阶段 agentic workflows 的高级调度这一新兴方向，与之前针对 one-shot queries 的内存优化、batching 优化和调度工作不同。</p>
+    <p><strong>Memory and Batching Optimizations。</strong>大量研究旨在缓解大型 KV cache 开销以提升 GPU 吞吐。内存管理创新，例如 vLLM 的 PagedAttention [20]、LightLLM 的 token-level management [26] 和 S³ 的 pre-allocation scheme [18]，关注更细粒度的控制。其他方法包括 OLLA [36]，它优化 array lifetime 和 location，以在不改变模型的情况下减少内存使用；以及 FlashAttention [8]，一种 IO-aware exact attention 算法，可减少内存读写，用于更快训练和更长序列。同时，ORCA 的 continuous batching [48]、Sarathi [2] 与 DeepSpeed-FastGen [14] 中的 split-and-merge 等高级 batching 技术优化了请求分组。Batching 创新还包括 DVABatch [7]，它为 DNN serving 引入 diversity-aware multi-entry multi-exit batching，以及 FlexGen [34]，它通过内存聚合和压缩在单 GPU 上实现高吞吐 LLM inference。这些方法虽是基础性工作，但主要优化单个计算 segment，而不是具有长 I/O 阶段的 agentic workflows 中的 segment 间调度。</p>
+    <p><strong>Scheduling Policies。</strong>另一类工作关注调度策略。对于单请求优化，FastServe [43] 使用 job-level preemption 优先处理短查询。REEF [12] 实现微秒级抢占，用于低延迟 GPU-accelerated DNN inference。在 multi-tenant 场景中，VTC [33] 采用 cost function 保证公平性。其他方向包括 disaggregation，例如 Splitwise [28]、TetriInfer [15] 和 DistServe [50] 分离 prefill 和 decode 阶段以获得更好的负载均衡。AlpaServe [23] 使用 model parallelism 做 statistical multiplexing，在突发负载下改善延迟。Llumnix [37] 引入动态调度以处理异构请求和 tail latencies。然而，这些调度器面向传统 one-shot LLM queries。Infercept [1] 和 LAMPS [32] 率先在 I/O 等待期间 offload KV cache 以提升内存利用率。Autellix [25] 首次为 agentic tasks 提出 request-level scheduling policy（LAS）。与 Autellix 的回顾式策略不同，Astraea 是首个引入主动调度的方法，它利用计算与 I/O 时长预测来优化全局 JCT。</p>
+
+    <h2>7 结论</h2>
+    <p>本文关注 tool-augmented large language models（LLMs）产生的 agentic workflows 所带来的效率挑战。这类工作流通常包含频繁的外部 API 调用，尤其是基于 Web 的检索和服务访问。在这些场景中，计算与 I/O 的交替模式通常会导致显著的端到端延迟。为解决这一问题，我们以最小化平均 job completion time 为全局目标，对请求生命周期进行建模，并证明该调度问题是 NP-hard。在此基础上，我们提出 Astraea，一个面向 agentic workflows 的 inference serving engine。其核心是状态感知 multi-level feedback queue（Stateful-MLFQ）调度算法，该算法动态调整优先级，并把优化范围从单个 segment 扩展到整个生命周期。跨多种工作负载和模型的实验表明，Astraea 显著降低平均 JCT，验证了它在 Web-augmented inference 场景中的有效性和鲁棒性。</p>
+
+    <h2>参考文献</h2>
+    <p class="note">参考文献属于学术元数据，作者姓名、论文题名、会议名和系统名按原文保留。</p>
+    <ol class="refs">
+      <li>Reyna Abhyankar, Zijian He, Vikranth Srivatsa, Hao Zhang, and Yiying Zhang. Infercept: efficient intercept support for augmented large language model inference. In Proceedings of the 41st International Conference on Machine Learning, 2024.</li>
+      <li>Amey Agrawal, Nitin Kedia, Ashish Panwar, Jayashree Mohan, Nipun Kwatra, Bhargav Gulavani, Alexey Tumanov, and Ramachandran Ramjee. Taming Throughput-Latency tradeoff in LLM inference with Sarathi-Serve. In OSDI 24, 2024.</li>
+      <li>Suno AI. Bark: text-to-speech model, 2023.</li>
+      <li>Yuntao Bai et al. Constitutional AI: Harmlessness from AI feedback. arXiv:2212.08073, 2022.</li>
+      <li>Lin Chen et al. ShareGPT4V: Improving large multi-modal models with better captions. ECCV, 2024.</li>
+      <li>Lu Chen et al. AgentGraph: Toward universal dialogue management with structured deep reinforcement learning. IEEE/ACM TASLP, 2019.</li>
+      <li>Weihao Cui et al. DVABatch: Diversity-aware Multi-Entry Multi-Exit batching for efficient processing of DNN services on GPUs. USENIX ATC, 2022.</li>
+      <li>Tri Dao et al. FlashAttention: Fast and memory-efficient exact attention with IO-awareness. NeurIPS, 2022.</li>
+      <li>Google DeepMind. AI achieves silver-medal standard solving International Mathematical Olympiad problems, 2024.</li>
+      <li>Luyu Gao et al. PAL: Program-aided language models. ICML, 2023.</li>
+      <li>Izzeddin Gur et al. A real-world WebAgent with planning, long context understanding, and program synthesis. ICLR, 2024.</li>
+      <li>Mingcong Han et al. Microsecond-scale preemption for concurrent GPU-accelerated DNN inferences. OSDI, 2022.</li>
+      <li>Shibo Hao et al. ToolkenGPT: Augmenting frozen language models with massive tools via tool embeddings. NeurIPS, 2023.</li>
+      <li>Connor Holmes et al. DeepSpeed-FastGen: High-throughput text generation for LLMs via MII and DeepSpeed-Inference. arXiv:2401.08671, 2024.</li>
+      <li>Cunchen Hu et al. Inference without interference: Disaggregate LLM inference for mixed downstream workloads. arXiv:2401.11181, 2024.</li>
+      <li>Carlos E. Jimenez et al. SWE-bench: Can language models resolve real-world GitHub issues? ICLR, 2024.</li>
+      <li>Yunho Jin, Chun-Feng Wu, David Brooks, and Gu-Yeon Wei. S³: Increasing GPU utilization during generative inference for higher throughput. NeurIPS, 2023.</li>
+      <li>Yunho Jin, Chun-Feng Wu, David Brooks, and Gu-Yeon Wei. S³: Increasing GPU utilization during generative inference for higher throughput. NeurIPS, 2023.</li>
+      <li>Adarsh Kumarappan et al. LeanAgent: Lifelong learning for formal theorem proving. ICLR, 2025.</li>
+      <li>Woosuk Kwon et al. Efficient memory management for large language model serving with PagedAttention. SOSP, 2023.</li>
+      <li>LangChain. LangChain, 2023.</li>
+      <li>Zhuohan Li et al. AlpaServe: Statistical multiplexing with model parallelism for deep learning serving. OSDI, 2023.</li>
+      <li>Zhuohan Li et al. AlpaServe: Statistical multiplexing with model parallelism for deep learning serving. OSDI, 2023.</li>
+      <li>Ruibo Liu et al. Mind's Eye: Grounded language model reasoning through simulation. arXiv:2210.05359, 2022.</li>
+      <li>Michael Luo et al. Autellix: An efficient serving engine for LLM agents as general programs. arXiv:2502.13965, 2025.</li>
+      <li>ModelTC. LightLLM, 2024.</li>
+      <li>NVIDIA. FasterTransformer, 2023.</li>
+      <li>Pratyush Patel et al. Splitwise: Efficient generative LLM inference using phase splitting. ISCA, 2024.</li>
+      <li>Ofir Press et al. Measuring and narrowing the compositionality gap in language models. arXiv:2210.03350, 2022.</li>
+      <li>Alec Radford et al. Improving language understanding by generative pre-training. Technical report, OpenAI, 2018.</li>
+      <li>Robin Rombach et al. High-resolution image synthesis with latent diffusion models. CVPR, 2022.</li>
+      <li>Rana Shahout et al. Fast inference for augmented large language models. arXiv:2410.18248, 2024.</li>
+      <li>Ying Sheng et al. Fairness in serving large language models. OSDI, 2024.</li>
+      <li>Ying Sheng et al. FlexGen: High-throughput generative inference of large language models with a single GPU. ICML, 2023.</li>
+      <li>Mohit Shridhar et al. ALFWorld: Aligning text and embodied environments for interactive learning. ICLR, 2018.</li>
+      <li>Benoit Steiner et al. OLLA: Optimizing the lifetime and location of arrays to reduce memory usage of neural networks. arXiv:2210.12924, 2022.</li>
+      <li>Biao Sun et al. Llumnix: Dynamic scheduling for large language model serving. OSDI, 2024.</li>
+      <li>Hugo Touvron et al. LLaMA: Open and efficient foundation language models. arXiv:2302.13971, 2023.</li>
+      <li>Xingyao Wang et al. OpenHands: An open platform for AI software developers as generalist agents. ICLR, 2025.</li>
+      <li>Ben Wang and Aran Komatsuzaki. GPT-J-6B: A 6 billion parameter autoregressive language model, 2021.</li>
+      <li>Jason Wei et al. Chain-of-thought prompting elicits reasoning in large language models. NeurIPS, 2022.</li>
+      <li>Philip Welsby and Bernard M. Y. Cheung. ChatGPT, 2023.</li>
+      <li>Bingyang Wu et al. Fast distributed inference serving for large language models. arXiv:2305.05920, 2023.</li>
+      <li>John Yang et al. SWE-agent: Agent-computer interfaces enable automated software engineering. NeurIPS, 2024.</li>
+      <li>Zhilin Yang et al. HotpotQA: A dataset for diverse, explainable multi-hop question answering. EMNLP, 2018.</li>
+      <li>Shunyu Yao et al. WebShop: Towards scalable real-world web interaction with grounded language agents. NeurIPS, 2022.</li>
+      <li>Shunyu Yao et al. ReAct: Synergizing reasoning and acting in language models. ICLR, 2023.</li>
+      <li>Gyeong-In Yu et al. Orca: A distributed serving system for Transformer-Based generative models. OSDI, 2022.</li>
+      <li>Lianmin Zheng et al. Judging LLM-as-a-judge with MT-Bench and Chatbot Arena. NeurIPS, 2023.</li>
+      <li>Yinmin Zhong et al. DistServe: Disaggregating prefill and decoding for goodput-optimized large language model serving. OSDI, 2024.</li>
+      <li>Shuyan Zhou et al. WebArena: A realistic web environment for building autonomous agents. ICLR, 2024.</li>
+    </ol>
+
+    <h2>附录 A 问题复杂性</h2>
+    <p>我们通过从经典 NP-hard 问题进行归约，证明该调度问题是 NP-hard。该经典问题是在具有 precedence constraints 的单机上最小化 total completion time，记为 1|prec|ΣC<sub>j</sub>。</p>
+    <p><strong>证明。</strong>一个 1|prec|ΣC<sub>j</sub> 实例由作业集合 J = {J<sub>1</sub>, J<sub>2</sub>, ..., J<sub>n</sub>} 构成，其中每个作业 J<sub>k</sub> 具有处理时间 p<sub>k</sub>，并具有 precedence relation prec。</p>
+    <p>给定一个任意 1|prec|ΣC<sub>j</sub> 实例，我们构造一个 LLM agent scheduling problem 实例如下。我们考虑本问题的一个简化版本，其中 batch size 为 1，也就是说 GPU 每次只能处理一个 computational segment。</p>
+    <ol>
+      <li><strong>Decomposition：</strong>首先，我们把作业的 precedence graph 分解为一组不相交链，例如 J<sub>a</sub> → J<sub>b</sub> → J<sub>c</sub>，以及孤立作业，例如 J<sub>d</sub>。</li>
+      <li><strong>Mapping Construction：</strong>对于每条作业链，例如 J<sub>a</sub> → J<sub>b</sub> → J<sub>c</sub>，我们创建一个 parent request R<sub>i</sub>，由 segment 序列 &lt;S<sub>i</sub><sup>1</sup>, S<sub>i</sub><sup>2</sup>, S<sub>i</sub><sup>3</sup>&gt; 组成。对于每个孤立作业 J<sub>d</sub>，我们创建单 segment request R<sub>j</sub> = &lt;S<sub>j</sub><sup>1</sup>&gt;。</li>
+      <li><strong>Service Time Assignment：</strong>每个作业 J<sub>k</sub> 的处理时间 p<sub>k</sub> 被映射为其对应 segment S<sub>k</sub> 的 computational service time。为完成该归约，我们假设所有构造出的 segment 的 API call time 为 0。具体而言，对于由链 J<sub>a</sub> → J<sub>b</sub> → J<sub>c</sub> 派生的请求 R<sub>i</sub>，设置 T<sub>comp</sub>(S<sub>i</sub><sup>1</sup>) = p<sub>a</sub> 且 T(A<sub>i</sub><sup>1</sup>) = 0；T<sub>comp</sub>(S<sub>i</sub><sup>2</sup>) = p<sub>b</sub> 且 T(A<sub>i</sub><sup>2</sup>) = 0；依此类推。对于由孤立作业 J<sub>d</sub> 派生的请求 R<sub>j</sub>，设置 T<sub>comp</sub>(S<sub>j</sub><sup>1</sup>) = p<sub>d</sub> 且 T(A<sub>j</sub><sup>1</sup>) = 0。</li>
+    </ol>
+    <p>该构造可在多项式时间内完成。通过把 API call times 设为零，segments S<sub>i</sub><sup>j</sup> 与 S<sub>i</sub><sup>j+1</sup> 之间的依赖成为即时 precedence constraint，完全模拟原问题中的 J<sub>k</sub> → J<sub>l</sub> 关系。构造请求的一个有效 schedule 因而是对 computational tasks {T<sub>comp</sub>(S<sub>1</sub>), ..., T<sub>comp</sub>(S<sub>n</sub>)} 的排列，并尊重 intra-request ordering，这直接对应于作业 {J<sub>1</sub>, ..., J<sub>n</sub>} 的有效 schedule。</p>
+    <p>作业 J<sub>k</sub> 的完成时间 C<sub>k</sub> 等价于其对应 segment S<sub>k</sub> 的计算部分完成时间。因此，最小化作业完成时间之和 ΣC<sub>k</sub> 等价于最小化 segment completion times 之和。由于最小化所有请求的 total（或 average）Job Completion Time（JCT）要求最小化其底层 segment completion times 之和，本问题的解就给出了 1|prec|ΣC<sub>j</sub> 问题的解。</p>
+    <p>由于 NP-hard 问题 1|prec|ΣC<sub>j</sub> 的任意实例都能在多项式时间内归约到我们的 LLM agent scheduling problem 的一个特殊情况，即 batch size 为 1 且 API times 为 0，因此我们的一般问题也是 NP-hard。□</p>
+
+    <h2>附录 B 参数敏感性分析</h2>
+    <p>为验证所提方法中关键超参数选择的合理性和鲁棒性，本节对 aging threshold 与 queue cost thresholds 进行敏感性分析。所有实验均在 GPT-J 模型和 50% memory availability 下进行。</p>
+
+    <h3>B.1 Aging Threshold 分析</h3>
+    <p>Aging mechanism 是 Stateful-MLFQ 算法保证公平性的关键。为研究其核心参数 aging threshold 的影响，我们开展了一系列敏感性实验，把 threshold（response ratio）设置为默认值 5、减半值 2.5、加倍值 10，以及 infinity（禁用该机制）。图 7 的结果表明，禁用 aging mechanism 在所有测试 QPS 负载下表现最差，其 JCT 最多比默认配置高 7%。这确认了 anti-starvation mechanism 的关键作用。此外，结果显示，将 threshold 从默认值减半或加倍都会导致平均 JCT 上升，证明存在一个最优参数范围。</p>
+
+    <figure class="figure">
+      <img src="../assets/astraea-2512.14142v1/figure7-aging-threshold.png" alt="Aging threshold sensitivity extracted from PDF">
+      <figcaption class="caption">图 7：不同系统负载下 aging threshold 对性能的影响。</figcaption>
+    </figure>
+
+    <h3>B.2 Queue Cost Thresholds 分析</h3>
+    <p>在 Stateful-MLFQ 算法中，队列迁移阈值由 segment 的计算成本（token count）决定。六个队列的默认阈值设置为 [128, 256, 384, 512, 640]。为考察该参数的敏感性，我们在保持其他配置不变的情况下，将阈值减半和加倍。图 8 的结果表明，默认配置在所有负载下都保持最优性能。阈值过低会导致中等长度 segments 过早降级，而阈值过高会削弱对 I/O-intensive requests 的保护。</p>
+
+    <figure class="figure">
+      <img src="../assets/astraea-2512.14142v1/figure8-queue-thresholds.png" alt="Queue cost threshold sensitivity extracted from PDF">
+      <figcaption class="caption">图 8：不同系统负载下 queue cost thresholds 对性能的影响。</figcaption>
+    </figure>
+
+    <h2>附录 C 系统开销与稳定性分析</h2>
+    <p>为量化 Stateful-MLFQ 调度逻辑本身的计算开销，我们测试了单次调度决策的耗时。在典型高负载场景（GPT-J 6B 模型，50% memory availability，QPS=5）下，Astraea 的平均单次调度决策时间为 0.132 毫秒。鉴于工作负载中一个完整请求平均包含 5.17 个 segments，完整请求生命周期的总调度开销约为 0.68 毫秒。与该场景中 123.6 秒的平均 JCT 相比，调度器自身的总计算开销可以忽略不计，仅占 0.0006%。</p>
+    <p>Astraea 的稳定性最好通过其在高负载和内存受限条件下的性能体现，如性能评估所示（图 4）。稳定性可通过 QPS 增加时 JCT 曲线的陡峭程度来衡量。在最竞争的场景中，例如 GPT-J 上 30% memory availability（图 4a），基线方法表现出高度不稳定性。例如，vLLM-SJF 的 JCT 从 QPS=1 时的 116.05s 飙升到 QPS=5 时的 176.34s，增加 51.9%，表明在负载下严重性能退化。相比之下，Astraea 的 JCT 曲线显著更平坦，仅从 105.77s 上升到 122.88s，增加 16.2%。这表明 Astraea 具有更好的负载适应性和调度稳定性。通过其状态感知策略有效缓解资源竞争和 head-of-line blocking，Astraea 保持了可预测且鲁棒的性能曲线，这是在负载波动且资源约束严格的生产环境中部署 LLM agent services 的关键要求。</p>
+  </div>
+</main>
+</body>
+</html>

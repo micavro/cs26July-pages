@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LMCache：企业级 LLM Inference 的高效 KV Cache Layer 中文翻译稿</title>
+<style>
+:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:860px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:830px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+</style>
+</head>
+<body>
+<main class="paper">
+<h1>LMCache：企业级 LLM Inference 的高效 KV Cache Layer 中文翻译稿</h1>
+<div class="authors">Yuhan Liu, Jiayi Yao, Yihua Cheng, Yuwei An, Xiaokun Chen, Shaoting Feng, Yuyang Huang, Samuel Shen, Rui Zhang, Kuntai Du, Junchen Jiang</div>
+<div class="meta">源文件：my-documents/lmcache-2510.09665.pdf | 19 页 | 保留术语：LMCache、KV cache、context caching、PD disaggregation、connector、controller</div>
+<section class="columns">
+
+<section class="abstract"><p><strong>摘要。</strong>KV cache 过去通常只存放在 GPU memory 中，用来加速 LLM decoding。但企业级 inference 正出现两个趋势：不同 queries 之间要复用相同 prefix 的 KV cache，prefill 和 decode 也越来越常被拆到不同 engines 或 GPUs 上运行。这要求 KV cache 能被高效地从 GPU 中抽取、存储、传输并重新加载。LMCache 是一个开源 KV caching layer，支持 vLLM 和 SGLang，能够在 GPU、CPU、local disk、remote backend、Redis 等层次之间移动 KV cache，并对上层暴露 pin、lookup、cleanup、movement、compression 等管理能力。实验显示，在 multi-round QA、document analysis 和 PD disaggregation 等场景中，LMCache 相对基础 vLLM 和商用替代方案可带来最高 15 倍 throughput 提升，并显著降低 TTFT 与 ITL。</p></section>
+
+<h2>1 引言</h2>
+<p>LLM inference 的增长已经超过训练，支撑客服、代码生成、RAG、文档分析和 agentic workflows。KV cache 是其中的核心中间状态。传统系统将它视为单个 query 生命周期内的 GPU 内部数据结构，但新型应用让 KV cache 跨 query、跨 engine 复用成为必要。</p>
+<p>论文指出两类关键场景。第一是 <span class="term">cross-query caching</span>：把共享 prefix 的 KV cache 持久化到更低层存储，后续 query 复用时避免重复 prefill。第二是 <span class="term">prefill-decode disaggregation</span>：prefill GPU 产出 KV cache，decode GPU 负责 latency-sensitive generation，因此 KV cache 必须跨 engine 或跨 GPU 传输。</p>
+<figure class="figure narrow"><img src="../assets/lmcache-2510.09665/figures/fig1-adoption-statistics.png" alt="LMCache 采用与使用增长统计"><figcaption class="caption">图 1：真实使用统计显示，LMCache 用户数、存储 KV cache 规模和镜像拉取量持续增长。</figcaption></figure>
+<p>真实部署数据支持这个趋势：用户存储的 KV cache 总量持续增长，远超 GPU memory 容量；被移出 GPU 的 tokens 也越来越频繁地被重复访问。换言之，KV cache 不再只是 GPU 内部临时缓存，而是需要被视为可管理、可迁移、可复用的系统级数据。</p>
+<figure class="figure wide"><img src="../assets/lmcache-2510.09665/figures/fig2-4-cache-motivation.png" alt="LMCache 支持 context caching 与 PD disaggregation"><figcaption class="caption">图 2 到图 4：LMCache 支持跨 query 复用与 PD disaggregation，同时真实统计显示 GPU 外 KV cache 规模和 reuse per token 都在增长。</figcaption></figure>
+
+<h2>2 动机与挑战</h2>
+<p>论文总结了高效 KV caching 的三类系统挑战。第一是 I/O inefficiency。现代 inference engines 采用 paged attention，KV cache 被切成许多小 pages，常见大小只有几十 KB。直接以 page 粒度存取无法打满带宽，而且会引入额外 CPU-GPU copy。</p>
+<p>第二是 inference engine 快速演进。每周都有新模型、新 attention kernel、新 memory layout。若 KV caching library 与某个 engine 内部实现耦合太深，就需要频繁改适配层。LMCache 因此提供标准化 connector interface，把 cache layer 与 engine backend 解耦。</p>
+<p>第三是缺少管理 API。query router、scheduler、operator 或应用层需要知道哪些 prefix 的 KV cache 在哪里，能否 pin、evict、compress 或 move。没有统一接口时，上层只能做粗糙 routing 和 eviction，导致重复存储、错误调度和不可预测的 cache behavior。</p>
+
+<h2>3 LMCache 概览</h2>
+<p>LMCache 位于 LLM inference engine 和异构 storage/network devices 之间。它的任务是提供统一、高性能的 KV cache movement and management substrate，同时兼容 vLLM 和 SGLang 等快速变化的后端。</p>
+<figure class="figure wide"><img src="../assets/lmcache-2510.09665/figures/fig6-system-workflow.png" alt="LMCache 端到端系统工作流"><figcaption class="caption">图 6：LMCache 的端到端工作流。核心组件包括 KV Connector、Token Processor、Cache Engine、Storage Manager、Transfer Channel、Event Manager 和 Cache Controller。</figcaption></figure>
+<p>Store workflow 中，新 query 先经过 KV connector 准备 tokenized prompt 和 GPU address metadata；token processor 判断哪些新 tokens 尚未存储；storage manager 通过 transfer channel 将这些 KV cache 保存到 backend。</p>
+<p>Retrieve workflow 中，query 同样先经过 connector；token processor 识别 backend 中已经匹配的 prefix tokens；event manager 检查 query ID 和已有地址；若需要加载，GPU connector 从对应 storage tier 拉回 KV cache。Lookup workflow 则服务于 router 或 scheduler，它们可以查询某个 token prefix 的 cache 是否存在以及位于何处。</p>
+
+<h2>4 性能优化</h2>
+<p>LMCache 的第一个优化是 <span class="term">batched operations</span>。它不按 inference engine 的小 page 逐个传输，而把多个 pages 组合成更大的 chunk，默认可达到 256 tokens per chunk。存储时，系统先用 CUDA kernel 将散布在 GPU paged memory 中的 KV cache 拷贝到连续 streaming buffer，再由 DMA engine 批量写入低层存储；加载时则反向进行。</p>
+<p>第二个优化是 <span class="term">compute-I/O overlap</span>。LMCache 采用 layer-wise pipelining：在第一层执行 inference 时，下一层的 KV cache 可以异步载入 buffer 并转换为 paged layout。它也支持 request-level asynchronous loading，在请求真正开始 inference 前利用排队等待时间预取 KV cache，从而降低实际服务时的 loading delay。</p>
+<p>第三个优化是 <span class="term">minimum data copy</span>。当 KV cache 同时写入多个目的地，例如 CPU memory、local disk、remote backend 时，LMCache 通过 reference counter 和零拷贝式设计避免重复复制数据。对于现代 engines 维护的 free GPU pages，LMCache 还实现 dynamic offloading，仅复制 free pages 的子集，减少额外内存压力。</p>
+<figure class="figure narrow"><img src="../assets/lmcache-2510.09665/figures/fig7-dynamic-offloading.png" alt="LMCache dynamic offloading"><figcaption class="caption">图 7：dynamic offloading。LMCache 只复制 free pages 中必要的区域，以避免大量无效拷贝。</figcaption></figure>
+
+<h2>5 Connector 与 Controller 接口</h2>
+<p>Connector interface 让 LMCache 能接入不同 inference engine。论文列出一组函数，例如 get_num_new_matched_tokens 查询 backend 中可命中的 cache token 数，update_state_after_alloc 更新某 query 是否需要从 backend 转移 KV cache，build_connector_meta 生成 transfer metadata，start_load_kv 和 wait_load_kv 启动并同步加载，start_store_kv 和 wait_store_kv 则处理 offloading。</p>
+<p>Controller API 把 KV cache 暴露成一等可管理对象。上层可以执行 lookup、pin、move、compress、delete、clear 等操作。这样 query router 可以做 KV-cache-aware routing，operator 可以 pin 热门文档，agent framework 可以识别和移动特定内容对应的 KV cache。</p>
+
+<h2>6 实验评估</h2>
+<p>LMCache 的实验覆盖单节点 CPU offloading、real-trace driven evaluation、centralized storage server、PD disaggregation、component-wise evaluation 和 sensitivity study。指标包括 TTFT、ITL、throughput、loading bandwidth 和 tail latency。</p>
+<figure class="figure wide"><img src="../assets/lmcache-2510.09665/figures/fig8-end-to-end-comparison.png" alt="LMCache 与 vLLM 和商用替代方案对比"><figcaption class="caption">图 8：相对 basic vLLM、basic vLLM CPU offloading 和两个商用方案，LMCache 在 TTFT 和 ITL 上显著更优，并支持更高 QPS。</figcaption></figure>
+<p>在 single-node CPU offloading 中，LMCache 在多个模型上都降低 TTFT 和 ITL。论文给出的核心解释是：basic vLLM 只把 KV data 保存在 GPU 中，可命中容量有限；basic vLLM CPU offloading 虽能迁移到 CPU，但 per-layer、per-16-token transmission 无法充分利用带宽；LMCache 以 chunk 粒度加载并使用高性能 CUDA kernels，因此命中率和带宽利用率都更高。</p>
+<p>Real-trace evaluation 中，LMCache 在不同 QPS、不同模型和真实公司流量分布上持续优于 basic vLLM。论文报告在五个模型的高 QPS 区间，LMCache 将 TTFT 至少降低 3.7 到 6.8 倍，ITL 至少降低 19% 到 58%。在 remote backend offloading 场景中，LMCache 相对 basic vLLM 在相同 TTFT 下提升 1.3 到 3 倍 inference throughput。</p>
+<figure class="figure wide"><img src="../assets/lmcache-2510.09665/figures/fig12-pd-disaggregation.png" alt="PD disaggregation 下的 tail latency"><figcaption class="caption">图 12：在 PD disaggregation 中，LMCache 相比 vLLM native PD disaggregation 显著降低 tail latency。</figcaption></figure>
+<p>在 PD disaggregation 中，LMCache 把 prefiller 产生的 KV cache 以 chunk 方式高效传给 decoder。相比 vLLM native PD disaggregation，论文报告 mean TTFT 降低 1.53 到 1.84 倍，mean ITL 降低 1.12 到 1.66 倍。component-wise breakdown 表明，收益主要来自更低 transmission latency 和更好的 asynchronous compute overlap。</p>
+
+<h2>7 真实部署经验</h2>
+<p>论文的部署经验很有价值。第一，remote storage loading 并不总比 full prefill 慢。随着对象存储和 remote backend 带宽提升，在长上下文场景中加载已有 KV cache 可能直接低于重新 prefill 的成本。第二，context truncation 会显著降低 prefix cache hit ratio，因为截断后的输入不再与已缓存 prefix 对齐。真实 trace 中，某些场景 prefix hit ratio 会从约 85% 降到 45%。</p>
+<p>第三，生产环境更偏好 containerized deployment。许多企业用户直接使用官方 Docker images，而不是深度修改 LMCache 源码。第四，生产中的 prefix cache hit rate 往往高于预期。现代 coding assistant、chat application 和 RAG pipeline 产生大量 dynamically reusable contexts，不只是固定 system prompt 可复用。</p>
+
+<h2>8 结论与选题启发</h2>
+<p>LMCache 将 KV cache 从 engine 内部临时状态提升为分布式系统中的一等数据结构。它的贡献不只是某个 cache policy，而是把 movement、storage、connector、controller 和 deployment lessons 组织成可复用 layer。论文表明，面向 agentic workflows 和企业应用时，KV cache management 应与 scheduler、router 和 storage hierarchy 协同设计。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>若研究多智能体调度或 state locality，LMCache 可以作为“底层 cache substrate”参考。它提供了上层调度器需要的 API：查询 cache 是否存在、位置在哪里、是否可移动、是否可 pin 或压缩。未来选题可以把 workflow-level scheduler 与 LMCache-style controller 结合，研究 query routing、cache retention 和 tier placement 的联合优化。</p></div>
+<p>局限是论文偏系统工程，理论模型较少。它说明了生产瓶颈和 API 形态，但如何根据 future reuse probability、deadline 或 workflow DAG 结构做最优 cache orchestration，仍需要新的调度模型。</p>
+
+<h2>参考说明</h2>
+<pre class="refs-block">参考文献保留在原 PDF 中。本文译稿主要覆盖摘要、引言、动机、挑战、LMCache 架构、性能优化、connector/controller 接口、实验结果和真实部署经验。</pre>
+
+</section>
+</main>
+</body>
+</html>

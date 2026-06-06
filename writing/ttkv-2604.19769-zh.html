@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TTKV：面向长上下文 LLM Inference 的 Temporal-Tiered KV Cache 中文翻译稿</title>
+<style>
+:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+</style>
+</head>
+<body>
+<main class="paper">
+<h1>TTKV：面向长上下文 LLM Inference 的 Temporal-Tiered KV Cache 中文翻译稿</h1>
+<div class="authors">Guohui Duanzuyang, Weihan Yang, Hao Huang, Denghui Wei, Shuhao Wang, Wen Xin, Jianping Ke</div>
+<div class="meta">源文件：my-documents/ttkv-2604.19769.pdf | 9 页 | 保留术语：temporal-tiered KV cache、fast tier、slow tier、differential quantization、streaming attention、Host-to-GPU traffic</div>
+<section class="columns">
+
+<section class="abstract"><p><strong>摘要。</strong>TTKV 研究长上下文推理中的 KV cache 内存和传输瓶颈。论文把人类记忆的短期/长期层次作为类比：最近且高价值的 KV 保存在 GPU HBM 的 fast tier，以全精度快速访问；更旧的上下文移动到 host DRAM 的 slow tier，并以压缩格式保存。与简单 offloading 不同，TTKV 同时做三件事：temporal tier layout 按时间和访问价值分层；differential quantization 对 key 和 value 采用不同精度；streaming attention 把 slow-tier block 识别、异步预取和注意力计算重叠起来。实验显示，在 128K context 下，TTKV 可将 Host-to-GPU traffic 降低到约 1/6，并将 p95 decode latency 降低约 76%，同时保持接近 FP16 的准确率。</p></section>
+
+<h2>1 引言</h2>
+<p>长上下文 LLM inference 的主要瓶颈已经从单纯计算转向 KV cache movement。随着上下文扩展到 64K、128K 甚至更长，所有历史 token 的 key/value 都留在 GPU 中会迅速耗尽 HBM；全部 offload 到 CPU 又会让每一步 decoding 被 PCIe 传输拖慢。</p>
+<p>TTKV 的核心思想是 temporal locality。最近 token 更可能被频繁访问，也更应保留高精度；较早 token 虽然仍可能被用到，但访问频率较低，可以放到容量更大的慢层并压缩。这样比“全量 FP16 留在 HBM”省内存，也比“每步从 DRAM 拉大量 KV”省传输。</p>
+<figure class="figure wide"><img src="../assets/ttkv-2604.19769/figures/fig2-key-value-distribution.png" alt="key 与 value 幅度分布"><figcaption class="caption">图 2：key 的动态范围和尖峰比 value 更明显，因此 slow tier 中 key 应保留更高精度，value 可以更激进压缩。</figcaption></figure>
+
+<h2>2 三个设计原则</h2>
+<p>论文将方法拆成三个原则。第一是 <span class="term">Tier Layout</span>：fast tier 存最近 tokens，slow tier 存较老 context。fast tier 使用 GPU HBM 和 FP16，slow tier 使用 host DRAM 和压缩块。第二是 <span class="term">Tier Content</span>：不同数据不必同等精度保存。实验发现 key 对 attention score 更敏感，value 更稳定，因此 key 使用 8-bit，value 使用 4-bit。</p>
+<p>第三是 <span class="term">Tier Interaction</span>：跨层访问必须被 pipeline 化。若每个 decoding step 先等待 DRAM 传输再计算，GPU 会大量空转。TTKV 将 slow-tier KV 切成 block，用 streaming attention 在计算当前可用 KV 的同时异步预取下一批 block。</p>
+<figure class="figure wide"><img src="../assets/ttkv-2604.19769/figures/fig3-4-pipeline-and-overview.png" alt="TTKV pipeline 和系统概览"><figcaption class="caption">图 3 到图 4：TTKV 通过传输/计算重叠降低 GPU idle，并把 tier layout、differential quantization 和 streaming attention 组成统一框架。</figcaption></figure>
+
+<h2>3 方法细节</h2>
+<p>TTKV 将一个上下文的 KV cache 分为 K<sub>fast</sub>、V<sub>fast</sub> 和 K<sub>slow</sub>、V<sub>slow</sub>。新生成 token 先进入 fast tier；当 fast tier 达到容量上限时，最旧 block 被压缩并追加到 slow tier。slow tier 中 block 大小影响延迟和准确率：太小会增加调度与索引开销，太大则降低选择粒度。</p>
+<p>Streaming attention 的伪代码体现了三步：先在 fast tier 上计算 attention；再对 slow-tier blocks 打分并选择 TopK；然后异步预取、解压和计算这些 blocks 的 attention，并把结果合并。这个流程不是简单缓存命中，而是面向每一步 decoding 的流式稀疏访问。</p>
+<figure class="figure wide"><img src="../assets/ttkv-2604.19769/figures/alg1-table1-streaming-attention.png" alt="TTKV streaming attention 与初步结果"><figcaption class="caption">算法 1 与表 1：TTKV streaming attention 将 block identification、async prefetch、decompression 和 fast-tier eviction 组合起来。</figcaption></figure>
+
+<h2>4 实验结果</h2>
+<p>实验在 L-Eval、GovReport、Qasper、MultiNews、RepoBench-P、RULER 等长上下文任务上进行，模型包括 LLaMA-3.1、Qwen2.5 和 DeepSeek-R1 蒸馏变体。指标包括 p95 latency、Host-to-GPU traffic、准确率、ROUGE-L、F1 和吞吐。</p>
+<p>核心结果是：相比 FP16 dense KV，TTKV 在多个模型上显著降低 H-&gt;G traffic 和 p95 latency，同时准确率接近或略优于基线压缩方法。论文报告在 128K context 下，平均 H-&gt;G traffic 降低约 5.94 倍，p95 latency 降低约 76%。吞吐实验也显示，随着 context length 增长，其他方法受传输拖累明显，而 TTKV 仍保持较高 token/s。</p>
+<figure class="figure wide"><img src="../assets/ttkv-2604.19769/figures/fig5-6-results.png" alt="TTKV RULER 结果"><figcaption class="caption">图 5 到图 6：TTKV 在 RULER 上显著降低 Host-to-GPU traffic 和 p95 decode latency，并优于 KIVI、KVQuant、DiffKV、ShadowKV 等基线。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/ttkv-2604.19769/figures/tables4-7-ablation.png" alt="TTKV 长上下文结果和消融"><figcaption class="caption">表 4 到表 7：长上下文任务与消融结果表明，tier layout、differential quantization 和 streaming attention 都是必要组件。</figcaption></figure>
+
+<h2>5 局限与选题启发</h2>
+<p>TTKV 主要处理单请求或 batch 中的长上下文推理，对 workflow-level reuse、跨请求共享和多 agent 依赖没有建模。它也默认 slow tier 为 host DRAM，没有展开 SSD 或分布式 cache 的 placement 问题。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>TTKV 可以作为“单请求长上下文 KV 分层”的系统基线。若未来研究 agent workflow，TTKV 的 temporal tier 可扩展为 workflow-aware tier：不仅按 token 年龄，还按下游 branch probability、共享 prompt 价值和 deadline 决定哪些 KV 留在 HBM、哪些压缩到 DRAM。</p></div>
+
+<h2>参考说明</h2>
+<pre class="refs-block">参考文献保留在原 PDF 中。本文译稿覆盖摘要、设计原则、方法、实验和对选题的启发。</pre>
+
+</section>
+</main>
+</body>
+</html>

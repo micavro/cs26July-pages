@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helium：面向 Agentic Workflows 的高效 LLM Serving 中文翻译稿</title>
+<style>
+:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+</style>
+</head>
+<body>
+<main class="paper">
+<h1>Helium：面向 Agentic Workflows 的高效 LLM Serving 中文翻译稿</h1>
+<div class="authors">Nojan Sheybani, Jiaqi Shi, Tao Li</div>
+<div class="meta">源文件：my-documents/helium-2603.16104.pdf | 18 页 | 保留术语：agentic workflow、workflow DAG、query optimizer、query processor、CacheFetch、parallel/map-reduce/reflexive patterns</div>
+<section class="columns">
+
+<section class="abstract"><p><strong>摘要。</strong>Helium 研究的是 agentic workflows 中的 LLM serving 问题。传统 data system 可以把 SQL pipeline 优化成 operators 之间的数据流，但 LLM application 往往把每次模型调用当成远程黑盒 API，导致跨请求依赖、重复 prompt、共享上下文和 cache locality 都无法被系统看见。Helium 把 LLM 调用抽象成 workflow DAG 中的 operator，并把输入 token、输出 token、batch size、KV cache 容量和动态分支都纳入执行计划。系统由 query optimizer 和 query processor 组成，前者做 cache-aware logical planning，后者在运行时做 cache-aware scheduling、proactive cache management 和 worker coordination。实验表明，在 trading、map-reduce、debate、agent review 等工作流中，Helium 相比 LangGraph、vLLM 和 naive pipeline 能显著降低端到端延迟，并在更高 batch size 和更多 worker 下保持更好的扩展性。</p></section>
+
+<h2>1 引言</h2>
+<p>论文的起点很清楚：LLM 应用正在从单轮问答变成多步骤工作流。一个 workflow 可能先检索资料，再让多个 agent 并行分析，之后汇总、反思、重写或投票。每一步都是 LLM operator，operator 之间有数据依赖，也会产生重复 prompt 和可复用 KV cache。</p>
+<p>传统 LLM serving 只看到一条条独立请求，因此只能优化单个 request 的 batching、routing 或 prefix cache。它不知道这些请求属于同一个 workflow，也不知道某个 operator 的输出会喂给哪个下游 operator。Helium 的核心主张是：agentic workflows 应该像数据库 query plan 一样被系统化优化，而不是只在应用层串联 API 调用。</p>
+<figure class="figure wide"><img src="../assets/helium-2603.16104/figures/fig1-agentic-disparities.png" alt="传统 SQL pipeline 与 agentic workflow 的差异"><figcaption class="caption">图 1：传统 SQL pipeline 的 operator sharing 已经成熟，而 agentic workflow 中 LLM operator 的共享、批处理和 KV cache 复用仍缺少系统支持。</figcaption></figure>
+
+<h2>2 问题与系统目标</h2>
+<p>Helium 观察到 agentic workflow 有三类重要结构。第一是 <span class="term">parallel</span>：多个 agent 或多个子任务可以同时运行。第二是 <span class="term">map-reduce</span>：长文档被分块处理，再合并结果。第三是 <span class="term">reflexive</span>：模型输出会触发下一轮自评、修正或调用工具。这些结构都让单请求调度策略失效。</p>
+<p>系统要解决两类矛盾。计算上，LLM engine 喜欢把足够多请求放入 batch，提高 GPU 利用率；应用上，workflow 更关心最终结果完成时间，而不是某个中间请求的局部 latency。内存上，KV cache 能减少重复 prefill，但 cache 容量有限，错误地保留低价值 cache 会挤掉更关键的下游状态。</p>
+
+<h2>3 系统架构</h2>
+<p>Helium 将应用提交的 workflow DAG 转换为 query batch。每个节点是 LLM operator，边表示数据依赖。系统先通过 profiling 得到不同 operator 的输入长度、输出长度和运行代价，再交给 query optimizer 生成 cache-aware logical plan。运行阶段由 query processor 负责调度 worker、插入 CacheFetch 操作，并根据执行进度调整 cache。</p>
+<figure class="figure wide"><img src="../assets/helium-2603.16104/figures/fig3-system-architecture.png" alt="Helium 系统架构"><figcaption class="caption">图 3：Helium 架构。optimizer 处理 workflow DAG、data batch 和 profiles，processor 负责 proactive cache management 与 cache-aware scheduling。</figcaption></figure>
+<p>Query optimizer 的关键任务是识别哪些中间 prompt 或 KV cache 未来会被复用，并把复用机会显式放入计划。Query processor 则需要在 worker 层面做选择：哪些 operator 现在运行，哪些 cache 预取或保留，哪些请求可以合批，哪些请求必须等待上游结果。</p>
+
+<h2>4 调度与 CacheFetch</h2>
+<p>Helium 的一个重要设计是把 cache 操作显式化。对于多个 agent 共享的 static prompt、few-shot examples 或上游输出，系统可以插入 CacheFetch，让下游 operator 在执行前直接拿到所需 KV state。这样可以减少重复 prefill，也让调度器知道某个请求是否因为 cache 未就绪而暂时不适合运行。</p>
+<figure class="figure wide"><img src="../assets/helium-2603.16104/figures/fig4-scheduling-workflow.png" alt="workflow DAG 与 templated radix tree"><figcaption class="caption">图 4：Helium 将 workflow DAG 映射到 templated radix tree，用静态 prompt、placeholder、LLM output 和 prefix structure 标识可共享状态。</figcaption></figure>
+<p>调度层的目标不是简单先来先服务，而是结合工作流结构优化端到端时间。对于 map 阶段，系统倾向于提高并行度和 batch 利用率；对于 reduce 或 reflexive 阶段，系统更关注关键路径。论文把这些模式都纳入 cost model，避免局部吞吐最优拖慢最终结果。</p>
+
+<h2>5 实验结果</h2>
+<p>实验包含合成工作流和真实场景。Trading workflow 中，系统把并行分析、debate 和 map-reduce 模式组合起来评估；Helium 的优化计划比 LangGraph 等基线更少重复 prefill，并能降低 P95 latency。随着 batch size 增大，Helium 的优势更明显，因为它能同时利用 batching 和 cache locality。</p>
+<figure class="figure wide"><img src="../assets/helium-2603.16104/figures/fig6-7-trading-and-latency.png" alt="Trading workflow 和 latency 结果"><figcaption class="caption">图 6 到图 7：Trading workflow 体现 parallel、debate 与 map-reduce 结构；Helium 在不同 batch size 下保持更低延迟。</figcaption></figure>
+<p>Ablation 说明，单独使用 cache 或单独使用 workflow-aware scheduling 都不够。真正的收益来自二者联合：调度器知道 cache 未来是否会被下游复用，cache manager 也知道当前工作流是否在关键路径上。</p>
+<figure class="figure wide"><img src="../assets/helium-2603.16104/figures/fig8-9-sensitivity.png" alt="Helium sensitivity 结果"><figcaption class="caption">图 8 到图 9：随着 debate rounds、branches、workers 和 cache capacity 变化，Helium 相对基线保持较稳定的收益。</figcaption></figure>
+
+<h2>6 局限与选题启发</h2>
+<p>Helium 仍是早期系统。它依赖 profiling 和工作流结构可见性；对开放式动态工具调用、外部环境状态变化、模型输出长度预测错误等问题处理有限。论文也没有把多层 KV cache placement 或跨节点网络传输作为主线。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>这篇最适合作为“agent workflow + KV/state locality + scheduling”的主线参考。它提醒后续选题不要只做单请求 cache policy，而要让调度器看到 DAG、branch、共享 prompt 和端到端目标。可延伸的问题是：在 conditional DAG 中，如何根据分支概率、输出长度预测和 cache reuse probability 联合决定调度、预取和保留。</p></div>
+
+<h2>参考说明</h2>
+<pre class="refs-block">参考文献保留在原 PDF 中。本文译稿覆盖摘要、引言、系统目标、架构、调度设计、实验和对选题的启发。</pre>
+
+</section>
+</main>
+</body>
+</html>

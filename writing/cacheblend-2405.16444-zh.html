@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CacheBlend：面向 RAG 的 Cached Knowledge Fusion 中文翻译稿</title>
+<style>
+:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+</style>
+</head>
+<body>
+<main class="paper">
+<h1>CacheBlend：面向 RAG 的 Cached Knowledge Fusion 中文翻译稿</h1>
+<div class="authors">Jiaji Yao, Hanchen Li, Yuhan Liu, Siddhant Ray, Yihua Cheng, Qizheng Zhang, Kuntai Du, Shao Hu, Junchen Jiang</div>
+<div class="meta">源文件：my-documents/cacheblend-2405.16444.pdf | 16 页 | 保留术语：CacheBlend、RAG、full KV recompute、full KV reuse、selective KV recompute、HKVD tokens、KV cache fusor</div>
+<section class="columns">
+
+<section class="abstract"><p><strong>摘要。</strong>CacheBlend 面向 RAG 和多文档问答中的 KV cache reuse。RAG 请求常包含多个检索到的文本 chunks。Full KV recompute 质量最好但 prefill 慢；prefix caching 只能复用第一个 prefix chunk；full KV reuse 虽快，却忽略不同 chunks 之间的 cross-attention，可能产生错误答案。CacheBlend 的折中方案是 selective KV recompute：复用每个 chunk 的预计算 KV，只对少量高影响 tokens 的 KV 进行重算和融合。论文提出用 KV deviation 识别 High-KV-Deviation tokens，并设计 loading controller、KV cache manager 和 KV cache fusor，把 cache 从 CPU/SSD 加载到 GPU 并逐层融合。实验显示，相比 full KV recompute，CacheBlend 将 TTFT 降低 2.2 到 3.3 倍；相比 prefix caching，throughput 最高提升 3.3 倍，同时保持接近 full recompute 的质量。</p></section>
+
+<h2>1 动机</h2>
+<p>RAG 的输入通常不是一个共享前缀，而是一组检索 chunks 加用户 query。若每次都对所有 chunks 重新 prefill，长上下文会导致 TTFT 很高。若只复用 prefix KV，非前缀 chunks 仍需要重算。若把每个 chunk 的 KV 直接拼接复用，则缺少 chunks 之间的 cross-attention，模型可能无法理解多个证据之间的关系。</p>
+<figure class="figure wide"><img src="../assets/cacheblend-2405.16444/figures/fig1-cache-reuse-comparison.png" alt="full recompute、prefix caching、full reuse 与 CacheBlend 对比"><figcaption class="caption">图 1：CacheBlend 试图同时保留 full KV recompute 的质量和 full KV reuse 的速度。</figcaption></figure>
+<p>论文用一个 Messi 与 Ronaldo 的例子解释问题：两个 chunk 分别给出球员信息，query 需要比较二者。Full KV reuse 忽略 chunk 间交互时，模型容易回答错误。多 chunk 越多，cross-attention 越重要，full KV reuse 与 full recompute 的质量差距越大。</p>
+<figure class="figure wide"><img src="../assets/cacheblend-2405.16444/figures/fig2-3-motivation.png" alt="CacheBlend motivation"><figcaption class="caption">图 2 到图 3：更多相关 chunks 能提高生成质量；但直接 full KV reuse 可能因忽略 cross-attention 产生错误答案。</figcaption></figure>
+
+<h2>2 Fast KV Cache Fusing</h2>
+<p>CacheBlend 的目标是快速把多个预计算 KV cache 融合成接近 full recompute 的新 KV cache。论文定义两类差异：KV deviation 衡量某 token 的预计算 KV 与 full recompute KV 的差距；attention deviation 衡量前向 attention matrix 的差距。直觉是：KV deviation 高的 tokens 更可能导致 attention deviation，需要被优先重算。</p>
+<figure class="figure wide"><img src="../assets/cacheblend-2405.16444/figures/fig4-attention-matrices.png" alt="full recompute 与 full reuse 的 attention matrix 差异"><figcaption class="caption">图 4：Full KV reuse 缺少 cross-attention，使 forward attention matrix 与 full recompute 明显不同。</figcaption></figure>
+<p>Selective recompute 的流程是：每层只选择一小部分 tokens，重算它们的 Q/K/V 或相关 KV，然后把未选中 tokens 的原 KV 复用回来。这样计算量近似与重算比例 r 成正比，而不是与完整 prompt 长度成平方增长。</p>
+<figure class="figure wide"><img src="../assets/cacheblend-2405.16444/figures/fig5-6-selective-recompute.png" alt="selective recompute 与 attention deviation"><figcaption class="caption">图 5 到图 6：只重算少量 HKVD tokens 就能显著降低 attention deviation。</figcaption></figure>
+
+<h2>3 如何选择重算 tokens</h2>
+<p>直接计算 KV deviation 需要先知道 full recompute KV，这会失去加速意义。CacheBlend 因此提出估计方案：在前若干层或少量 pilot computation 中观察 token 的 deviation，再推断后续层需要重算的 tokens。论文经验发现 10% 到 20% 的 HKVD tokens 往往足以恢复大部分质量。</p>
+<p>这个设计背后依赖 attention sparsity：在 attention matrix 中，真正高影响的 token 对通常只占很小比例。若某 token 与其他 chunks 的交互很弱，它的预计算 KV 与 full recompute KV 差异也通常较小，不值得重算。</p>
+
+<h2>4 系统实现</h2>
+<p>CacheBlend 在 vLLM 上实现，主要组件包括 loading controller、KV cache manager 和 KV cache fusor。用户请求到来后，系统先检索相关 chunks，查询这些 chunks 的 KV cache 是否已经在 CPU/SSD 中存在；若存在，则加载到 GPU；若不存在，则计算并存储。KV cache fusor 逐层执行 selective recompute，并把融合后的 KV 交给 LLM engine 继续 decode。</p>
+<figure class="figure wide"><img src="../assets/cacheblend-2405.16444/figures/fig11-system-workflow.png" alt="CacheBlend 系统工作流"><figcaption class="caption">图 11：CacheBlend 在 RAG 请求中从存储加载 chunk KV cache，并通过 fusor 生成 fused KV cache。</figcaption></figure>
+<p>系统还利用 pipeline overlap：下一层 KV cache 可以在当前层 selective recompute 时从存储加载，减少额外等待。对于大规模 RAG，KV cache 存在 SSD 或 CPU 中并不一定慢，只要加载和计算能重叠，TTFT 仍可显著下降。</p>
+
+<h2>5 实验结果</h2>
+<p>实验覆盖 2WikiMQA、Musique、SAMSum、MultiNews 等数据集，模型包括 Mistral-7B、Yi-34B、Llama-70B。论文比较 Full KV recompute、Prefix Caching、Full KV reuse、MapReduce/MapRerank 和 CacheBlend。</p>
+<p>总体结果表明，CacheBlend 相比 full KV recompute 将 TTFT 降低 2.2 到 3.3 倍，质量下降很小；相比 full KV reuse，CacheBlend 显著提高 F1 和 ROUGE-L；相比 prefix caching，它能处理多个非前缀 chunks，throughput 最高提升 3.3 倍。</p>
+<figure class="figure wide"><img src="../assets/cacheblend-2405.16444/figures/fig12-13-evaluation.png" alt="CacheBlend evaluation"><figcaption class="caption">图 12 到图 13：CacheBlend 在多个数据集和模型上降低 TTFT，同时保持较好质量。</figcaption></figure>
+
+<h2>6 局限与选题启发</h2>
+<p>CacheBlend 主要面向 RAG 中多个静态文本 chunks 的融合，不直接处理复杂 agent workflow 中的动态状态、分支依赖和端到端调度。它的 token 选择也依赖经验性 attention sparsity，理论保证较弱。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>CacheBlend 是“多段知识 KV 融合”的关键参考。若后续选题关注 agent workflow，可把每个 agent 的 stable context、tool output 或中间摘要看作 chunks，研究哪些 token/state 需要重算，哪些可直接复用，以及这个选择如何与 workflow scheduler 和 cache placement 联合优化。</p></div>
+
+<h2>参考说明</h2>
+<pre class="refs-block">参考文献保留在原 PDF 中。本文译稿覆盖摘要、动机、fast KV cache fusing、selective recompute、系统实现、实验和对选题的启发。</pre>
+
+</section>
+</main>
+</body>
+</html>
