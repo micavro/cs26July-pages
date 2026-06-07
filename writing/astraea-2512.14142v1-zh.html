@@ -330,8 +330,6 @@
     <h3>2.1 背景</h3>
     <h4>2.1.1 从基础 LLM 到 LLM 驱动 Agent 的演进</h4>
     <p>早期 LLM 擅长 in-context learning（ICL），但本质上作为独立文本生成器运行，缺乏与外部环境交互或动态验证生成知识的机制。一个关键进展是 Chain-of-Thought（CoT）[41] 等结构化推理框架的出现。它把推理负载从单次查询响应事务转变为更长的顺序推理过程，并隐式引入了早期工作流语义。</p>
-    <p>在此基础上，ReAct [47] 等框架正式整合了推理与外部工具使用，建立了本地计算与远程 I/O 交错的核心 agentic loop。这种能力转变直接对应系统需求的转变：工作负载不再是单体计算，而是具有异构资源需求（计算、内存、I/O）的依赖 segment 动态图。</p>
-    <p>这些 agentic 能力通常通过多种 API 调用模式实现，可分为三类：集成非 LLM 工具，例如翻译器和检索系统；用于复杂问题求解的迭代 self-calls；以及多组件协作，例如由 LLM 编排其他模型。该范式催生了 LangChain [21] 和 AgentGraph [6] 等复杂框架，它们支持多 Agent 工作流，也给 serving infrastructure 的资源管理和调度带来前所未有的挑战。</p>
     <p>基于此，ReAct [47] 等框架把推理与外部动作结合起来，使模型能够使用工具，并将内部推理锚定在真实世界观测上。从系统角度看，这种整合把负载从连续计算转变为本地推理与远程 I/O 之间的循环，这正是 agentic workflows 的特征。</p>
     <p>Agent 的“action”能力由多种模式实现，广义上都可以看作 API 调用。根据交互目标，它们可分为三类：（1）<strong>集成非 LLM 工具</strong>，即调用外部专用 API 以弥补 LLM 的不足，例如使用翻译器或信息检索系统；（2）<strong>迭代 self-calls</strong>，即 LLM 多次调用自身来分解任务并维护推理历史；（3）<strong>多组件协作</strong>，即把多个模型和工具组合成由核心 planner LLM 编排的协作系统。该范式催生了 LangChain [21] 和 AgentGraph [6] 等框架，从而支持复杂的多 Agent 协作工作流。</p>
 
@@ -575,11 +573,9 @@ W_{\mathrm{swap}} &= 2\, T_{\mathrm{swap}}\, C_{\mathrm{batch}}\, M
       <li>Cunchen Hu et al. Inference without interference: Disaggregate LLM inference for mixed downstream workloads. arXiv:2401.11181, 2024.</li>
       <li>Carlos E. Jimenez et al. SWE-bench: Can language models resolve real-world GitHub issues? ICLR, 2024.</li>
       <li>Yunho Jin, Chun-Feng Wu, David Brooks, and Gu-Yeon Wei. S³: Increasing GPU utilization during generative inference for higher throughput. NeurIPS, 2023.</li>
-      <li>Yunho Jin, Chun-Feng Wu, David Brooks, and Gu-Yeon Wei. S³: Increasing GPU utilization during generative inference for higher throughput. NeurIPS, 2023.</li>
       <li>Adarsh Kumarappan et al. LeanAgent: Lifelong learning for formal theorem proving. ICLR, 2025.</li>
       <li>Woosuk Kwon et al. Efficient memory management for large language model serving with PagedAttention. SOSP, 2023.</li>
       <li>LangChain. LangChain, 2023.</li>
-      <li>Zhuohan Li et al. AlpaServe: Statistical multiplexing with model parallelism for deep learning serving. OSDI, 2023.</li>
       <li>Zhuohan Li et al. AlpaServe: Statistical multiplexing with model parallelism for deep learning serving. OSDI, 2023.</li>
       <li>Ruibo Liu et al. Mind's Eye: Grounded language model reasoning through simulation. arXiv:2210.05359, 2022.</li>
       <li>Michael Luo et al. Autellix: An efficient serving engine for LLM agents as general programs. arXiv:2502.13965, 2025.</li>
