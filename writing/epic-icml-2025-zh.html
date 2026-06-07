@@ -14,6 +14,38 @@ h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12
 .callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
 @media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
 </style>
+
+  <style>
+    mjx-container[jax="CHTML"] {
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+    }
+
+    .math {
+      font-family: inherit;
+    }
+
+    .math mjx-container[jax="CHTML"][display="true"] {
+      margin: 0.2em 0;
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      },
+      chtml: {
+        linebreaks: {automatic: true}
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
 <main class="paper">
@@ -40,7 +72,7 @@ h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12
 
 <h2>4 LegoLink 算法</h2>
 <p>直接复用 PIC KV 的 naive 方法会失败。原因是每个 chunk 在 compile 时都从位置 0 开始，初始 tokens 会产生强 attention sink，link 后这些 token 仍吸引过多 attention。Fully Recompute 准确但慢，CacheBlend 通过选择一部分 tokens 重算改善质量但复杂度较高。</p>
-<p>LegoLink 的观察是：只需要重算每个 chunk 的前 k 个 tokens，就能让它们意识到自己在当前 prompt 中不是开头，从而显著缓解 attention sink。若 k 很小，重算复杂度接近 O(kN) 而不是 O(N<sup>2</sup>)。LegoLink-0 甚至把 dummy beginning tokens 在 compile 时加入、link 时丢弃，进一步减少链接时开销。</p>
+<p>LegoLink 的观察是：只需要重算每个 chunk 的前 k 个 tokens，就能让它们意识到自己在当前 prompt 中不是开头，从而显著缓解 attention sink。若 k 很小，重算复杂度接近 O(kN) 而不是 \(O(N^{2})\)。LegoLink-0 甚至把 dummy beginning tokens 在 compile 时加入、link 时丢弃，进一步减少链接时开销。</p>
 <figure class="figure wide"><img src="../assets/epic-icml-2025/figures/fig4-pic-algorithms.png" alt="PIC algorithms 对比"><figcaption class="caption">图 4：Naive、Fully Recompute、CacheBlend 和 LegoLink 的对比。LegoLink 只重算每个 chunk 的初始 tokens。</figcaption></figure>
 
 <h2>5 实验结果</h2>

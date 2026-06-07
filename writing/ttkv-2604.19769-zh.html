@@ -14,6 +14,38 @@ h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12
 .callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
 @media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
 </style>
+
+  <style>
+    mjx-container[jax="CHTML"] {
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+    }
+
+    .math {
+      font-family: inherit;
+    }
+
+    .math mjx-container[jax="CHTML"][display="true"] {
+      margin: 0.2em 0;
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      },
+      chtml: {
+        linebreaks: {automatic: true}
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
 <main class="paper">
@@ -35,7 +67,7 @@ h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12
 <figure class="figure wide"><img src="../assets/ttkv-2604.19769/figures/fig3-4-pipeline-and-overview.png" alt="TTKV pipeline 和系统概览"><figcaption class="caption">图 3 到图 4：TTKV 通过传输/计算重叠降低 GPU idle，并把 tier layout、differential quantization 和 streaming attention 组成统一框架。</figcaption></figure>
 
 <h2>3 方法细节</h2>
-<p>TTKV 将一个上下文的 KV cache 分为 K<sub>fast</sub>、V<sub>fast</sub> 和 K<sub>slow</sub>、V<sub>slow</sub>。新生成 token 先进入 fast tier；当 fast tier 达到容量上限时，最旧 block 被压缩并追加到 slow tier。slow tier 中 block 大小影响延迟和准确率：太小会增加调度与索引开销，太大则降低选择粒度。</p>
+<p>TTKV 将一个上下文的 KV cache 分为 \(K_{\mathrm{fast}}\)、\(V_{\mathrm{fast}}\) 和 \(K_{\mathrm{slow}}\)、\(V_{\mathrm{slow}}\)。新生成 token 先进入 fast tier；当 fast tier 达到容量上限时，最旧 block 被压缩并追加到 slow tier。slow tier 中 block 大小影响延迟和准确率：太小会增加调度与索引开销，太大则降低选择粒度。</p>
 <p>Streaming attention 的伪代码体现了三步：先在 fast tier 上计算 attention；再对 slow-tier blocks 打分并选择 TopK；然后异步预取、解压和计算这些 blocks 的 attention，并把结果合并。这个流程不是简单缓存命中，而是面向每一步 decoding 的流式稀疏访问。</p>
 <figure class="figure wide"><img src="../assets/ttkv-2604.19769/figures/alg1-table1-streaming-attention.png" alt="TTKV streaming attention 与初步结果"><figcaption class="caption">算法 1 与表 1：TTKV streaming attention 将 block identification、async prefetch、decompression 和 fast-tier eviction 组合起来。</figcaption></figure>
 

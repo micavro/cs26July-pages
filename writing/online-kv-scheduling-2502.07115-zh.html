@@ -14,6 +14,38 @@ h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12
 .callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
 @media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
 </style>
+
+  <style>
+    mjx-container[jax="CHTML"] {
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+    }
+
+    .math {
+      font-family: inherit;
+    }
+
+    .math mjx-container[jax="CHTML"][display="true"] {
+      margin: 0.2em 0;
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      },
+      chtml: {
+        linebreaks: {automatic: true}
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
 <main class="paper">
@@ -32,12 +64,12 @@ h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12
 <p>论文贡献包括：第一，给出带 KV cache memory constraints 的在线 batching/scheduling 数学模型；第二，用整数规划定义 hindsight optimal，用作离线金标准；第三，证明一般对抗到达场景下确定性在线算法无法获得常数 competitive ratio；第四，提出 MC-SF 算法并给出结构化条件下的理论保证；第五，在合成数据和真实对话 trace 上验证算法效果。</p>
 
 <h2>2 模型</h2>
-<p>系统只有一个 computational worker，可理解为单个 GPU 或联合工作的 GPU worker，memory limit 为 M。请求 i 到达时，调度器看到 prompt size s<sub>i</sub> 和 output length o<sub>i</sub>，实际算法可使用输出长度预测值 o&#771;<sub>i</sub>。请求经历两个阶段：prompt phase 需要存储 s<sub>i</sub> 个 prompt token 的 KV；token phase 中第 j 个输出 token 需要 s<sub>i</sub>+j 的 memory。最后一个 token 完成后，该请求相关 KV cache 全部释放。</p>
-<p>一个 batch 可以同时处理多个请求的下一个 token。如果请求还未开始，放入 batch 会生成它的第一个输出 token；如果请求已在进行，放入 batch 会生成下一个 token。论文假设 batch processing time 为一单位时间，且请求一旦启动就 non-preemptive，即必须连续处理 o<sub>i</sub> 轮直到完成。</p>
-<p>调度器的约束是任意时刻 active requests 的 memory sum 不超过 M。若 S(t) 是时刻 t 已启动但未完成的请求集合，o<sub>i</sub><sup>(t)</sup> 是请求 i 已生成到的位置，则需满足 Σ<sub>i∈S(t)</sub>(s<sub>i</sub>+o<sub>i</sub><sup>(t)</sup>) ≤ M。优化目标是最小化 total end-to-end latency，即所有请求 completion time 减 arrival time 的和。</p>
+<p>系统只有一个 computational worker，可理解为单个 GPU 或联合工作的 GPU worker，memory limit 为 M。请求 i 到达时，调度器看到 prompt size \(s_{i}\) 和 output length \(o_{i}\)，实际算法可使用输出长度预测值 \(\tilde{o}_{i}\)。请求经历两个阶段：prompt phase 需要存储 \(s_{i}\) 个 prompt token 的 KV；token phase 中第 j 个输出 token 需要 \(s_i + j\) 的 memory。最后一个 token 完成后，该请求相关 KV cache 全部释放。</p>
+<p>一个 batch 可以同时处理多个请求的下一个 token。如果请求还未开始，放入 batch 会生成它的第一个输出 token；如果请求已在进行，放入 batch 会生成下一个 token。论文假设 batch processing time 为一单位时间，且请求一旦启动就 non-preemptive，即必须连续处理 \(o_{i}\) 轮直到完成。</p>
+<p>调度器的约束是任意时刻 active requests 的 memory sum 不超过 M。若 S(t) 是时刻 t 已启动但未完成的请求集合，\(o_{i}^{(t)}\) 是请求 i 已生成到的位置，则需满足 \(\sum_{i\in S(t)}(s_i + o_i^{(t)}) \le M\)。优化目标是最小化 total end-to-end latency，即所有请求 completion time 减 arrival time 的和。</p>
 
 <h2>3 Hindsight Optimal 与整数规划</h2>
-<p>为了评价在线算法，论文定义 hindsight optimal：假设调度器在时间开始前就知道所有请求的 arrival time、prompt size 和 output length。它不现实，但可作为最优下界。论文把它写成整数规划，变量 x<sub>i,t</sub> 表示请求 i 是否在时间 t 开始处理。</p>
+<p>为了评价在线算法，论文定义 hindsight optimal：假设调度器在时间开始前就知道所有请求的 arrival time、prompt size 和 output length。它不现实，但可作为最优下界。论文把它写成整数规划，变量 \(x_{i,t}\) 表示请求 i 是否在时间 t 开始处理。</p>
 <p>目标函数最小化所有请求的完成延迟。约束包括：每个请求只能在到达后开始一次；任意时刻所有 active requests 的 KV memory 总量不超过 M；变量为二元变量。这个 formulation 把 non-preemptive execution、token-wise KV growth 和 GPU memory limit 放到同一个离线优化问题中。</p>
 <p>这个 benchmark 的意义在于区分两类损失：算法结构本身不够好导致的损失，以及在线决策不知道未来请求导致的信息损失。在合成实验中，论文专门设计 all-at-once arrivals 和 online stochastic arrivals 来分别观察这两种因素。</p>
 
@@ -45,7 +77,7 @@ h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12
 <p>在一般在线 adversarial arrivals 下，论文先给出负结果：任何 deterministic online algorithm 的 competitive ratio 至少是 Ω(√n)，因此不能期望一个在所有实例上都有常数竞争比的确定性在线策略。</p>
 <p>在这个负结果之后，论文提出 MC-SF。算法思想很直接：每一轮先处理已经开始的请求，避免中途停滞导致 active KV cache 被长期占用；然后在 waiting requests 中，按预测输出长度从短到长尝试加入当前 batch。每加入一个新请求前，算法都检查未来若干 peak points 的 memory feasibility，确保后续 token generation 中不会超过 M。</p>
 <figure class="figure wide"><img src="../assets/online-kv-scheduling-2502.07115/figures/alg1-mc-sf.png" alt="MC-SF 算法伪代码"><figcaption class="caption">算法 1：Memory-Constrained Shortest-First。核心是短作业优先，同时用预测输出长度做 KV memory feasibility check。</figcaption></figure>
-<p>MC-SF 需要对输出长度有上界预测 o&#771;<sub>i</sub> ≥ o<sub>i</sub>。这不是纯理论假设，论文指出输出长度预测已是 LLM serving 的活跃研究方向。若预测是上界，算法能保守估计未来 KV footprint；若预测有误，实验中再加入 protection margin 来缓解 overflow。</p>
+<p>MC-SF 需要对输出长度有上界预测 \(\tilde{o}_i \ge o_i\)。这不是纯理论假设，论文指出输出长度预测已是 LLM serving 的活跃研究方向。若预测是上界，算法能保守估计未来 KV footprint；若预测有误，实验中再加入 protection margin 来缓解 overflow。</p>
 <p>理论分析集中在特殊结构化场景：所有请求同时到达、prompt size 相同，预测输出长度相对真实长度在常数因子内。在这些条件下，论文证明 MC-SF 的 total latency 相对 hindsight optimal 为 O(1)。这个结论不表示 MC-SF 在所有实际场景都有常数比，而是说明它的设计与最优调度结构相容，尤其适合 high-demand、许多请求同时等待的场景。</p>
 
 <h2>5 数值实验</h2>

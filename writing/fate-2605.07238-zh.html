@@ -8,6 +8,38 @@
 :root{--ink:#161616;--muted:#5f6368;--rule:#d9dde3;--paper:#fff;--bg:#f4f6f8;--accent:#184c7f;--soft:#f8fafc}
 *{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.72;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:70px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}h1{margin:0 auto 22px;max-width:850px;text-align:center;font-size:32px;line-height:1.28;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:820px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:830px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:830px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:760px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}.math{break-inside:avoid;margin:16px 0 18px;padding:12px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px;font-family:"Times New Roman","Cambria Math",serif;font-size:15.5px;line-height:1.65;text-align:center;overflow-x:auto}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:520px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
 </style>
+
+  <style>
+    mjx-container[jax="CHTML"] {
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+    }
+
+    .math {
+      font-family: inherit;
+    }
+
+    .math mjx-container[jax="CHTML"][display="true"] {
+      margin: 0.2em 0;
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      },
+      chtml: {
+        linebreaks: {automatic: true}
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
 <main class="paper">
@@ -23,15 +55,19 @@
 <p>因此调度问题也发生变化。传统 serving 中调度器主要响应队列状态；在异构 workflow serving 中，调度器还会塑造下游 stage 继承的 execution state。把一个 stage 放在不同 device 上，可能保留 model residency、避免未来 transfer、改善 parent-child colocation，或保留可复用 prefix-related state。相反，过度追求当前负载均衡可能破坏对端到端 latency 更重要的 locality。</p>
 <p>FATE（Future-stATE-aware scheduling）主张调度不应只优化即时执行效率，还应优化 future-state preservation。它在有限 downstream horizon 内估计当前 frontier assignment 的后果，但只提交当前 frontier，并在状态更新后继续推进。</p>
 <h2>2 问题形式化</h2>
-<p>系统在线服务动态 workflow 实例集合 W<sub>t</sub>。每个 workflow 是 DAG G=(V,E)，节点 v 表示 workflow stage，有向边 (u,v) 表示 v 必须接收 u 的输出后才能开始。每个 stage v 具有模型类型 m(v)、eligible device set A(v)、bounded multi-device shard degree R(v)、base runtime profile c<sub>v</sub>、stage-local feature ϕ(v)、parent set Pa(v) 和 child set Ch(v)。</p>
-<div class="math">s<sub>t</sub> = (ρ<sub>t</sub>, κ<sub>t</sub>, ℓ<sub>t</sub>, τ<sub>t</sub>)</div>
-<p>执行状态 s<sub>t</sub> 包含四类信息：ρ<sub>t</sub> 表示每个 device 上的 model residency；κ<sub>t</sub> 表示 prefix/cache 相关可复用 metadata；ℓ<sub>t</sub> 记录已完成 parent output 的 device location；τ<sub>t</sub> 记录 device availability time。Ready set 是 parent 全部完成的 stage 集合；feasible candidate set 是在当前资源约束下可把 ready stage 放到 eligible device 上的 assignment。</p>
+<p>系统在线服务动态 workflow 实例集合 \(W_{t}\)。每个 workflow 是 DAG G=(V,E)，节点 v 表示 workflow stage，有向边 (u,v) 表示 v 必须接收 u 的输出后才能开始。每个 stage v 具有模型类型 m(v)、eligible device set A(v)、bounded multi-device shard degree R(v)、base runtime profile \(c_{v}\)、stage-local feature ϕ(v)、parent set Pa(v) 和 child set Ch(v)。</p>
+<div class="math">\[
+s_t = (\rho_t, \kappa_t, \ell_t, \tau_t)
+\]</div>
+<p>执行状态 \(s_{t}\) 包含四类信息：\(\rho_{t}\) 表示每个 device 上的 model residency；\(\kappa_{t}\) 表示 prefix/cache 相关可复用 metadata；\(\ell_{t}\) 记录已完成 parent output 的 device location；\(\tau_{t}\) 记录 device availability time。Ready set 是 parent 全部完成的 stage 集合；feasible candidate set 是在当前资源约束下可把 ready stage 放到 eligible device 上的 assignment。</p>
 <h2>3 方法</h2>
 <p>FATE 由三个交互组件组成：frontier CP-SAT planner with horizon-aware candidate scoring、commit-and-advance schedule construction procedure，以及 state-conditional cost and scoring model。Planner 只在当前 ready frontier 上求解，不把未来层级引入显式 CP-SAT 变量；未来层级通过 scoring 影响当前决策。</p>
 <figure class="figure wide"><img src="../assets/fate-2605.07238/figures/figure1-overview.png" alt="图 1：FATE 概览。给定异构 workflow DAG 和当前 execution state，FATE 进行 horizon-aware planning、assignment scoring、bounded shard execution 和状态更新。"><figcaption class="caption">图 1：FATE 概览。给定异构 workflow DAG 和当前 execution state，FATE 进行 horizon-aware planning、assignment scoring、bounded shard execution 和状态更新。</figcaption></figure>
-<p>在每个 planning step j，FATE 针对当前 ready frontier R<sub>j</sub>、每个 shard slot k 和 eligible device d 引入二元变量 y<sub>v,k,d</sub>，表示 stage v 的第 k 个 shard 是否放在 device d 上。目标最大化 frontier-planning score Ψ(v,k,d | s<sub>t</sub>,H)，其中 H 是 downstream lookahead horizon。约束保证每个 device 在一次 frontier planning wave 中最多接收一个 shard-slot assignment，每个 shard slot 最多被分配给一个 device，并且高编号 shard 只能在低编号 shard 已启用时选择。</p>
+<p>在每个 planning step j，FATE 针对当前 ready frontier \(R_{j}\)、每个 shard slot k 和 eligible device d 引入二元变量 \(y_{v,k,d}\)，表示 stage v 的第 k 个 shard 是否放在 device d 上。目标最大化 frontier-planning score Ψ(v,k,d | \(s_{t}\),H)，其中 H 是 downstream lookahead horizon。约束保证每个 device 在一次 frontier planning wave 中最多接收一个 shard-slot assignment，每个 shard slot 最多被分配给一个 device，并且高编号 shard 只能在低编号 shard 已启用时选择。</p>
 <p>状态感知打分由两部分组成：即时运行成本与未来状态价值。成本项包括等待、模型切换、跨 device transfer；收益项包括 parent colocation、prefix/cache reuse、bounded shard parallelism 以及保留下游结构 locality。State-conditional cost estimator 给出校正成本：</p>
-<div class="math">ĉ(v,d,s<sub>t</sub>) = c<sub>base</sub>(v,d) + Δ<sub>switch</sub> + Δ<sub>transfer</sub> - Δ<sub>prefix</sub> - Δ<sub>locality</sub> - Δ<sub>parallel</sub></div>
+<div class="math">\[
+\hat{c}(v,d,s_t) = c_{\mathrm{base}}(v,d) + \Delta_{\mathrm{switch}} + \Delta_{\mathrm{transfer}} - \Delta_{\mathrm{prefix}} - \Delta_{\mathrm{locality}} - \Delta_{\mathrm{parallel}}
+\]</div>
 <p>调度流程先构造 ready frontier，计算每个候选的校正成本和 horizon-aware score，用 CP-SAT 求解当前 frontier placement，然后把已选 assignment materialize 到 committed action pool。Runtime executor 再根据 dependency readiness 和 device availability 发出 queued actions。当前 frontier 耗尽后，系统更新 workflow state 并重复。</p>
 <div class="twocol"><figure class="figure"><img src="../assets/fate-2605.07238/figures/algorithm1-fate.png" alt="算法 1：FATE 的紧凑调度过程。"><figcaption class="caption">算法 1：FATE 的紧凑调度过程。</figcaption></figure><figure class="figure"><img src="../assets/fate-2605.07238/figures/algorithm2-full-scheduling.png" alt="算法 2：FATE 的完整调度过程。"><figcaption class="caption">算法 2：FATE 的完整调度过程。</figcaption></figure></div>
 <h2>4 实验</h2>
@@ -49,7 +85,7 @@
 <h2>7 结论</h2>
 <p>本文提出 FATE，一种用于异构 LLM workflow 的 future-state-aware scheduler。FATE 将模型驻留、父输出位置、prefix/cache 可复用状态和未来 device reachability 作为调度目标的一部分，通过 horizon-aware frontier planning 和 state-conditional scoring 在当前决策中保留下游有用状态。实验表明，FATE 在 workflow-DAG benchmark、controlled prefix-reuse 与多项消融和鲁棒性测试中均表现稳定，说明 future-state preservation 是异构 LLM workflow serving 的有效调度目标。</p>
 <h2>附录 A 技术细节</h2>
-<p>附录给出完整符号表、扩展问题形式化、expanded scheduling score、state-conditional cost model 和完整过程描述。符号表强调 workflow/execution-state 与 planning/scoring/cost 两组变量：前者包括 W<sub>t</sub>、G、R(v)、ρ<sub>t</sub>、κ<sub>t</sub>、ℓ<sub>t</sub>、τ<sub>t</sub> 等，后者包括 ready frontier R<sub>j</sub>、lookahead horizon H、assignment variable y<sub>v,k,d</sub>、frontier score Ψ、runtime scheduling score S 以及各类成本/收益项。</p>
+<p>附录给出完整符号表、扩展问题形式化、expanded scheduling score、state-conditional cost model 和完整过程描述。符号表强调 workflow/execution-state 与 planning/scoring/cost 两组变量：前者包括 \(W_{t}\)、G、R(v)、\(\rho_{t}\)、\(\kappa_{t}\)、\(\ell_{t}\)、\(\tau_{t}\) 等，后者包括 ready frontier \(R_{j}\)、lookahead horizon H、assignment variable \(y_{v,k,d}\)、frontier score Ψ、runtime scheduling score S 以及各类成本/收益项。</p>
 <div class="twocol"><figure class="figure"><img src="../assets/fate-2605.07238/figures/table4-notation-workflow.png" alt="表 4：workflow 与 execution-state 符号汇总。"><figcaption class="caption">表 4：workflow 与 execution-state 符号汇总。</figcaption></figure><figure class="figure"><img src="../assets/fate-2605.07238/figures/table5-notation-planning.png" alt="表 5：planning、scoring 与 cost 符号汇总。"><figcaption class="caption">表 5：planning、scoring 与 cost 符号汇总。</figcaption></figure></div>
 <h2>附录 B Baseline 适配</h2>
 <p>为在共同 execution substrate 下比较 scheduling logic，作者实现所有 baseline 于同一 serving stack。Halo 被忠实复现为原始 workflow-serving scheduling policy；KVFlow-style 保留 future-step-aware prefix priority、cache retention 与 same-model affinity；Helix-style 保留 heterogeneity-aware earliest-finish placement 与 transfer/switch-aware assignment；HEFT 作为 classical heterogeneous DAG scheduling baseline；RoundRobin 简单轮转 device。</p>
@@ -132,8 +168,8 @@ Each workflow instance is represented as a directed acyclic graph (DAG) G = (V, 
 node v ∈V denotes a workflow stage and each directed edge (u, v) ∈E denotes a precedence
 dependency: stage v may begin only after the output of stage u is available. Each stage v is
 characterized by
- m(v), A(v), R(v), cv, ϕ(v), Pa(v), Ch(v)
-
+m(v), A(v), R(v), cv, ϕ(v), Pa(v), Ch(v)
+
 .
 Here, m(v) denotes the model type, A(v) ⊆D is the eligible device set, R(v) ∈Z≥1 is the maximum
 bounded shard degree, and cv : A(v) →R+ denotes the base runtime profile across eligible devices,
@@ -354,7 +390,7 @@ d
 −t}.
 The model-switch cost is
 Cswitch(v, d, st) =
-0,
+0,
 if m(v) is already resident on d,
 κswitch(m(v), d),
 otherwise.

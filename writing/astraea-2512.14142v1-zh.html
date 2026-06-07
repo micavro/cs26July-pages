@@ -242,6 +242,38 @@
       }
     }
   </style>
+
+  <style>
+    mjx-container[jax="CHTML"] {
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+    }
+
+    .math {
+      font-family: inherit;
+    }
+
+    .math mjx-container[jax="CHTML"][display="true"] {
+      margin: 0.2em 0;
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      },
+      chtml: {
+        linebreaks: {automatic: true}
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
 <main class="paper">
@@ -331,30 +363,46 @@
     <p>为应对 LLM agent inference 中“compute-I/O”交替执行带来的调度挑战，本节首先形式化 agentic execution workflow，然后定义调度目标。</p>
 
     <h3>3.1 问题形式化</h3>
-    <p>LLM agents 通过使用外部工具完成复杂任务，因此其执行天然是多阶段的。我们把由用户发起的端到端推理任务定义为一个 <strong>parent request</strong>（或 complete request），记为 R<sub>i</sub>。它的执行过程不是单一计算过程，而是由若干 segment 组成的动态多阶段工作流。我们把 R<sub>i</sub> 的生命周期形式化表示为有序 segmented requests 序列：</p>
-    <div class="math">R<sub>i</sub> = &lt; S<sub>i</sub><sup>1</sup>, S<sub>i</sub><sup>2</sup>, ..., S<sub>i</sub><sup>k</sup> &gt;</div>
-    <p>其中 k<sub>i</sub> 是请求 R<sub>i</sub> 中 segment 的总数，在请求初始到达时未知。</p>
-    <p>每个 segmented request S<sub>i</sub><sup>j</sup> 的内部执行流可进一步抽象为三个有序阶段，它们具有不同的资源消耗特征：</p>
+    <p>LLM agents 通过使用外部工具完成复杂任务，因此其执行天然是多阶段的。我们把由用户发起的端到端推理任务定义为一个 <strong>parent request</strong>（或 complete request），记为 \(R_{i}\)。它的执行过程不是单一计算过程，而是由若干 segment 组成的动态多阶段工作流。我们把 \(R_{i}\) 的生命周期形式化表示为有序 segmented requests 序列：</p>
+    <div class="math">\[
+R_i = \left\langle S_i^1, S_i^2, \ldots, S_i^k \right\rangle
+\]</div>
+    <p>其中 \(k_{i}\) 是请求 \(R_{i}\) 中 segment 的总数，在请求初始到达时未知。</p>
+    <p>每个 segmented request \(S_{i}^{j}\) 的内部执行流可进一步抽象为三个有序阶段，它们具有不同的资源消耗特征：</p>
     <ul>
       <li><strong>Prefill Stage：</strong>该阶段负责在当前上下文上执行并行 Attention 计算，以生成初始 KV cache。其执行速度主要受 GPU 每秒浮点运算数（FLOPS）限制。因此，我们把该阶段归类为 <strong>Compute-bound</strong>。</li>
       <li><strong>Decoding Stage：</strong>该阶段以自回归方式逐个生成 token。其执行速度主要受 GPU 内存带宽限制。我们把该阶段归类为 <strong>Memory-bound</strong>。</li>
       <li><strong>API Call Stage：</strong>该阶段涉及与外部网络服务交互，在此期间本地计算和内存资源保持空闲。我们把该阶段归类为 <strong>I/O-bound</strong>。</li>
     </ul>
-    <p>为形式化建模 segmented request S<sub>i</sub><sup>j</sup>，我们把它表示为一个三元组，其中每个元素代表相应阶段的预期服务时间成本：</p>
-    <div class="math">S<sub>i</sub><sup>j</sup> = (T(P<sub>i</sub><sup>j</sup>), T(D<sub>i</sub><sup>j</sup>), T(A<sub>i</sub><sup>j</sup>))</div>
-    <p>请求生命周期中不同资源瓶颈交替出现，是该调度问题的核心挑战。传统调度器通常把每个已就绪计算任务，即 segment S<sub>i</sub><sup>j</sup>，视为独立且无状态的调度单元，这会系统性惩罚包含多次 I/O 中断的请求。</p>
-    <p>本研究的核心调度目标被定义为最小化所有请求的平均端到端 Job Completion Time（JCT）。我们把完整请求 R<sub>i</sub> 的 JCT 定义为从其到达时间 t<sub>arrival</sub>(R<sub>i</sub>) 到其最终 segment 计算完成时间 t<sub>finish</sub>(R<sub>i</sub>) 的总时长。该时长由所有 segment 的实际处理时间和 ready queue 中的等待时间组成。令 C(S<sub>i</sub><sup>j</sup>) 为 segment S<sub>i</sub><sup>j</sup> 的完成时间，则 t<sub>finish</sub>(R<sub>i</sub>) = C(S<sub>i</sub><sup>k</sup>)。segment 的完成时间可递归定义为：</p>
-    <div class="math">C(S<sub>i</sub><sup>j</sup>) = t<sub>arrival</sub>(R<sub>i</sub>) + W(S<sub>i</sub><sup>1</sup>) + T<sub>comp</sub>(S<sub>i</sub><sup>1</sup>)，当 j = 1；<br>C(S<sub>i</sub><sup>j</sup>) = C(S<sub>i</sub><sup>j-1</sup>) + T(A<sub>i</sub><sup>j-1</sup>) + W(S<sub>i</sub><sup>j</sup>) + T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>)，当 j &gt; 1。</div>
-    <p>其中 T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>) 和 T(A<sub>i</sub><sup>j</sup>) 分别表示 segment S<sub>i</sub><sup>j</sup> 在计算阶段（prefill 与 decoding）和 API 调用阶段实际花费的时间。W(S<sub>i</sub><sup>j</sup>) 是该 segment 被调度执行之前在 ready queue 中的等待时间。因此，请求 R<sub>i</sub> 的 JCT 可表示为：</p>
-    <div class="math">JCT(R<sub>i</sub>) = C(S<sub>i</sub><sup>k</sup>) − t<sub>arrival</sub>(R<sub>i</sub>) = Σ<sub>j=1..k</sub>(W(S<sub>i</sub><sup>j</sup>) + T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>)) + Σ<sub>j=1..k−1</sub>T(A<sub>i</sub><sup>j</sup>)。</div>
+    <p>为形式化建模 segmented request \(S_{i}^{j}\)，我们把它表示为一个三元组，其中每个元素代表相应阶段的预期服务时间成本：</p>
+    <div class="math">\[
+S_i^j = \left(T(P_i^j), T(D_i^j), T(A_i^j)\right)
+\]</div>
+    <p>请求生命周期中不同资源瓶颈交替出现，是该调度问题的核心挑战。传统调度器通常把每个已就绪计算任务，即 segment \(S_{i}^{j}\)，视为独立且无状态的调度单元，这会系统性惩罚包含多次 I/O 中断的请求。</p>
+    <p>本研究的核心调度目标被定义为最小化所有请求的平均端到端 Job Completion Time（JCT）。我们把完整请求 \(R_{i}\) 的 JCT 定义为从其到达时间 \(t_{\mathrm{arrival}}(R_{i})\) 到其最终 segment 计算完成时间 \(t_{\mathrm{finish}}(R_{i})\) 的总时长。该时长由所有 segment 的实际处理时间和 ready queue 中的等待时间组成。令 \(C(S_{i}^{j})\) 为 segment \(S_{i}^{j}\) 的完成时间，则 \(t_{\mathrm{finish}}(R_{i})\) = \(C(S_{i}^{k})\)。segment 的完成时间可递归定义为：</p>
+    <div class="math">\[
+\begin{aligned}
+C(S_i^j) &= t_{\mathrm{arrival}}(R_i) + W(S_i^1) + T_{\mathrm{comp}}(S_i^1), && \text{当 } j = 1;\\
+C(S_i^j) &= C(S_i^{j-1}) + T(A_i^{j-1}) + W(S_i^j) + T_{\mathrm{comp}}(S_i^j), && \text{当 } j > 1.
+\end{aligned}
+\]</div>
+    <p>其中 \(T_{\mathrm{comp}}(S_{i}^{j})\) 和 \(T(A_{i}^{j})\) 分别表示 segment \(S_{i}^{j}\) 在计算阶段（prefill 与 decoding）和 API 调用阶段实际花费的时间。\(W(S_{i}^{j})\) 是该 segment 被调度执行之前在 ready queue 中的等待时间。因此，请求 \(R_{i}\) 的 JCT 可表示为：</p>
+    <div class="math">\[
+\begin{aligned}
+JCT(R_i) &= C(S_i^k) - t_{\mathrm{arrival}}(R_i)\\
+&= \sum_{j=1}^{k}\left(W(S_i^j) + T_{\mathrm{comp}}(S_i^j)\right) + \sum_{j=1}^{k-1}T(A_i^j).
+\end{aligned}
+\]</div>
     <p>问题的优化目标可形式化定义为：</p>
-    <div class="math">Minimize&nbsp;&nbsp; (1 / |R|) Σ<sub>R<sub>i</sub>∈R</sub> JCT(R<sub>i</sub>)</div>
+    <div class="math">\[
+\min \; \frac{1}{|R|}\sum_{R_i\in R} JCT(R_i)
+\]</div>
     <p>其中 R 表示系统处理的所有请求集合。</p>
 
     <h3>3.2 问题复杂性</h3>
     <p>我们证明第 3.1 节定义的调度问题是 NP-hard。</p>
     <p><strong>定理 3.1。</strong>LLM agent scheduling problem 是 NP-hard。</p>
-    <p><strong>证明。</strong>通过从经典的 1|prec|ΣC<sub>j</sub> 问题进行归约，详细证明见附录 A。□</p>
+    <p><strong>证明。</strong>通过从经典的 \(1|\mathrm{prec}|\sum C_j\) 问题进行归约，详细证明见附录 A。□</p>
 
     <h2>4 调度机制设计</h2>
     <h3>4.1 总体架构</h3>
@@ -374,28 +422,30 @@
 
     <h3>4.2 Service Time Predictor 设计</h3>
     <p>调度决策的有效性依赖于对请求每个阶段服务时间的准确预测。Predictor 的设计与调度算法是正交问题。为严格评估调度器性能，并隔离潜在预测误差影响，我们采用一种理想化但实用的预测方法。</p>
-    <p><strong>计算时间预测。</strong>总计算时间 T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>) 由 prefill 时间和 decoding 时间组成。对于 prefill 阶段，由于它是输入长度的确定性函数，我们通过使用不同 sequence lengths 对目标硬件进行离线 profiling，构建数据驱动的性能模型。对于 decoding 阶段，预测生成长度是已知挑战。已有工作表明高精度预测器是可行的。基于此，我们采用 segment 级 oracle 来给出生成 token 数 n<sub>gen</sub>，使用数据集中的 ground-truth 值。需要强调的是，该 oracle 不知道未来 segment，因此保留了调度问题的在线性质。总预测计算时间为：T<sub>comp</sub>(S<sub>i</sub><sup>j</sup>) = f<sub>prefill</sub>(n<sub>in</sub>) + n<sub>gen</sub> · avg_decode_latency_per_token。</p>
-    <p><strong>API latency 预测。</strong>API 调用时长高度可变，并依赖外部因素。静态分析通常不可行。然而，我们观察到同一功能类别内的 APIs 呈现稳定的 latency distributions。例如，与数学相关的 API 调用平均为 9e-5 秒，而图像生成和 chatbot APIs 可能需要几十秒，均值分别为 20.03s 和 28.6s。利用这一点，我们基于这些类别构建统计模型。调度时，我们从 prompt 中提取 API 类别，并使用该类别的平均 latency 作为预测值 T<sub>A</sub>(S<sub>i</sub><sup>j</sup>)。</p>
+    <p><strong>计算时间预测。</strong>总计算时间 \(T_{\mathrm{comp}}(S_{i}^{j})\) 由 prefill 时间和 decoding 时间组成。对于 prefill 阶段，由于它是输入长度的确定性函数，我们通过使用不同 sequence lengths 对目标硬件进行离线 profiling，构建数据驱动的性能模型。对于 decoding 阶段，预测生成长度是已知挑战。已有工作表明高精度预测器是可行的。基于此，我们采用 segment 级 oracle 来给出生成 token 数 \(n_{\mathrm{gen}}\)，使用数据集中的 ground-truth 值。需要强调的是，该 oracle 不知道未来 segment，因此保留了调度问题的在线性质。总预测计算时间为：\(T_{\mathrm{comp}}(S_{i}^{j})\) = \(f_{\mathrm{prefill}}(n_{\mathrm{in}})\) + \(n_{\mathrm{gen}}\) · avg_decode_latency_per_token。</p>
+    <p><strong>API latency 预测。</strong>API 调用时长高度可变，并依赖外部因素。静态分析通常不可行。然而，我们观察到同一功能类别内的 APIs 呈现稳定的 latency distributions。例如，与数学相关的 API 调用平均为 9e-5 秒，而图像生成和 chatbot APIs 可能需要几十秒，均值分别为 20.03s 和 28.6s。利用这一点，我们基于这些类别构建统计模型。调度时，我们从 prompt 中提取 API 类别，并使用该类别的平均 latency 作为预测值 \(T_{A}(S_{i}^{j})\)。</p>
 
     <h3>4.3 Stateful-MLFQ 调度算法</h3>
     <h4>4.3.1 算法设计概览</h4>
     <p>为落实第 3.1 节定义的全局优化目标，我们设计了状态感知 multi-level feedback queue 调度算法（Stateful-MLFQ），其完整逻辑见 Algorithm 1。该算法的核心在于“Stateful”性质：它不仅评估 segment 的当前特征，例如估计服务时间，还把 parent request 的历史行为，例如累计等待时间、过去的计算与 I/O 模式，与未来预测统一到一个决策框架中。它是一种分层、抢占式调度算法，目标是通过宏观和微观层面的控制在效率与公平性之间取得平衡。</p>
 
     <h4>4.3.2 宏观控制：事件驱动的优先级迁移</h4>
-    <p>该算法的宏观框架建立在 multi-level feedback queue（MLFQ）结构之上，由 m 个具有严格优先级的队列 Q<sub>0</sub>, ..., Q<sub>m−1</sub> 组成。</p>
+    <p>该算法的宏观框架建立在 multi-level feedback queue（MLFQ）结构之上，由 m 个具有严格优先级的队列 \(Q_{0}\), ..., \(Q_{\mathrm{m-1}}\) 组成。</p>
     <p>我们采用 Token Cost 而不是 time slice 作为迁移阈值，因为在 continuous batching 中，time slice 是一个受 batch composition 强烈影响的不稳定指标。相反，Token Cost 是确定性、内在的指标，只衡量请求已经获得的计算工作量。这种稳定性使优先级迁移决策更加公平和鲁棒。</p>
     <p>请求在队列之间的迁移是事件驱动的，由 Algorithm 1 的事件处理函数定义。</p>
     <ol>
-      <li><strong>On Request Arrival：</strong>所有新请求被放入最高优先级队列 Q<sub>0</sub>，以确保快速响应。</li>
+      <li><strong>On Request Arrival：</strong>所有新请求被放入最高优先级队列 \(Q_{0}\)，以确保快速响应。</li>
       <li><strong>On Segment Completion：</strong>segment 执行结束后，系统根据 parent request 的行为动态调整其优先级。<br><strong>Demotion：</strong>如果某个 segment 的计算成本超过其队列阈值，则 parent request 被识别为计算密集型，并降级到下一个更低优先级队列。<br><strong>Promotion：</strong>如果某个 segment 在耗尽其 token cost quota 之前让出执行并进入 API 调用，则 parent request 被识别为 I/O 密集型，并提升到更高优先级队列。该策略旨在优先处理 I/O-bound 请求，以最小化它们对总 JCT 的影响。</li>
     </ol>
 
     <h4>4.3.3 调度周期：batch 构建与队列内排序</h4>
     <p>在每个调度周期中，核心调度函数 BuildNextBatch 被调用，用于确定下一批要执行的请求。</p>
-    <p>该函数的第一步是处理饥饿（第 1 到 6 行）。它检查最低优先级队列 Q<sub>m−1</sub> 中的所有请求，如果某个请求的 response ratio 超过预定义 aging threshold，则将其抢先提升到最高优先级队列 Q<sub>0</sub>。</p>
-    <p>处理饥饿后，调度器从最高优先级队列 Q<sub>0</sub> 开始向下迭代（第 8 行），找到第一个非空队列 Q<sub>k</sub>。对于该队列中的所有 ready segments，调度器执行微观层面的队列内排序（第 11 到 14 行）。我们采用 Highest Response Ratio Next（HRRN）策略为每个 segment 计算分数：</p>
-    <div class="math">Score<sub>HRRN</sub>(S<sub>i</sub><sup>j</sup>) = (W(R<sub>i</sub>) + T<sub>proc</sub>(S<sub>i</sub><sup>j</sup>)) / T<sub>proc</sub>(S<sub>i</sub><sup>j</sup>)</div>
-    <p>其中 W(R<sub>i</sub>) 是其 parent request 的累计等待时间，T<sub>proc</sub>(S<sub>i</sub><sup>j</sup>) 是当前 segment 的估计服务时间。当等待时间相近时，该机制类似 Shortest Remaining Processing Time（SRPT），可提升效率。随着长作业等待时间累积，其分数增加，从而保证队列内公平性。</p>
+    <p>该函数的第一步是处理饥饿（第 1 到 6 行）。它检查最低优先级队列 \(Q_{\mathrm{m-1}}\) 中的所有请求，如果某个请求的 response ratio 超过预定义 aging threshold，则将其抢先提升到最高优先级队列 \(Q_{0}\)。</p>
+    <p>处理饥饿后，调度器从最高优先级队列 \(Q_{0}\) 开始向下迭代（第 8 行），找到第一个非空队列 \(Q_{k}\)。对于该队列中的所有 ready segments，调度器执行微观层面的队列内排序（第 11 到 14 行）。我们采用 Highest Response Ratio Next（HRRN）策略为每个 segment 计算分数：</p>
+    <div class="math">\[
+\mathrm{Score}_{\mathrm{HRRN}}(S_i^j) = \frac{W(R_i) + T_{\mathrm{proc}}(S_i^j)}{T_{\mathrm{proc}}(S_i^j)}
+\]</div>
+    <p>其中 \(W(R_{i})\) 是其 parent request 的累计等待时间，\(T_{\mathrm{proc}}(S_{i}^{j})\) 是当前 segment 的估计服务时间。当等待时间相近时，该机制类似 Shortest Remaining Processing Time（SRPT），可提升效率。随着长作业等待时间累积，其分数增加，从而保证队列内公平性。</p>
     <p>最后，候选 segments 按 HRRN 分数排序后，调度器将它们依次打包进下一 batch，直到达到 GPU 内存容量（第 15 到 20 行）。</p>
 
     <div class="algorithm">
@@ -433,10 +483,18 @@
 
     <h3>4.4 KV Cache 管理</h3>
     <p>调度机制的抢占性质要求为所有被抢占但尚未完成的请求保留中间状态（KV cache）。如果没有有效的管理策略，GPU 内存会成为关键瓶颈，限制调度器效果，并可能重新引入我们希望解决的 HoL blocking。为此，Astraea 集成了一种自适应 KV cache 管理策略，旨在动态平衡单请求延迟与整体系统吞吐。该策略由 GPU 内存使用量的 high-watermark threshold 控制，形成两个不同运行模式。在低负载场景，即低于阈值时，系统默认对所有 I/O-bound 请求采用 <strong>Preserve</strong> 策略，以优先降低延迟。相反，当内存压力较高时，目标转向通过最小化 memory-time waste 来最大化资源利用率。系统评估三种候选策略的潜在 waste：Preserve、Discard 和 Swap，并选择成本最低者。按照 Infercept [1] 提出的模型，每种策略的 waste（W）估计如下：</p>
-    <div class="math">W<sub>preserve</sub> = T<sub>api</sub> · C<sub>self</sub> · M<br>W<sub>discard</sub> = T<sub>recompute</sub> · C<sub>batch</sub> · M<br>W<sub>swap</sub> = 2 · T<sub>swap</sub> · C<sub>batch</sub> · M</div>
-    <p>其中 T<sub>api</sub>、T<sub>recompute</sub> 和 T<sub>swap</sub> 分别是 API 调用、KV cache 重计算和 swap I/O 的预测时长。C<sub>self</sub> 是请求自身 cache 的 token 数，C<sub>batch</sub> 是如果释放内存即可被 batch 的其他请求的总 token 数，M 是每个 token 的 KV cache 所需内存。</p>
+    <div class="math">\[
+\begin{aligned}
+W_{\mathrm{preserve}} &= T_{\mathrm{api}}\, C_{\mathrm{self}}\, M\\
+W_{\mathrm{discard}} &= T_{\mathrm{recompute}}\, C_{\mathrm{batch}}\, M\\
+W_{\mathrm{swap}} &= 2\, T_{\mathrm{swap}}\, C_{\mathrm{batch}}\, M
+\end{aligned}
+\]</div>
+    <p>其中 \(T_{\mathrm{api}}\)、\(T_{\mathrm{recompute}}\) 和 \(T_{\mathrm{swap}}\) 分别是 API 调用、KV cache 重计算和 swap I/O 的预测时长。\(C_{\mathrm{self}}\) 是请求自身 cache 的 token 数，\(C_{\mathrm{batch}}\) 是如果释放内存即可被 batch 的其他请求的总 token 数，M 是每个 token 的 KV cache 所需内存。</p>
     <p>系统随后选择 memory waste 最小的最优策略：</p>
-    <div class="math">Strategy = arg min<sub>s∈{Preserve, Discard, Swap}</sub> W<sub>s</sub></div>
+    <div class="math">\[
+\mathrm{Strategy} = \arg\min_{s\in\{\mathrm{Preserve},\mathrm{Discard},\mathrm{Swap}\}} W_s
+\]</div>
     <p>该自适应策略在竞争性负载下保证高资源利用率，同时在不拥塞场景中保持响应性。</p>
 
     <h2>5 实验评估</h2>
@@ -554,17 +612,17 @@
     </ol>
 
     <h2>附录 A 问题复杂性</h2>
-    <p>我们通过从经典 NP-hard 问题进行归约，证明该调度问题是 NP-hard。该经典问题是在具有 precedence constraints 的单机上最小化 total completion time，记为 1|prec|ΣC<sub>j</sub>。</p>
-    <p><strong>证明。</strong>一个 1|prec|ΣC<sub>j</sub> 实例由作业集合 J = {J<sub>1</sub>, J<sub>2</sub>, ..., J<sub>n</sub>} 构成，其中每个作业 J<sub>k</sub> 具有处理时间 p<sub>k</sub>，并具有 precedence relation prec。</p>
-    <p>给定一个任意 1|prec|ΣC<sub>j</sub> 实例，我们构造一个 LLM agent scheduling problem 实例如下。我们考虑本问题的一个简化版本，其中 batch size 为 1，也就是说 GPU 每次只能处理一个 computational segment。</p>
+    <p>我们通过从经典 NP-hard 问题进行归约，证明该调度问题是 NP-hard。该经典问题是在具有 precedence constraints 的单机上最小化 total completion time，记为 \(1|\mathrm{prec}|\sum C_j\)。</p>
+    <p><strong>证明。</strong>一个 \(1|\mathrm{prec}|\sum C_j\) 实例由作业集合 J = {\(J_{1}\), \(J_{2}\), ..., \(J_{n}\)} 构成，其中每个作业 \(J_{k}\) 具有处理时间 \(p_{k}\)，并具有 precedence relation prec。</p>
+    <p>给定一个任意 \(1|\mathrm{prec}|\sum C_j\) 实例，我们构造一个 LLM agent scheduling problem 实例如下。我们考虑本问题的一个简化版本，其中 batch size 为 1，也就是说 GPU 每次只能处理一个 computational segment。</p>
     <ol>
-      <li><strong>Decomposition：</strong>首先，我们把作业的 precedence graph 分解为一组不相交链，例如 J<sub>a</sub> → J<sub>b</sub> → J<sub>c</sub>，以及孤立作业，例如 J<sub>d</sub>。</li>
-      <li><strong>Mapping Construction：</strong>对于每条作业链，例如 J<sub>a</sub> → J<sub>b</sub> → J<sub>c</sub>，我们创建一个 parent request R<sub>i</sub>，由 segment 序列 &lt;S<sub>i</sub><sup>1</sup>, S<sub>i</sub><sup>2</sup>, S<sub>i</sub><sup>3</sup>&gt; 组成。对于每个孤立作业 J<sub>d</sub>，我们创建单 segment request R<sub>j</sub> = &lt;S<sub>j</sub><sup>1</sup>&gt;。</li>
-      <li><strong>Service Time Assignment：</strong>每个作业 J<sub>k</sub> 的处理时间 p<sub>k</sub> 被映射为其对应 segment S<sub>k</sub> 的 computational service time。为完成该归约，我们假设所有构造出的 segment 的 API call time 为 0。具体而言，对于由链 J<sub>a</sub> → J<sub>b</sub> → J<sub>c</sub> 派生的请求 R<sub>i</sub>，设置 T<sub>comp</sub>(S<sub>i</sub><sup>1</sup>) = p<sub>a</sub> 且 T(A<sub>i</sub><sup>1</sup>) = 0；T<sub>comp</sub>(S<sub>i</sub><sup>2</sup>) = p<sub>b</sub> 且 T(A<sub>i</sub><sup>2</sup>) = 0；依此类推。对于由孤立作业 J<sub>d</sub> 派生的请求 R<sub>j</sub>，设置 T<sub>comp</sub>(S<sub>j</sub><sup>1</sup>) = p<sub>d</sub> 且 T(A<sub>j</sub><sup>1</sup>) = 0。</li>
+      <li><strong>Decomposition：</strong>首先，我们把作业的 precedence graph 分解为一组不相交链，例如 \(J_{a}\) → \(J_{b}\) → \(J_{c}\)，以及孤立作业，例如 \(J_{d}\)。</li>
+      <li><strong>Mapping Construction：</strong>对于每条作业链，例如 \(J_{a}\) → \(J_{b}\) → \(J_{c}\)，我们创建一个 parent request \(R_{i}\)，由 segment 序列 &lt;\(S_{i}^{1}\), \(S_{i}^{2}\), \(S_{i}^{3}\)&gt; 组成。对于每个孤立作业 \(J_{d}\)，我们创建单 segment request \(R_{j}\) = &lt;\(S_{j}^{1}\)&gt;。</li>
+      <li><strong>Service Time Assignment：</strong>每个作业 \(J_{k}\) 的处理时间 \(p_{k}\) 被映射为其对应 segment \(S_{k}\) 的 computational service time。为完成该归约，我们假设所有构造出的 segment 的 API call time 为 0。具体而言，对于由链 \(J_{a}\) → \(J_{b}\) → \(J_{c}\) 派生的请求 \(R_{i}\)，设置 \(T_{\mathrm{comp}}(S_{i}^{1})\) = \(p_{a}\) 且 \(T(A_{i}^{1})\) = 0；\(T_{\mathrm{comp}}(S_{i}^{2})\) = \(p_{b}\) 且 \(T(A_{i}^{2})\) = 0；依此类推。对于由孤立作业 \(J_{d}\) 派生的请求 \(R_{j}\)，设置 \(T_{\mathrm{comp}}(S_{j}^{1})\) = \(p_{d}\) 且 \(T(A_{j}^{1})\) = 0。</li>
     </ol>
-    <p>该构造可在多项式时间内完成。通过把 API call times 设为零，segments S<sub>i</sub><sup>j</sup> 与 S<sub>i</sub><sup>j+1</sup> 之间的依赖成为即时 precedence constraint，完全模拟原问题中的 J<sub>k</sub> → J<sub>l</sub> 关系。构造请求的一个有效 schedule 因而是对 computational tasks {T<sub>comp</sub>(S<sub>1</sub>), ..., T<sub>comp</sub>(S<sub>n</sub>)} 的排列，并尊重 intra-request ordering，这直接对应于作业 {J<sub>1</sub>, ..., J<sub>n</sub>} 的有效 schedule。</p>
-    <p>作业 J<sub>k</sub> 的完成时间 C<sub>k</sub> 等价于其对应 segment S<sub>k</sub> 的计算部分完成时间。因此，最小化作业完成时间之和 ΣC<sub>k</sub> 等价于最小化 segment completion times 之和。由于最小化所有请求的 total（或 average）Job Completion Time（JCT）要求最小化其底层 segment completion times 之和，本问题的解就给出了 1|prec|ΣC<sub>j</sub> 问题的解。</p>
-    <p>由于 NP-hard 问题 1|prec|ΣC<sub>j</sub> 的任意实例都能在多项式时间内归约到我们的 LLM agent scheduling problem 的一个特殊情况，即 batch size 为 1 且 API times 为 0，因此我们的一般问题也是 NP-hard。□</p>
+    <p>该构造可在多项式时间内完成。通过把 API call times 设为零，segments \(S_{i}^{j}\) 与 \(S_{i}^{j+1}\) 之间的依赖成为即时 precedence constraint，完全模拟原问题中的 \(J_{k}\) → \(J_{l}\) 关系。构造请求的一个有效 schedule 因而是对 computational tasks {\(T_{\mathrm{comp}}(S_{1})\), ..., \(T_{\mathrm{comp}}(S_{n})\)} 的排列，并尊重 intra-request ordering，这直接对应于作业 {\(J_{1}\), ..., \(J_{n}\)} 的有效 schedule。</p>
+    <p>作业 \(J_{k}\) 的完成时间 \(C_{k}\) 等价于其对应 segment \(S_{k}\) 的计算部分完成时间。因此，最小化作业完成时间之和 \(\sum C_k\) 等价于最小化 segment completion times 之和。由于最小化所有请求的 total（或 average）Job Completion Time（JCT）要求最小化其底层 segment completion times 之和，本问题的解就给出了 \(1|\mathrm{prec}|\sum C_j\) 问题的解。</p>
+    <p>由于 NP-hard 问题 \(1|\mathrm{prec}|\sum C_j\) 的任意实例都能在多项式时间内归约到我们的 LLM agent scheduling problem 的一个特殊情况，即 batch size 为 1 且 API times 为 0，因此我们的一般问题也是 NP-hard。□</p>
 
     <h2>附录 B 参数敏感性分析</h2>
     <p>为验证所提方法中关键超参数选择的合理性和鲁棒性，本节对 aging threshold 与 queue cost thresholds 进行敏感性分析。所有实验均在 GPT-J 模型和 50% memory availability 下进行。</p>

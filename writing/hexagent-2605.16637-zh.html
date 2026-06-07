@@ -8,6 +8,38 @@
 :root{--ink:#161616;--muted:#5f6368;--rule:#d9dde3;--paper:#fff;--bg:#f4f6f8;--accent:#184c7f;--soft:#f8fafc}
 *{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.72;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:70px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}h1{margin:0 auto 22px;max-width:850px;text-align:center;font-size:32px;line-height:1.28;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:820px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:830px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:830px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:760px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}.math{break-inside:avoid;margin:16px 0 18px;padding:12px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px;font-family:"Times New Roman","Cambria Math",serif;font-size:15.5px;line-height:1.65;text-align:center;overflow-x:auto}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:520px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
 </style>
+
+  <style>
+    mjx-container[jax="CHTML"] {
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+    }
+
+    .math {
+      font-family: inherit;
+    }
+
+    .math mjx-container[jax="CHTML"][display="true"] {
+      margin: 0.2em 0;
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      },
+      chtml: {
+        linebreaks: {automatic: true}
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
 <main class="paper">
@@ -29,7 +61,7 @@
 <h2>3 工作负载刻画</h2>
 <p>本文先通过小型 ablation 说明：服务 agentic workflow 时，既需要 end-to-end workflow awareness，也需要异构 workload/GPU-aware placement。实验使用 Llama3.1-70B 和 Qwen3-235B-A22B，在含 8 个 prefill 与 8 个 decode 实例的异构 P-D 集群上运行，其中实例由 A100、H100 和 H200 混合组成。工作负载包括 ShareGPT 对话链、BFCL-v3 function-calling workflow、LATS tree/search workflow 以及混合负载。</p>
 <figure class="figure wide"><img src="../assets/hexagent-2605.16637/figures/table1-ablation.png" alt="表 1：异构 P-D 部署上的刻画消融。每格为 Req95/Req99；数值越低越好。"><figcaption class="caption">表 1：异构 P-D 部署上的刻画消融。每格为 Req95/Req99；数值越低越好。</figcaption></figure>
-<p>指标使用 scaled-SLO。对 workflow w，先估计其在同一集群上的独立执行视界 H<sub>w</sub>。给定 scale factor α，若完成时间 C<sub>w</sub> ≤ αH<sub>w</sub>，则该 workflow 满足 SLO。Req95 和 Req99 分别是达到 95% 与 99% workflow SLO attainment 所需的最小 α。</p>
+<p>指标使用 scaled-SLO。对 workflow w，先估计其在同一集群上的独立执行视界 \(H_{w}\)。给定 scale factor α，若完成时间 \(C_{w}\) ≤ \(αH_{w}\)，则该 workflow 满足 SLO。Req95 和 Req99 分别是达到 95% 与 99% workflow SLO attainment 所需的最小 α。</p>
 <p><strong>方法 1：加入 workflow-level awareness。</strong>将 per-call FCFS 替换为 workflow-level FCFS 后，不再只按 call 揭示时间排序，而保留同一 workflow 的执行连续性。相较 per-call FCFS，Workflow-FCFS 平均将 Req95 降低 31.4%，Req99 降低 23.3%。在 BFCL 上尤其明显，例如 Qwen-BFCL 的 Req95 从 21.11 降至 9.64，Req99 从 26.89 降至 11.67。</p>
 <p><strong>洞见 1。</strong>Agentic workflow serving 必须优化端到端 workflow 进度，而不只是 per-call queue order。即便简单的 workflow-level FCFS，也能因保留 workflow 执行连续性而显著改善尾部 SLO scale。</p>
 <p><strong>方法 2：加入 heterogeneity awareness。</strong>仅有 workflow 级排序仍不够。不同调用的输入输出长度不同，有些更偏 prefill，有些带来更大的 decode/KV 压力；不同 GPU 实例上的 prefill/decode 服务延迟也不同。HEXAGENT 在知道哪个 workflow 更紧急后，还会根据每个 call 的工作量模式和实例服务时间选择合适的 prefill/decode pair。相较 Workflow-FCFS，HEXAGENT 在六个刻画案例中平均进一步降低 Req95 26.9%、Req99 42.6%。</p>
@@ -40,7 +72,7 @@
 <figure class="figure wide"><img src="../assets/hexagent-2605.16637/figures/figure2-system-architecture.png" alt="图 2：HEXAGENT 的系统架构和调度器位置。调度器收集跨阶段状态并联合决定 placement 与 queue priority。"><figcaption class="caption">图 2：HEXAGENT 的系统架构和调度器位置。调度器收集跨阶段状态并联合决定 placement 与 queue priority。</figcaption></figure>
 <p>调度器内部包括 State Collector、Estimator、Joint Planner 和 Plan Dispatcher。State Collector 汇总 prefill/decode 队列、运行中 call、decode KV 用量、带宽相关传输状态和 workflow progress；Estimator 将状态与每个 call 的输入输出长度转换为 runtime estimates；Joint Planner 联合决定 prefill/decode pair 和本地队列优先级；Plan Dispatcher 将决策发给对应 worker。队列顺序不仅是实例选择的附属项，它会显著影响 workflow 尾延迟。</p>
 <h2>5 调度框架</h2>
-<p>HEXAGENT 将服务过程建模为在线 workflow scheduling over heterogeneous resources。对于每个 workflow，系统维护当前已揭示子图和独立完成视界 H<sub>w</sub>(t)。Ready calls 根据 projected scaled-SLO pressure 排序：如果一个 call 在候选实例上运行后会让 workflow 更接近或超过当前视界，就获得更高优先级。</p>
+<p>HEXAGENT 将服务过程建模为在线 workflow scheduling over heterogeneous resources。对于每个 workflow，系统维护当前已揭示子图和独立完成视界 \(H_{w}\)(t)。Ready calls 根据 projected scaled-SLO pressure 排序：如果一个 call 在候选实例上运行后会让 workflow 更接近或超过当前视界，就获得更高优先级。</p>
 <p>调度是 event-driven 的。workflow arrival、prefill completion、transfer completion 和 decode completion 都会改变运行状态并触发调度。新 workflow 到达会揭示 source calls；prefill 完成释放 prefill slot 并启动 KV transfer；transfer 完成使 call 具备 decode admission 条件；decode 完成释放 decode capacity，并可能揭示新的 child calls。</p>
 <figure class="figure wide"><img src="../assets/hexagent-2605.16637/figures/algorithm1-event-driven-scheduling.png" alt="算法 1：HEXAGENT 的事件驱动调度流程。"><figcaption class="caption">算法 1：HEXAGENT 的事件驱动调度流程。</figcaption></figure>
 <p>Prefill scheduler 对每个等待 call 评估候选 prefill/decode 组合，预测 elapsed time 与完成压力，并用 adaptive greedy 策略反复选择最紧急且可行的 call。为了避免昂贵 KV movement，调度器会惩罚跨硬件类型且传输代价过高的 prefill-decode pair，除非服务时间收益足以抵消。</p>
