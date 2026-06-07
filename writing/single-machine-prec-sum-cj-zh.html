@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>1|prec|ΣCj 调度问题与 NP-hard 归约</title>
+  <style>
+    :root {
+      --ink: #161616;
+      --muted: #5f6368;
+      --rule: #d9dde3;
+      --paper: #fff;
+      --bg: #f4f6f8;
+      --accent: #184c7f;
+      --soft: #f8fafc;
+      --warn: #7a3b00;
+    }
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", "Times New Roman", serif;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    main.paper {
+      width: min(1040px, calc(100vw - 36px));
+      margin: 34px auto;
+      padding: 62px 78px 80px;
+      background: var(--paper);
+      border: 1px solid #e4e7eb;
+      box-shadow: 0 18px 46px rgba(20, 28, 38, .10);
+    }
+    h1 {
+      margin: 0 auto 16px;
+      max-width: 820px;
+      text-align: center;
+      font-size: 32px;
+      line-height: 1.26;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    .subtitle {
+      margin: 0 auto 34px;
+      max-width: 780px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .columns {
+      max-width: 820px;
+      margin: 0 auto;
+      font-size: 17px;
+      text-align: left;
+    }
+    h2 {
+      margin: 38px 0 12px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid var(--rule);
+      font-size: 24px;
+      line-height: 1.35;
+    }
+    h3 {
+      margin: 28px 0 8px;
+      font-size: 19px;
+      line-height: 1.4;
+    }
+    p {
+      margin: 0 0 14px;
+    }
+    a {
+      color: var(--accent);
+      text-decoration-thickness: .08em;
+      text-underline-offset: .18em;
+    }
+    .back {
+      margin: 0 0 26px;
+      font-size: 15px;
+    }
+    .note {
+      margin: 18px 0;
+      padding: 14px 18px;
+      border-left: 4px solid var(--accent);
+      background: var(--soft);
+    }
+    .warning {
+      border-left-color: var(--warn);
+    }
+    table {
+      width: 100%;
+      margin: 16px 0 22px;
+      border-collapse: collapse;
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    th, td {
+      padding: 10px 12px;
+      border: 1px solid var(--rule);
+      vertical-align: top;
+    }
+    th {
+      background: #eef3f8;
+      font-weight: 700;
+      text-align: left;
+    }
+    code {
+      padding: 0 .18em;
+      border-radius: 3px;
+      background: #eef1f4;
+      font-family: "Cascadia Mono", "Consolas", monospace;
+      font-size: .92em;
+    }
+    ol, ul {
+      margin: 0 0 16px 1.35em;
+      padding: 0;
+    }
+    li {
+      margin: 6px 0;
+    }
+    .math {
+      margin: 14px 0 18px;
+      overflow-x: auto;
+    }
+    .refs {
+      font-size: 15px;
+      color: #2a2f35;
+    }
+    mjx-container[jax="CHTML"] {
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-width: 100%;
+    }
+    @media (max-width: 820px) {
+      main.paper {
+        width: 100%;
+        margin: 0;
+        padding: 36px 22px 54px;
+        border: none;
+        box-shadow: none;
+      }
+      h1 {
+        font-size: 25px;
+        text-align: left;
+      }
+      .subtitle {
+        text-align: left;
+      }
+      .columns {
+        font-size: 16px;
+      }
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      },
+      chtml: {
+        linebreaks: {automatic: true}
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+<main class="paper">
+  <section class="columns">
+    <p class="back"><a href="astraea-2512.14142v1-zh.html#complexity-1-prec-sum-cj">返回 Astraea 中的首次引用</a></p>
+  </section>
+
+  <h1>\(1|\mathrm{prec}|\sum C_j\) 调度问题与 NP-hard 归约</h1>
+  <p class="subtitle">这是调度理论中一个经典的单机 precedence-constrained total completion time 问题。它常被用作系统论文中的归约源问题，用来证明新的调度模型至少和经典困难问题一样难。</p>
+
+  <section class="columns">
+    <h2>1. 这个记号怎么读？</h2>
+    <p>\(1|\mathrm{prec}|\sum C_j\) 使用 Graham、Lawler、Lenstra 和 Rinnooy Kan 推广的三字段调度记号 \(\alpha|\beta|\gamma\)。三个字段分别描述机器环境、约束条件和优化目标。</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>字段</th>
+          <th>在 \(1|\mathrm{prec}|\sum C_j\) 中的含义</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>\(\alpha = 1\)</td>
+          <td>只有一台机器、一个处理器或一个不可并行的服务资源。任意时刻最多处理一个 job。</td>
+        </tr>
+        <tr>
+          <td>\(\beta = \mathrm{prec}\)</td>
+          <td>job 之间存在 precedence constraints。若 \(i \prec j\)，则 job \(j\) 必须等 job \(i\) 完成后才能开始。</td>
+        </tr>
+        <tr>
+          <td>\(\gamma = \sum C_j\)</td>
+          <td>目标是最小化所有 job 的完成时间之和。\(C_j\) 是 job \(j\) 在整个 schedule 中完成的时间。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>更直接地说，这个问题是：给定一批有处理时间和依赖关系的任务，在一台机器上安排一个满足依赖的顺序，使所有任务完成时间的总和尽可能小。</p>
+
+    <h2>2. 形式化定义</h2>
+    <p>输入包括 job 集合 \(J=\{1,\ldots,n\}\)、每个 job 的处理时间 \(p_j>0\)，以及一个 precedence DAG \(G=(J,E)\)。边 \((i,j)\in E\) 表示 \(i\prec j\)，即 \(j\) 不能早于 \(i\) 执行。</p>
+
+    <p>在没有 release dates、且目标 \(\sum C_j\) 随完成时间单调增加时，最优解不需要主动空转机器。因此一个可行 schedule 可以看成 precedence DAG 的一个 topological order：</p>
+
+    <div class="math">\[
+      \pi=(\pi_1,\pi_2,\ldots,\pi_n).
+    \]</div>
+
+    <p>如果 job \(\pi_k\) 排在第 \(k\) 个执行，则它的完成时间是前面所有已执行 job 的处理时间前缀和：</p>
+
+    <div class="math">\[
+      C_{\pi_k}=\sum_{h=1}^{k} p_{\pi_h}.
+    \]</div>
+
+    <p>优化目标为：</p>
+
+    <div class="math">\[
+      \min_{\pi\ \text{is a topological order}}\;\sum_{k=1}^{n} C_{\pi_k}
+      =
+      \min_{\pi}\;\sum_{k=1}^{n}\sum_{h=1}^{k}p_{\pi_h}.
+    \]</div>
+
+    <p>这个等式也说明了问题的直觉：越早执行的 job，其处理时间会被计入越多后续 job 的等待中；但 precedence constraints 又限制了哪些 job 可以提前。</p>
+
+    <h2>3. 一个小例子</h2>
+    <p>假设有三个 job：\(p_A=3\)、\(p_B=1\)、\(p_C=2\)，并且只有一个依赖 \(A\prec C\)。可行顺序和目标值如下：</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>顺序</th>
+          <th>完成时间</th>
+          <th>\(\sum C_j\)</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>\(A,B,C\)</td>
+          <td>\(C_A=3,\ C_B=4,\ C_C=6\)</td>
+          <td>13</td>
+          <td>满足 \(A\prec C\)，但短 job \(B\) 被推迟了。</td>
+        </tr>
+        <tr>
+          <td>\(B,A,C\)</td>
+          <td>\(C_B=1,\ C_A=4,\ C_C=6\)</td>
+          <td>11</td>
+          <td>满足 \(A\prec C\)，且更早完成了短 job。</td>
+        </tr>
+        <tr>
+          <td>\(A,C,B\)</td>
+          <td>\(C_A=3,\ C_C=5,\ C_B=6\)</td>
+          <td>14</td>
+          <td>虽然尽快解锁并执行 \(C\)，但总体完成时间更差。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>如果没有 precedence constraints，单机最小化 \(\sum C_j\) 的规则很简单：按处理时间从短到长执行，也就是 SPT（shortest processing time first）。加入 arbitrary precedence constraints 后，调度器必须在“先做短任务”和“先解锁后继任务”之间权衡，这正是困难性的来源。</p>
+
+    <h2>4. NP-hard、NP-complete 和 strongly NP-hard</h2>
+
+    <h3>4.1 优化问题和判定问题</h3>
+    <p>\(1|\mathrm{prec}|\sum C_j\) 本身是一个优化问题。讨论 NP-complete 时，通常使用它的判定版：</p>
+
+    <div class="math">\[
+      \text{给定阈值 }K,\ \text{是否存在一个 precedence-feasible schedule，使得 }\sum_j C_j\le K?
+    \]</div>
+
+    <p>这个判定问题属于 NP：证书就是一个 job 顺序。验证时只需检查该顺序是否尊重所有 precedence edges，并计算完成时间之和是否不超过 \(K\)。这些都可以在多项式时间内完成。</p>
+
+    <h3>4.2 NP-hard 是什么意思？</h3>
+    <p>说一个问题 \(B\) 是 NP-hard，意思是任意 NP 问题都可以通过多项式时间归约转化到 \(B\)，或者至少某个已知 NP-hard 问题可以归约到 \(B\)。如果 \(B\) 有多项式时间精确算法，那么被归约过来的已知困难问题也会有多项式时间算法。</p>
+
+    <p>因此，对优化问题说“NP-hard”不是说它没有任何可用算法，而是说：除非 \(P=NP\)，否则不能期待一个对所有输入都多项式时间求最优解的通用算法。</p>
+
+    <h3>4.3 strongly NP-hard 是什么意思？</h3>
+    <p>Strongly NP-hard 更强。普通 NP-hard 有时可能来自数值很大的参数；这类问题可能存在 pseudo-polynomial algorithm。Strongly NP-hard 表示即使把数值参数限制在多项式大小范围内，困难性仍然存在。</p>
+
+    <p>对于调度问题，这通常意味着困难不只是因为处理时间 \(p_j\) 的二进制编码很大，而是来自 precedence graph 和目标函数之间的组合结构。经典结果表明，在 arbitrary precedence constraints 下，\(1|\mathrm{prec}|\sum C_j\) 是 strongly NP-hard。</p>
+
+    <div class="note warning">
+      <p><strong>注意。</strong>NP-hard 不等于“所有实例都难”。很多特殊结构仍可能有高效算法，例如无 precedence constraints 的 \(1||\sum C_j\) 可由 SPT 最优求解；一些受限 precedence graph 也可以利用结构化算法或动态规划。NP-hard 说的是 arbitrary 输入上的一般情形。</p>
+    </div>
+
+    <h2>5. 为什么它常用于系统论文的归约？</h2>
+    <p>系统论文中的新调度问题往往比经典单机问题更复杂：可能有 batching、I/O wait、KV cache、异构 GPU、多个模型和动态到达。证明这类问题 NP-hard 的常见方式，是把一个已知 NP-hard 的经典问题嵌入为新问题的特殊情况。</p>
+
+    <p>如果一个新问题在某些参数设置下退化为 \(1|\mathrm{prec}|\sum C_j\)，那么新问题至少和 \(1|\mathrm{prec}|\sum C_j\) 一样难。因为任何 \(1|\mathrm{prec}|\sum C_j\) 实例都可以被翻译成新问题实例；若新问题存在通用多项式精确算法，就能反过来求解经典 NP-hard 问题。</p>
+
+    <h2>6. 和 Astraea 文章中的证明有什么关系？</h2>
+    <p>Astraea 文章在第 3.2 节使用 \(1|\mathrm{prec}|\sum C_j\) 作为归约源问题。直觉映射如下：</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>经典问题元素</th>
+          <th>Astraea/LLM agent scheduling 中的对应元素</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>单机</td>
+          <td>把 batch size 设为 1，使系统一次只处理一个 computational segment。</td>
+        </tr>
+        <tr>
+          <td>job \(J_j\)</td>
+          <td>一个需要 GPU 计算的 segment \(S_j\)。</td>
+        </tr>
+        <tr>
+          <td>处理时间 \(p_j\)</td>
+          <td>segment 的计算时间 \(T_{\mathrm{comp}}(S_j)\)。</td>
+        </tr>
+        <tr>
+          <td>precedence edge \(i\prec j\)</td>
+          <td>segment 之间的依赖关系。把 API/I/O 时间设为 0 后，依赖只保留顺序约束。</td>
+        </tr>
+        <tr>
+          <td>完成时间 \(C_j\)</td>
+          <td>segment 或其所在请求的完成时间。</td>
+        </tr>
+        <tr>
+          <td>\(\sum C_j\)</td>
+          <td>总 JCT 或平均 JCT；在 job 数固定时，最小化平均值等价于最小化总和。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>这个归约说明：Astraea 的一般调度问题包含一个经典 strongly NP-hard 问题作为特殊情况。因此，论文不需要证明所有 agentic workflow 都难；只要证明经典困难问题能在它的模型内被表达出来，就足以推出一般问题 NP-hard。</p>
+
+    <h2>7. 读论文时应如何理解这个结论？</h2>
+    <ul>
+      <li><strong>它支持“为什么需要启发式/近似/在线策略”。</strong>如果一般问题 NP-hard，论文提出预测、优先级或局部搜索类调度策略是合理方向。</li>
+      <li><strong>它不是性能结论。</strong>NP-hard 只说明最坏情况精确求解困难，不说明某个 heuristic 一定好或一定坏。</li>
+      <li><strong>它不是不可调度结论。</strong>实际 workload 可能有短链、重复结构、有限模板或可预测分布，这些都能被系统利用。</li>
+      <li><strong>它提醒看清 special case。</strong>证明通常依赖把新问题参数固定到一个简单设置；如果这个简单设置已难，则完整模型自然更难。</li>
+    </ul>
+
+    <h2>参考</h2>
+    <ol class="refs">
+      <li>R. L. Graham, E. L. Lawler, J. K. Lenstra, and A. H. G. Rinnooy Kan. <a href="https://ir.cwi.nl/pub/18052" target="_blank" rel="noopener noreferrer">Optimization and Approximation in Deterministic Sequencing and Scheduling: A Survey</a>. Annals of Discrete Mathematics, 1979.</li>
+      <li>J. K. Lenstra and A. H. G. Rinnooy Kan. <a href="https://pubsonline.informs.org/doi/abs/10.1287/opre.26.1.22" target="_blank" rel="noopener noreferrer">Complexity of Scheduling under Precedence Constraints</a>. Operations Research, 1978.</li>
+    </ol>
+  </section>
+</main>
+</body>
+</html>
