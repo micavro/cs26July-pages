@@ -177,6 +177,31 @@
       font-size: 13.5px;
       line-height: 1.55;
     }
+    .algorithm-code {
+      margin: 12px 0 0;
+      display: grid;
+      grid-template-columns: 2.2em minmax(0, 1fr);
+      column-gap: 12px;
+      row-gap: 2px;
+      align-items: start;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 13.5px;
+      line-height: 1.55;
+      overflow-x: auto;
+    }
+    .algorithm-code .line-no {
+      color: var(--muted);
+      text-align: right;
+      user-select: none;
+      font-variant-numeric: tabular-nums;
+    }
+    .algorithm-code .line {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .algorithm-code .comment {
+      color: #5b6773;
+    }
     .refs {
       column-count: 2;
       column-gap: 30px;
@@ -450,30 +475,32 @@ JCT(R_i) &= C(S_i^k) - t_{\mathrm{arrival}}(R_i)\\
       <strong>Algorithm 1：Stateful-MLFQ Scheduling</strong><br>
       <strong>Input：</strong>m：队列数量；Q：优先级队列；T：Token thresholds；τ：Aging threshold。<br>
       <strong>Output：</strong>下一执行 batch B。
-<pre>function BuildNextBatch(Q, T, τ):
-  // 1. Starvation Prevention (Aging)
-  foreach request R ∈ Q[m-1] do
-    if (R.waitTime + R.nextProcTime) / R.nextProcTime &gt; τ then
-      Q[0] ← Q[0] ∪ {R}
-      Q[m-1] ← Q[m-1] \ {R}
-
-  // 2. Batch Construction
-  B ← ∅
-  for k ← 0 to m - 1 do
-    if Q[k] is not empty then
-      C ← GetAllReadySegments(Q[k])
-
-      // 3. Intra-queue sorting using HRRN
-      foreach segment S ∈ C do
-        S.HRRNscore ← (S.totalwaitTime + S.procTime) / S.procTime
-      Csorted ← SortByHRRNScore(C, DESC)
-
-      // 4. Pack batch respecting memory constraints
-      foreach segment S ∈ Csorted do
-        if CanFitInMemory(B ∪ {S}) then
-          B ← B ∪ {S}
-      return B
-  return B</pre>
+      <div class="algorithm-code" aria-label="Algorithm 1 with paper line numbers">
+        <span class="line-no">1</span><span class="line">function BuildNextBatch(Q, T, τ):</span>
+        <span class="line-no"></span><span class="line comment">  // 1. Starvation Prevention (Aging)</span>
+        <span class="line-no">2</span><span class="line">  foreach request R ∈ Q[m-1] do</span>
+        <span class="line-no">3</span><span class="line">    if (R.waitTime + R.nextProcTime) / R.nextProcTime &gt; τ then</span>
+        <span class="line-no">4</span><span class="line">      Q[0] ← Q[0] ∪ {R}</span>
+        <span class="line-no">5</span><span class="line">      Q[m-1] ← Q[m-1] \ {R}</span>
+        <span class="line-no"></span><span class="line"></span>
+        <span class="line-no"></span><span class="line comment">  // 2. Batch Construction</span>
+        <span class="line-no">6</span><span class="line">  B ← ∅</span>
+        <span class="line-no">7</span><span class="line">  for k ← 0 to m - 1 do</span>
+        <span class="line-no">8</span><span class="line">    if Q[k] is not empty then</span>
+        <span class="line-no">9</span><span class="line">      C ← GetAllReadySegments(Q[k])</span>
+        <span class="line-no"></span><span class="line"></span>
+        <span class="line-no"></span><span class="line comment">      // 3. Intra-queue sorting using HRRN</span>
+        <span class="line-no">10</span><span class="line">      foreach segment S ∈ C do</span>
+        <span class="line-no">11</span><span class="line">        S.HRRNscore ← (S.totalwaitTime + S.procTime) / S.procTime</span>
+        <span class="line-no">12</span><span class="line">      Csorted ← SortByHRRNScore(C, DESC)</span>
+        <span class="line-no"></span><span class="line"></span>
+        <span class="line-no"></span><span class="line comment">      // 4. Pack batch respecting memory constraints</span>
+        <span class="line-no">13</span><span class="line">      foreach segment S ∈ Csorted do</span>
+        <span class="line-no">14</span><span class="line">        if CanFitInMemory(B ∪ {S}) then</span>
+        <span class="line-no">15</span><span class="line">          B ← B ∪ {S}</span>
+        <span class="line-no">16</span><span class="line">      return B</span>
+        <span class="line-no">17</span><span class="line">  return B</span>
+      </div>
     </div>
 
     <h4>4.3.4 抢占粒度</h4>
