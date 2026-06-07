@@ -6,7 +6,10 @@
 <title>FATE：面向异构 LLM 工作流的未来状态感知调度</title>
 <style>
 :root{--ink:#161616;--muted:#5f6368;--rule:#d9dde3;--paper:#fff;--bg:#f4f6f8;--accent:#184c7f;--soft:#f8fafc}
-*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.72;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:70px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}h1{margin:0 auto 22px;max-width:850px;text-align:center;font-size:32px;line-height:1.28;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:820px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:830px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:830px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:760px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}.math{break-inside:avoid;margin:16px 0 18px;padding:12px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px;font-family:"Times New Roman","Cambria Math",serif;font-size:15.5px;line-height:1.65;text-align:center;overflow-x:auto}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:520px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.72;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:70px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}h1{margin:0 auto 22px;max-width:850px;text-align:center;font-size:32px;line-height:1.28;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:820px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:830px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:830px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:760px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}.math{break-inside:avoid;margin:16px 0 18px;padding:12px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px;font-family:"Times New Roman","Cambria Math",serif;font-size:15.5px;line-height:1.65;text-align:center;overflow-x:auto}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:520px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}.qa-jump{margin:0 0 16px;text-align:right;font-size:14px;line-height:1.4}
+.qa-jump a{color:var(--accent,#1d5b79);font-weight:700;text-decoration:none;border-bottom:1px solid currentColor}
+.qa-jump a:hover{color:var(--ink,#171717)}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
 </style>
 
   <style>
@@ -40,6 +43,17 @@
     };
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<style id="qa-module-style">
+.qa-panel{margin:0 0 28px;padding:18px 20px 20px;background:var(--soft,#f7fafc);border:1px solid var(--rule,#dfe3e8);border-left:4px solid var(--accent,#1d5b79);border-radius:6px}
+.qa-panel h2{margin:0 0 12px;padding:0;border:0;font-size:23px;line-height:1.35}
+.qa-toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 12px;margin:0 0 16px}
+.qa-toc a{display:block;padding:7px 9px;border:1px solid var(--rule,#dfe3e8);border-radius:4px;background:#fff;color:var(--accent,#1d5b79);font-size:14px;line-height:1.35;text-decoration:none}
+.qa-toc a:hover{text-decoration:underline;text-underline-offset:.18em}
+.qa-item{scroll-margin-top:22px;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--rule,#dfe3e8)}
+.qa-item h3{margin:0 0 8px;font-size:18px;line-height:1.38}
+.qa-item p{margin:0;color:var(--ink,#171717)}
+@media(max-width:820px){.qa-panel{padding:16px 14px}.qa-toc{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <main class="paper">
@@ -48,6 +62,9 @@
 <div class="meta">中文翻译稿 | 源文件：fate-2605.07238.pdf | 术语 FATE、CP-SAT、frontier、model residency、prefix reuse 保留英文</div>
 <section class="columns">
 
+<!-- paper-qa-link -->
+<p class="qa-jump"><a href="#paper-qa">&#26597;&#30475;&#35770;&#25991;&#38382;&#31572;</a></p>
+<!-- /paper-qa-link -->
 <section class="abstract"><p><strong>摘要。</strong>LLM 应用越来越以异构多阶段工作流执行，而不是孤立 inference call。在这些 workflow DAG 中，调度决策不仅影响当前 ready stage，还会影响下游继承的执行状态，包括 model residency、parent-output locality、prefix reuse 和 future device reachability。现有 serving 与 DAG-scheduling policy 多数只单独优化当前队列状态、placement cost 或 reuse signal，可能破坏有用状态并增加端到端延迟。FATE 是一种 future-state-aware scheduler，结合 CP-SAT frontier planner、horizon-aware candidate scoring、bounded multi-device shard execution 与 state-conditional cost estimation。它不求解单体 full-DAG 问题，而是在当前 ready frontier 上反复规划，并根据即时成本和诱导出的下游状态为 assignment 打分。在 WfCommons-derived workflow-DAG benchmark 与 controlled prefix-reuse benchmark 上，FATE 优于 practical heuristics、classical DAG scheduling 及近期 workflow-serving policy 的 proxy adaptation；workflow-DAG benchmark 上 normalized makespan 和 normalized P95 latency 分别为 0.675 和 0.677，相比 RoundRobin 降低 32.5% 和 32.3%。</p></section>
 <h2>1 引言</h2>
 <p>近期 LLM serving 技术显著提升了单次 inference call 的效率，例如 paged KV-cache 管理、structured language-program execution、prefill/decode scheduling 和 architectural disaggregation。当 workload 可以近似为单次模型调用或弱耦合调用序列时，这些技术非常有效。</p>
@@ -1098,6 +1115,45 @@ downstream application. Appropriate mitigations include applying the scheduler w
 enforce existing safety policies, access controls, monitoring, rate limits, and privacy protections for
 the underlying LLM applications.
 24</pre>
+
+
+<!-- paper-qa-module -->
+<section class="qa-panel" id="paper-qa">
+  <h2>论文问答</h2>
+  <nav class="qa-toc" aria-label="论文问答导航">
+      <a href="#qa-q1">Q1：这篇论文试图解决什么问题？</a>
+      <a href="#qa-q2">Q2：有哪些相关研究？</a>
+      <a href="#qa-q3">Q3：论文如何解决这个问题？</a>
+      <a href="#qa-q4">Q4：论文做了哪些实验？</a>
+      <a href="#qa-q5">Q5：有什么可以进一步探索的点？</a>
+      <a href="#qa-q6">Q6：总结一下论文的主要内容。</a>
+  </nav>
+    <section class="qa-item" id="qa-q1">
+      <h3>Q1：这篇论文试图解决什么问题？</h3>
+      <p>它解决异构 LLM workflow 调度中的未来状态破坏问题。现有策略常只看当前 ready stage 的放置成本或队列状态，却忽略当前选择会影响下游的 model residency、prefix reuse、parent-output locality 和未来设备可达性。</p>
+    </section>
+    <section class="qa-item" id="qa-q2">
+      <h3>Q2：有哪些相关研究？</h3>
+      <p>相关研究包括 HEFT 等 DAG scheduling、Parrot/Helium/HEXAGENT 这类 workflow-aware LLM serving、KV/prefix reuse、异构 GPU placement，以及 CP-SAT/optimization-based scheduling。FATE 的关键词是 future-state-aware，而不是只做局部贪心。</p>
+    </section>
+    <section class="qa-item" id="qa-q3">
+      <h3>Q3：论文如何解决这个问题？</h3>
+      <p>FATE 用 CP-SAT frontier planner 在有限 horizon 内规划候选执行前沿，再用 horizon-aware scoring 衡量当前决策对未来状态的影响。它把 reuse、residency、device reachability 等信号纳入打分，避免为了当前快而牺牲后续更大的状态收益。</p>
+    </section>
+    <section class="qa-item" id="qa-q4">
+      <h3>Q4：论文做了哪些实验？</h3>
+      <p>实验使用多种工作流、模型族、异构设备和冲突压力设置，比较端到端延迟、prefix reuse、调度信号消融、solver overhead 和扰动鲁棒性。结果展示 FATE 在多种条件下比只看局部信号的基线更稳定地降低 workflow 完成时间。</p>
+    </section>
+    <section class="qa-item" id="qa-q5">
+      <h3>Q5：有什么可以进一步探索的点？</h3>
+      <p>可以继续研究更长 horizon 下 planner 的可扩展性，以及预测错误、动态分支和在线到达对计划质量的影响。也可以将 FATE 与 Coral 的资源模板或 Chimera 的语义路由结合，形成从模型选择到硬件放置的统一 planner。</p>
+    </section>
+    <section class="qa-item" id="qa-q6">
+      <h3>Q6：总结一下论文的主要内容。</h3>
+      <p>FATE 的主要内容是：LLM workflow 调度要保护未来可复用状态。它用有限前瞻规划把当前 placement 与下游 cache、模型驻留和设备路径联系起来，从而减少端到端延迟。</p>
+    </section>
+</section>
+<!-- /paper-qa-module -->
 
 </section>
 </main>
