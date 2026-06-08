@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HEXAGENT：工作流感知与异构感知的 Agentic LLM Serving：详细论文问答</title>
+<style>
+:root{--ink:#171717;--muted:#5e6874;--rule:#dde3ea;--paper:#fff;--bg:#f4f6f8;--accent:#17636f;--soft:#f7fafb}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.76;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:62px 82px 86px;background:var(--paper);border:1px solid #e4e8ee;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 18px;max-width:900px;text-align:center;font-size:31px;line-height:1.3;letter-spacing:0;text-wrap:balance}h2{margin:38px 0 14px;padding-top:4px;font-size:24px;line-height:1.35}h3{margin:24px 0 10px;font-size:19px;line-height:1.38}
+p{margin:0 0 13px;overflow-wrap:anywhere}.meta{margin:0 auto 30px;max-width:840px;text-align:center;color:var(--muted);font-size:14px}.nav{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:0 auto 30px}.nav a{padding:7px 10px;border:1px solid var(--rule);border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-size:14px}.nav a:hover{text-decoration:underline;text-underline-offset:.18em}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px 12px;margin:0 0 28px;padding:16px;border:1px solid var(--rule);border-left:4px solid var(--accent);background:var(--soft);border-radius:6px}.toc a{color:var(--accent);text-decoration:none}.toc a:hover{text-decoration:underline;text-underline-offset:.18em}
+section.qa{scroll-margin-top:22px;border-top:1px solid var(--rule);padding-top:18px;margin-top:24px}ul{margin:0 0 16px 1.35em;padding:0}li{margin:6px 0}strong{font-weight:700}code{font-family:"Cascadia Mono","Consolas",monospace;background:#eef1f4;border-radius:3px;padding:0 .18em}.content{max-width:860px;margin:0 auto;font-size:17px}
+@media(max-width:820px){main{width:100%;margin:0;padding:34px 24px 54px;border:0;box-shadow:none}h1{font-size:23px;text-align:left}.meta,.nav{justify-content:flex-start;text-align:left}.content{font-size:16px}.toc{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<div class="content">
+<div class="meta">详细 Q&A 页面。对应翻译：<a href="../hexagent-2605.16637-zh.html">hexagent-2605.16637-zh.html</a></div>
+<nav class="nav"><a href="../hexagent-2605.16637-zh.html">返回中文翻译</a></nav>
+<div class="toc"><a href="#q1">Q1: 这篇论文试图解决什么问题？</a>
+<a href="#q2">Q2: 有哪些相关研究？</a>
+<a href="#q3">Q3: 论文如何解决这个问题？</a>
+<a href="#q4">Q4: 论文做了哪些实验？</a>
+<a href="#q5">Q5: 有什么可以进一步探索的点？</a>
+<a href="#q6">Q6: 总结一下论文的主要内容。</a></div>
+<h1>HEXAGENT：工作流感知与异构感知的 Agentic LLM Serving：详细论文问答</h1>
+<ul>
+<li><a href="../hexagent-2605.16637-zh.html">返回中文翻译</a></li>
+<li><a href="../paper-qa/hexagent-2605.16637-qa.html">打开 HTML 问答页</a></li>
+</ul>
+<section class="qa" id="q1"><h2>Q1: 这篇论文试图解决什么问题？</h2>
+<p>HEXAGENT 试图解决 <strong>在线 agentic workflow 在异构 prefill/decode 解耦集群中的 SLO 调度</strong>问题。Agent 请求不是单个 LLM query，而是运行时逐步揭示的 DAG：规划、工具调用、分支、修订和综合可能动态产生。每个 call 的 prompt 长度、输出长度和 KV-cache 需求不同，prefill 与 decode 又对硬件资源有不同瓶颈。</p>
+<p>传统调度器只看单次调用或同构集群，无法保证 workflow-level latency objective。HEXAGENT 要把 ready calls 的排序、prefill placement、decode placement 和 batching 联合起来，使整个 workflow 更可能按时完成。</p>
+</section><section class="qa" id="q2"><h2>Q2: 有哪些相关研究？</h2>
+<p>相关研究包括：</p>
+<ul>
+<li><strong>LLM serving 与 PD 分离</strong>：vLLM、SGLang、DistServe、Splitwise 等处理高吞吐推理和 prefill/decode disaggregation。</li>
+<li><strong>Agent/workflow serving</strong>：Parrot、Helium、Astraea、FATE 等分别关注应用级结构、cache-aware planning、状态调度和未来状态。</li>
+<li><strong>DAG scheduling</strong>：HEFT、critical path、list scheduling 等提供 workflow 优先级思想。</li>
+<li><strong>异构 GPU 调度</strong>：不同设备适合不同阶段，Coral 等资源优化工作与 HEXAGENT 的硬件感知方向相关。</li>
+</ul>
+<p>HEXAGENT 的特点是在线揭示 DAG + workflow-level deadline/SLO + PD placement 联合处理。</p>
+</section><section class="qa" id="q3"><h2>Q3: 论文如何解决这个问题？</h2>
+<p>HEXAGENT 的方法可以理解为事件驱动 workflow scheduler。</p>
+<ul>
+<li><strong>在线揭示 DAG</strong>：系统不假设完整 workflow 预先已知，而是在每个 event 后更新 DAG 状态和 ready calls。</li>
+<li><strong>Workflow independent completion horizon</strong>：为每个 workflow 估计如果独占资源还需要多久完成，从而判断当前延迟风险。</li>
+<li><strong>Ready-call prioritization</strong>：按错过完成视界的投影风险排序，而不是只按单 call 到达时间或长度排序。</li>
+<li><strong>Heterogeneous placement</strong>：联合选择 prefill 实例、decode 实例和 batch，考虑不同 GPU 对 prefill/decode 的计算、内存和传输能力。</li>
+</ul>
+<p>其核心思想是把调度优先级从 call-level 转成 workflow-risk-level：越可能拖慢整个 workflow 的 ready call，越应被优先处理。</p>
+</section><section class="qa" id="q4"><h2>Q4: 论文做了哪些实验？</h2>
+<p>实验从多个角度评估。</p>
+<ul>
+<li><strong>集群类型</strong>：包含异构和同构 prefill/decode 服务集群。</li>
+<li><strong>工作负载</strong>：在线 agentic workflows，具有不同 call 数量、prompt/output 长度和动态依赖。</li>
+<li><strong>对比基线</strong>：workflow-oblivious、heterogeneity-oblivious、不同调度信号组合和已有 serving 策略。</li>
+<li><strong>指标</strong>：SLO attainment、平均/尾延迟、不同 GPU 配置下表现、消融结果、调度开销和鲁棒性。</li>
+<li><strong>结论</strong>：workflow-aware 排序和 heterogeneity-aware placement 都有贡献；二者结合能更好满足 workflow-level SLO。论文还展示 scheduler overhead 可控。</li>
+</ul>
+<p>实验强调：在 agentic serving 中，“哪个 call 先执行”与“在哪种 prefill/decode 资源上执行”必须联合考虑。</p>
+</section><section class="qa" id="q5"><h2>Q5: 有什么可以进一步探索的点？</h2>
+<p>进一步探索方向：</p>
+<ul>
+<li><strong>更准确的长度和分支预测</strong>：在线 DAG 只部分可见，预测错误会影响 risk scoring。</li>
+<li><strong>KV cache 复用和迁移</strong>：HEXAGENT 关注 placement，但还可结合 LMCache/Helium/FATE 的状态复用。</li>
+<li><strong>成本优化</strong>：加入云 GPU 价格和模型成本，与 Coral 形成资源层闭环。</li>
+<li><strong>多模型 agent</strong>：不同 workflow stage 可用不同 LLM，需与 Chimera/RouteLLM 式模型选择结合。</li>
+<li><strong>公平性和多租户</strong>：workflow-level SLO 可能导致某些长流程被持续推后，需要严格 fairness guard。</li>
+</ul>
+<p>HEXAGENT 适合作为未来 agentic LLM serving runtime 的调度骨架。</p>
+</section><section class="qa" id="q6"><h2>Q6: 总结一下论文的主要内容。</h2>
+<p>一句话总结：<strong>HEXAGENT 面向在线揭示的 agentic workflow，在异构 prefill/decode 集群中做工作流级 SLO 调度。</strong></p>
+<p>论文将请求建模为动态 DAG，估计每个 workflow 的完成风险，并以此排序 ready calls；同时考虑 prefill/decode 解耦和异构 GPU 特性做 placement。实验显示，只有同时具备 workflow awareness 和 heterogeneity awareness，才能稳定提升 SLO 达成率。其主要贡献是把 agent workflow 的端到端目标落到实际 LLM serving 调度决策中。</p>
+<p>研究阅读补充：HEXAGENT 适合作为“在线 Agent DAG + prefill/decode 解耦”的系统参照。相比 HEFT 的静态 DAG，它面对的是逐步揭示的 workflow；相比 Coral 的资源分配，它还要在请求级事件到来时做实时决策。读这篇时应重点关注 workflow independent completion horizon 如何把全局 SLO 转化为 ready call priority。对本仓库而言，它提示后续选题必须明确：你的 scheduler 是离线规划、在线事件驱动，还是二者混合；不同选择会影响可证明性和系统复杂度。</p></section>
+</div>
+</main>
+</body>
+</html>
