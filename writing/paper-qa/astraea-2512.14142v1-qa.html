@@ -25,7 +25,8 @@ section.qa{scroll-margin-top:22px;border-top:1px solid var(--rule);padding-top:1
 <a href="#q3">Q3: 论文如何解决这个问题？</a>
 <a href="#q4">Q4: 论文做了哪些实验？</a>
 <a href="#q5">Q5: 有什么可以进一步探索的点？</a>
-<a href="#q6">Q6: 总结一下论文的主要内容。</a></div>
+<a href="#q6">Q6: 总结一下论文的主要内容。</a>
+<a href="#q7">Q7: 系统的详细主要流程是怎么样的？</a></div>
 <h1>Astraea：面向 LLM 驱动 Agent 的状态感知调度引擎：详细论文问答</h1>
 <ul>
 <li><a href="../astraea-2512.14142v1-zh.html">返回中文翻译</a></li>
@@ -76,6 +77,23 @@ section.qa{scroll-margin-top:22px;border-top:1px solid var(--rule);padding-top:1
 <p>论文首先指出 Agent 请求与普通 LLM query 的根本不同：它包含模型计算和外部 API 等待的交替，局部优化 segment 会造成全局 JCT 次优。随后作者形式化该在线调度问题并说明其复杂性。系统设计上，Astraea 预测每段计算/API 时间，用 Stateful-MLFQ 结合历史状态与等待公平性排序请求，并根据内存压力动态选择保留、丢弃或换出 KV cache。实验显示它在不同模型、QPS 和内存压力下都能降低平均 JCT，且系统开销很小。</p>
 <p>主要贡献可以概括为：提出 Agent 生命周期级调度视角；把 API 等待和 KV cache 状态纳入调度；设计低开销的状态感知 MLFQ；用实验证明在 Agent workload 下比传统 vLLM/Infercept 类策略更稳定。</p>
 <p>研究阅读补充：如果把 Astraea 放到本仓库的主线里，它最像“Agent runtime 的单机调度内核”。它不直接解决多模型选择，也不直接解决跨机器 KV placement，但它清楚回答了一个前置问题：当 Agent 请求在 GPU 计算和外部 I/O 之间来回切换时，调度器应该记录哪些状态、预测哪些未来事件、怎样把 cache 决策和排队决策合并。读这篇时应重点关注三个可迁移抽象：segment 生命周期、I/O-aware priority boost、cache preserve/discard/swap 的成本比较。后续若要做自己的系统，可以把它作为状态机和调度目标的基础，再叠加 Helium/FATE 的 workflow DAG 视角。</p></section>
+<section class="qa" id="q7"><h2>Q7: 系统的详细主要流程是怎么样的？</h2>
+<p>Astraea 的主流程可以理解为一个围绕 <strong>Request Pool -&gt; Predictor -&gt; Scheduler -&gt; Inference Engine -&gt; KV Cache Manager</strong> 循环运转的在线 serving pipeline。它不是只在请求到达时排一次队，而是在每个 segment 执行完成、请求进入 API 等待、API 返回、内存压力变化时持续更新状态。</p>
+<p><strong>第一步：请求进入系统并被拆成生命周期状态。</strong>用户提交的完整任务被表示为 parent request <code>R_i</code>。系统当前只看到它已经 ready 的 segment，例如第一个 <code>S_i^1</code>，后续 segment 可能要等模型输出触发 API、API 返回后才显现。新请求进入统一的 Request Pool，同时初始化请求级状态：到达时间、累计等待时间、当前队列层级、已消耗 token cost、KV cache 状态、当前是否在 I/O 等待，以及下一段是否 ready。</p>
+<p><strong>第二步：Service Time Predictor 给 ready segment 标注元数据。</strong>对每个可调度 segment，Predictor 估计两类时间。计算时间由 prefill 和 decode 组成：prefill 主要按输入长度和离线 profiling 估计，decode 由预测生成长度乘以平均单 token decode latency 得到。API latency 则按工具/API 类别做统计估计，例如数学工具通常很短，图像生成或 chatbot 类 API 可能有几十秒等待。这些估计不会直接给出最优调度，但会让调度器知道“当前计算贵不贵”和“执行后大概率会不会进入长 I/O”。</p>
+<p><strong>第三步：新请求默认进入最高优先级队列。</strong>Stateful-MLFQ 维护多个严格优先级队列 <code>Q0...Qm-1</code>。新到达请求先进入 <code>Q0</code>，保证刚到达的交互请求不会一开始就被长任务压住。之后请求不再固定停留在某个队列，而是根据执行行为被提升或降级。</p>
+<p><strong>第四步：每个调度周期先做 aging，避免饥饿。</strong>在 BuildNextBatch 开始时，调度器检查最低优先级队列中的请求。如果某个请求的 response ratio 超过阈值 <code>tau</code>，就把它提升到最高优先级队列。论文中使用的判断形式是 <code>(waitTime + nextProcTime) / nextProcTime &gt; tau</code>。这一步的作用是给长时间等待的请求兜底，避免 MLFQ 只偏向短计算或频繁 I/O 的请求。</p>
+<p><strong>第五步：从最高的非空队列中选择候选 segments。</strong>调度器从 <code>Q0</code> 向低优先级队列扫描，找到第一个非空队列 <code>Qk</code>，取出其中所有 ready segments。注意这里的选择粒度是 ready segment，但等待时间和优先级都绑定到 parent request 的生命周期状态上，所以它不是传统“无状态 segment 排队”。</p>
+<p><strong>第六步：队列内部用 HRRN 排序。</strong>在同一个队列内，调度器计算每个候选 segment 的分数：</p>
+<p><code>HRRN score = (totalWaitTime + procTime) / procTime</code></p>
+<p>其中 <code>procTime</code> 是当前 segment 的预测计算时间，<code>totalWaitTime</code> 来自 parent request 的累计等待。这个分数有两个效果：当等待时间相近时，短 segment 分数更高，接近 SJF/SRPT 的效率倾向；当某个长请求等待很久时，分数会上升，避免长期饿死。</p>
+<p><strong>第七步：按排序结果构建下一批 batch。</strong>候选 segments 按 HRRN 分数从高到低尝试放入 batch。调度器必须检查 GPU 内存约束，只有能放进当前 batch 的 segment 才会被加入。batch 填充到内存容量或没有可加入的候选项后，交给 LLM Inference Engine 执行。</p>
+<p><strong>第八步：Inference Engine 执行到 segment 边界。</strong>Astraea 的抢占粒度是 segment 级，而不是每个 decode iteration 都抢占。一批任务开始后会运行到这些 segments 完成：要么生成最终响应，要么生成工具/API 调用并暂停，要么完成当前计算段后等待下一状态。这种设计减少了细粒度抢占带来的 KV cache swap 成本，也更贴合 agent workflow 的自然边界。</p>
+<p><strong>第九步：segment 完成后触发队列迁移。</strong>如果一个请求在当前队列消耗了较多 token cost，说明它偏 compute-intensive，调度器会把 parent request 降到更低优先级队列，避免它持续占用前排资源。如果它在耗尽 token cost quota 前就触发 API 调用并让出 GPU，说明它偏 I/O-intensive，调度器会提升它的优先级。这个 promotion 的动机是：I/O 请求回来后通常需要一小段计算就能继续推进生命周期，优先处理它们有助于降低整体 JCT。</p>
+<p><strong>第十步：进入 API 等待时由 KV Cache Manager 管状态。</strong>当 segment 触发外部 API 调用，本地 GPU 不再为它计算，但它已有的 KV cache 可能还占用显存。Astraea 在低内存压力下默认 Preserve，把 cache 保留在 GPU 中，以便 API 返回后快速继续。高内存压力下，它比较 Preserve、Discard、Swap 三种策略的 memory-time waste：Preserve 占显存但恢复快；Discard 释放显存但返回后要重算 prefill；Swap 把 cache 换出到低层存储，释放显存但有换出和换入成本。系统选择估计 waste 最小的策略。</p>
+<p><strong>第十一步：API 返回后请求重新变为 ready。</strong>外部 API 返回的内容被追加到上下文中，形成下一段推理输入。如果 cache 被 Preserve，系统可直接继续；如果被 Discard，需要重算相关上下文；如果被 Swap，需要先换回 cache。然后新的 segment 进入 Request Pool，Predictor 重新估计下一段的计算/API 时间，Scheduler 在后续调度周期中再次决定它的位置。</p>
+<p><strong>第十二步：循环直到 parent request 完成。</strong>上述流程会在每个请求的多个 segment 间反复发生，直到最后一个 segment 生成最终响应。系统统计的是 parent request 从到达到最终完成的 JCT，而不是单个 segment 的局部延迟。因此 Astraea 的主要设计点是：调度器、预测器和 KV manager 都围绕完整生命周期协同，而不是各自局部优化。</p>
+<p>用一句更工程化的话概括：Astraea 在每个事件边界重新回答三个问题：哪个 ready segment 最值得现在进入 batch？这个请求根据历史行为应该升队还是降队？如果它去等 API，KV cache 应该留在 GPU、丢弃，还是换出？这三个决策合在一起，构成了论文所谓的状态感知 Agent serving 流程。</p></section>
 </div>
 </main>
 </body>
