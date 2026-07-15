@@ -1,81 +1,497 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AlpaServe：基于模型并行性的统计复用深度学习服务：中文精读与校订</title>
-<style>
-:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
-*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
-h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
-h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
-.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
-.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
-@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+<!DOCTYPE html>
 
-.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-34px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a{color:var(--accent);text-decoration:none}.paper-nav a:hover{text-decoration:underline}
-.overview{margin:0 0 28px;padding:20px 22px;border:1px solid #cddbe6;border-radius:8px;background:linear-gradient(135deg,#f7fbfd,#fff)}.overview h2{margin:0 0 10px;padding:0;font-size:21px}.overview ul{margin-bottom:0}.doing{font-size:18px;line-height:1.75}.equation{margin:24px 0;padding:18px 20px;border-left:4px solid var(--accent);background:var(--soft);overflow-x:auto}.equation .math{margin:6px 0 10px;text-align:center;font-size:1.05em}.source-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}.source-actions a{display:inline-block;padding:8px 12px;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:14px}.source-actions a.primary{background:var(--accent);color:#fff}.figure img{width:auto;max-height:760px}.revision-note{color:var(--muted);font-size:13px}.qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.qa-links a{padding:5px 9px;border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:13px}
-@media(max-width:820px){.paper-nav{margin:-8px 0 24px}.overview{padding:16px}.doing{font-size:16px}}
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>AlpaServe：利用模型并行实现深度学习服务的统计复用：中文全文翻译</title><style>
+:root{--ink:#161616;--muted:#5f6368;--rule:#d9dde3;--paper:#fff;--bg:#f4f6f8;--accent:#184c7f;--soft:#f8fafc}
+html{font-size:16px;scroll-behavior:smooth}*,*::before,*::after{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.76;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:70px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}h1{margin:0 auto 22px;max-width:900px;text-align:center;font-size:32px;line-height:1.28;font-weight:700;overflow-wrap:anywhere;text-wrap:balance}.authors{margin:0 auto 18px;max-width:900px;text-align:center;font-size:14px;line-height:1.6}.meta{margin:0 0 28px;color:var(--muted);text-align:center;font-size:13px}.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-35px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a,.qa-link a{color:var(--accent);text-decoration:none}.paper-nav a:hover,.qa-link a:hover{text-decoration:underline}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 13px;padding-top:4px;font-size:24px}h3{margin:27px 0 10px;font-size:20px}h4{margin:21px 0 8px;font-size:17px}p{margin:0 0 14px;overflow-wrap:anywhere}ul,ol{margin:0 0 17px 1.5em;padding:0}li{margin:0 0 9px;padding-left:.1em}.abstract,.keywords{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}.keywords{padding-top:11px;padding-bottom:11px}.qa-link{margin:0 0 26px;padding:13px 16px;border:1px solid #cbd8e4;border-radius:5px;background:#fbfdff;font-family:"Microsoft YaHei",sans-serif;text-align:center}.figure{break-inside:avoid;max-width:820px;margin:28px auto 34px;text-align:center}.figure img{display:block;max-width:100%;height:auto;max-height:780px;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:800px;margin:0 auto;font-size:14px;font-weight:700;line-height:1.55;text-align:left;color:#202124}table{width:100%;margin:22px auto 30px;border-collapse:collapse;font-size:14px;line-height:1.55;display:block;overflow-x:auto}th,td{padding:7px 9px;border:1px solid #d8dde3;vertical-align:top}th{background:#f4f7fa}.math.display{display:block;margin:20px auto;padding:12px 8px;overflow-x:auto;text-align:center}.math.inline{white-space:nowrap}.footnotes{margin-top:32px;padding-top:16px;border-top:1px solid var(--rule);font-size:13px;color:#424850}.refs-note{white-space:pre-wrap;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-size:13.5px;line-height:1.55}.translation-note{margin:20px 0;padding:14px 16px;border-left:4px solid #8a6d3b;background:#fffaf0;font-size:14px}.citation:empty{display:none}code{font-family:Consolas,"Courier New",monospace;font-size:.9em}.algorithm{margin:22px 0;padding:15px 17px;border:1px solid #d9e0e7;background:#fbfcfd;border-radius:4px;overflow-x:auto}.algorithm p{margin-bottom:7px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 26px 52px;border:0;box-shadow:none}.paper-nav{margin:-8px 0 24px}h1{font-size:24px}.columns{font-size:16px;line-height:1.84}.figure{max-width:100%}table{font-size:12.5px}}
+</style><script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script><script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head><body><main class="paper"><nav class="paper-nav"><a href="../index.html">← 论文目录</a><a href="paper-qa/alpaserve-2302.11665-qa.html">Q1-Q7 详细问答 →</a></nav><h1>AlpaServe：利用模型并行实现深度学习服务的统计复用<br/>中文全文翻译</h1><div class="authors">Zhuohan Li · Lianmin Zheng · Yinmin Zhong · Vincent Liu · Ying Sheng · Xin Jin · Yanping Huang · Zhifeng Chen · Hao Zhang · Joseph E. Gonzalez · Ion Stoica</div><div class="meta">OSDI 2023 · arXiv 2302.11665 · 公式统一使用 LaTeX/MathJax</div><section class="columns"><section class="abstract"><h2>摘要</h2><p>模型并行通常用于让单个大模型突破单设备内存限制。AlpaServe 进一步表明：即使模型能装入单设备，模型并行也可用于跨设备统计复用，在突发多模型负载下减少排队延迟。系统联合决定多个模型的放置、复制和并行策略，在并行开销与复用收益之间搜索。生产负载评估显示，它可在 99% 以上请求满足延迟约束时支持最高 10 倍到达率或 6 倍突发程度。</p></section><section class="keywords"><p><strong>关键词：</strong>多模型 serving；模型并行；统计复用；突发负载；模型放置；SLO</p></section><div class="qa-link"><a href="paper-qa/alpaserve-2302.11665-qa.html">阅读比正文更聚焦的 Q1-Q7 详细论文问答</a></div><div class="translation-note"><strong>翻译说明：</strong>本页以论文公开 LaTeX 源码为底稿，按原章节顺序逐段翻译；保留英文系统名、指标名和必要术语。所有数学表达式保留原始 LaTeX，由 MathJax 渲染。图表来自原论文素材。</div>
+<h2 id="introduction">1 简介</h2>
+<p>自导学习的进步使模型规模实现了指数级扩展。例如，像BERT和GPT-3这样的大型预训练模型，已经解锁了大量新的机器学习（ML）应用，从Copilot到 copy.ai 和ChatGPT。</p>
+<p>由于这些大型模型对计算和内存的需求较高，服务起来具有挑战性。例如，GPT-3需要325GB内存来存储其参数，并且需要相应的计算量来进行推理。要满足这一模式，至少需要5块英伟达最新的Hopper 80GB显卡来承载这些重量，甚至可能需要更多GPU以实现实时运行。更糟糕的是，模型尺寸的爆炸式增长依然持续。面对模型规模的指数级增长，模型压缩和剪枝等技术已不够用，且往往以降低模型质量为代价。</p>
+<figure class="figure" data-latex-placement="t" id="fig:two-model-example">
+<img alt="两种在两块GPU上服务两个模型的布局策略。在每个子图中，左侧显示模型的放置位置，右侧显示处理突发请求的时间线。在“Burst 1”时期，4个型号A的请求同时出现。与模型并行共置可以缩短突发请求的平均完成时间。" loading="lazy" src="../assets/papers/alpaserve-full/figure-01.png"/>
+<figcaption class="caption">两种在两块GPU上服务两个模型的布局策略。在每个子图中，左侧显示模型的放置位置，右侧显示处理突发请求的时间线。在“Burst 1”时期，4个型号A的请求同时出现。与模型并行共置可以缩短突发请求的平均完成时间。</figcaption>
+</figure>
+<p>由于请求率波动大，提供足够资源以服务这些模型可能非常困难。例如，使用常见的工作负载迹，我们观察到需求频繁激增，平均值<span class="math inline">\(\times\)</span> 50。满足服务水平目标（SLO）延迟通常意味着为这些峰值负载进行配置，这可能非常昂贵;为此目的分配的额外设备大多数时间都未被充分利用。更糟糕的是，在A/B测试或为特定领域提供微调模型（§<a data-reference="sec:serving-sys-background" data-reference-type="ref" href="#sec:serving-sys-background">2</a>）等情境下，服务多个模型和多个大模型变体的情况越来越普遍。</p>
+<p>本文研究如何高效地同时服务多个大型模型。具体来说，我们探讨了模型并行在在线模型服务中被低估的优势，即使是对于能够在单一设备上安装的小型模型。模型并行指的是在分布式设备上对模型进行分区和执行（§<a data-reference="subsec:model-parallel-background" data-reference-type="ref" href="#subsec:model-parallel-background">2.1</a>）。模型并行的好处在 <em>以吞吐量为导向</em> 的训练环境中已被深入研究。然而，其对模型在 <em>延迟敏感</em> 设置下服务的影响仍然大多未被充分开发。</p>
+<p>我们观察到，模型服务设计空间存在一些根本性的过渡点，挑战了关于服务的先有假设，即使是适用于单一设备的模型。例如，考虑两个型号和两个GPU，每个GPU都有足够的内存来存储一个完整模型。如图所示。<a data-reference="fig:two-model-example" data-reference-type="ref" href="#fig:two-model-example">1</a>（a），几乎所有现有服务系统都采用的自然方法是为一个模型分配一个专用 GPU。这种做法看起来合理，因为将模型划分到GPU会带来通信开销，进而可能增加预测延迟。然而，我们发现引入额外的模型并行（直到每例执行时间实际上 <em>增加</em>）可以实现更广泛的布局策略，例如模型共址，从而在突发负载下改善系统的统计复用能力。见图 1<a data-reference="fig:two-model-example" data-reference-type="ref" href="#fig:two-model-example">（a</a>），假设模型的执行时间为 <span class="math inline">\(y\)</span>，则请求1至4的平均端到端延迟为 <span class="math inline">\((1y + 2y + 3y + 4y)/4 =2.5y\)</span>。见图 <a data-reference="fig:two-model-example" data-reference-type="ref" href="#fig:two-model-example">1</a>（b），假设模型并行开销为10%，请求1至请求4的平均延迟降至 <span class="math inline">\((1.1y + 1.6y + 2.1y + 2.6y)/4= 1.85y\)</span>。与模型并行共址可以利用更多设备处理突发请求，并降低平均完成时间，尽管存在开销（§<a data-reference="subsec:illustrative-example" data-reference-type="ref" href="#subsec:illustrative-example">3.1</a>）。即使我们batch 处理请求，案件依然成立（§<a data-reference="subsec:batching-exp" data-reference-type="ref" href="#subsec:batching-exp">6.5</a>）。</p>
+<p>不幸的是，如何最优地拆分和放置一组模型的决定非常复杂。虽然上述利用模型并行有其优势，但仍会增加开销，可能抵消这些好处，以减少突发性工作负载。例如，我们发现对模型并行效能影响特别大的轴是每GPU内存容量（§<a data-reference="subsec:serving-performance-factors" data-reference-type="ref" href="#subsec:serving-performance-factors">3.2</a>），尽管其他因素（如到达模式、SLO）也可能产生显著影响。此外，除了 <a data-reference="fig:two-model-example" data-reference-type="ref+label" href="#fig:two-model-example">1</a>中提出的运算间模型并行外，另一种模型并行——运内并行性，也存在其独特的权衡（§<a data-reference="subsec:model-parallel-overhead" data-reference-type="ref" href="#subsec:model-parallel-overhead">3.3</a>）。最终，不同风格的并行及其权衡创造了一个复杂、多维、多目标的设计空间，现有系统大多忽视或未能驾驭。然而，在服务环境中不利用模型并行通常不是大型模型的选项，而不直接解决这一权衡空间会导致成本和服务延迟显著增加。</p>
+<p>为此，我们介绍了AlpaServe<a class="footnote-ref" href="#fn2" id="fnref2" role="doc-noteref"><sup>2</sup></a>，这是一个自动且高效地探索不同并行化和布局策略在模型服务中权衡的系统。AlpaServe 采用集群资源规格、一组模型和周期性工作负载配置文件;然后对模型进行分区和配置，并调度请求以优化SLO实现率（即SLO内请求的百分比）。为协助AlpaServe设计，我们首先引入分类法，并量化模型服务中不同并行化策略之间的权衡（§<a data-reference="sec:motivation" data-reference-type="ref" href="#sec:motivation">3</a>）。随后，我们介绍了关键算法以导航权衡空间（§<a data-reference="sec:methods" data-reference-type="ref" href="#sec:methods">4</a>）。我们设计了一种迭代模拟器引导的模型布置算法以优化模型的共置，并设计了一种群划分算法，以寻找将簇划分为不相交的模型并行组的最佳方法。此外，我们扩展了现有的自动并行训练算法，使其更适合推理。</p>
+<p>我们在一个64-GPU集群上评估AlpaServe的生产工作负载（§<a data-reference="sec:evaluation" data-reference-type="ref" href="#sec:evaluation">6</a>）。评估结果显示，在一次优化一个指标时，AlpaServe可以选择将请求处理速率提高10<span class="math inline">\(\times\)</span>，实现2.5<span class="math inline">\(\times\)</span> 低延迟，或容忍比以往最先进服务系统更强的6<span class="math inline">\(\times\)</span> 突发流量。</p>
+<p>总之，我们做出以下贡献：</p>
+<ul>
+<li><p>对不同模型并行策略在高效模型服务中权衡空间的详细分析。</p></li>
+<li><p>在服务系统中引入模型并行的新型模型配置算法。</p></li>
+<li><p>对AlpaServe在合成和生产工作负载下的全面评估。</p></li>
+</ul>
+<h2 id="sec:serving-sys-background">2 背景</h2>
+<p>过去几年，从推荐到文本生成，开发出越来越强大的模型。因此，从这些模型中提供预测已成为现代云系统中不可或缺的工作量。这些工作负载的结构通常遵循简单的请求-响应范式。开发者提前上传预训练模型及其权重;运行时，客户端（无论是用户还是其他应用程序）向服务系统提交该模型的请求，服务系统会排队，分派到可用的 GPU/TPU，并返回结果。</p>
+<p>这些模型服务系统的要求可能非常严格。为了满足用户需求，系统通常必须严格遵守延迟的 SLO。同时，必须持续运行的服务系统需要尽量减少昂贵加速器带来的运营成本。最小化服务成本可能具有挑战性，因为动态扩展计算资源在每个预测请求的关键路径上会过慢：仅将大型模型交换到加速器内存中可能需要数秒钟。此外，用户请求的到达过程存在显著且不可预测的突发性。为了满足严格的SLO，当前的服务系统被迫过度配置计算资源，导致集群利用率低。</p>
+<p>在服务大型模型时，另一个出现的模式是使用多个相同或相似模型架构的实例。这通常体现在对大型未token数据进行预训练和对各种下游任务进行微调的实践中，这些可以显著提升准确性，但会导致同一模型架构出现多个实例。例如，Hugging Face 提供超过 9,000 个版本的精细调试 BERT。它们要么共享部分参数，要么完全不共享参数以提升准确性。此前的研究利用了共享参数的特性，但本文未考虑共享参数，因为AlpaServe主要针对通用设置，而全权重调优仍是一个主要应用场景。</p>
+<figure class="figure" id="fig:illustrative-example">
+<figure class="figure" id="fig:illustrative-example-high-cv">
+<img alt="高CV伽马抵达。" loading="lazy" src="../assets/papers/alpaserve-full/figure-04.png"/>
+<figcaption class="caption">高CV伽马抵达。</figcaption>
+</figure>
+<figure class="figure" id="fig:illustrative-example-nonuniform">
+<img alt="不同的请求率。" loading="lazy" src="../assets/papers/alpaserve-full/figure-05.png"/>
+<figcaption class="caption">不同的请求率。</figcaption>
+</figure>
+<figure class="figure" id="fig:cluster-utilization-illustration">
+<img alt="集群利用率。" loading="lazy" src="../assets/papers/alpaserve-full/figure-06.png"/>
+<figcaption class="caption">集群利用率。</figcaption>
+</figure>
+<figcaption>2模型示例中的延迟、CDF和集群利用率。</figcaption>
+</figure>
+<h3 id="subsec:model-parallel-background">2.1 模型服务中的模型并行</h3>
+<p>当试图满足服务性能要求或支持无法容纳于单一设备内存中的大型模型时，分布式并行模型执行是必要的。</p>
+<p>从高层次来看，深度学习模型的分布式执行可分为两类：操作员内并行和操作员间并行。</p>
+<p><strong>操作员内部并行性。</strong> DL模型由一系列多维张量上的算符组成，例如输入张量和权重张量的矩阵乘法。操作员内并行是指单个操作符被划分在多个设备中，每个设备并行执行部分计算。根据具体的分区策略及其与模型中前后算符的关系，分区可能需要参与的GPU之间通信，将输入拆分然后合并输出。</p>
+<p>操作员内并行性在单请求执行中有两个好处。首先，它可以扩展目标模型可用的总计算量，从而降低端到端延迟。同样，它可以扩展模型用于存储输入、权重和中间值的总内存。成本就是前面提到的沟通开销。</p>
+<p><strong>操作员间并行性。</strong> DL模型可用的另一种并行方式是操作员间并行，它将模型执行图的不同运算符分配到分布式设备上，以流水线方式执行（又称流水线并行）。在这里，设备仅在流水线阶段之间通信，通常通过设备对之间的点对点通信。</p>
+<p>与操作员内部并行不同，流水线并行不会缩短单个请求的执行时间。事实上，由于流水线阶段间通信延迟适中，通常会增加执行时间，尽管传输数据总量通常低于操作员内部并行。相反，传统服务系统中操作员间并行的主要用途是允许模型超越单个GPU的内存限制。</p>
+<h2 id="sec:motivation">3 动机与权衡分析</h2>
+<p>如前所述，这两种类型的模型并行都通过将模型划分到多个设备来减少每设备内存的使用。这项工作的一个关键动机是，我们可以利用该特性在一台设备上容纳更多模型，从而在处理突发请求时实现更好的统计复用。我们通过一系列实证考察和理论分析来探讨这一观点，首先是一个说明性示例（§<a data-reference="subsec:illustrative-example" data-reference-type="ref" href="#subsec:illustrative-example">3.1</a>），随后是模型并行何时有益的实证分析（§<a data-reference="subsec:serving-performance-factors" data-reference-type="ref" href="#subsec:serving-performance-factors">3.2</a>）、模型并行的开销（§<a data-reference="subsec:model-parallel-overhead" data-reference-type="ref" href="#subsec:model-parallel-overhead">3.3</a>）以及基于排队理论的分析（§<a data-reference="subsec:queueing-theory-analysis" data-reference-type="ref" href="#subsec:queueing-theory-analysis">3.4</a>）。本节所有实验均在配备8块NVIDIA 16GB V100显卡的AWS EC2 p3.16xlarge实例上进行。</p>
+<h3 id="subsec:illustrative-example">3.1 案例研究：一个双模型示例</h3>
+<p>我们从一个示意性实验开始，展示模型并行如何有利于多个模型的服务。我们使用两块GPU服务两台Transformer模型，每个模型有67亿参数（存储FP16权重为13.4 GB）。由于每块GPU有16GB内存，只能容纳一款型号。单个请求在一块GPU上处理大约需要0.4秒。</p>
+<p>我们比较以下模型的配置，对应 <a data-reference="fig:two-model-example" data-reference-type="ref+label" href="#fig:two-model-example">于1</a>中的策略。第一种是 <em>简单的放置</em>，由于内存限制，我们在每个GPU上放置一个模型。第二种是 <em>模型并行布局</em>，利用操作间并行将每个模型划分为两阶段流水线，让每个GPU执行每个模型的一半。</p>
+<p>当每个模型的请求都遵循独立的泊松过程，到达率为1.5请求/秒时，我们评估了这两个位置。 <a data-reference="fig:illustrative-example-uniform" data-reference-type="ref+label" href="#fig:illustrative-example-uniform">2</a> 显示了累计分布函数（CDF）和请求延迟的平均值（包括GPU执行时间和排队延迟）。模型并行布置将简单布置的平均延迟从0.70秒降低到0.55秒，提升了1.3<span class="math inline">\(\times\)</span> 。加速来自更好的突发容忍度：当突发超过单个GPU的能力时，只需简单放置即可开始排队请求。然而，只要对方模型不接收大量请求，模型并行布局可以通过统计复用GPU使用两个GPU来满足流行模型的请求。</p>
+<p>随着突发性提高，这种效应会更加明显，我们可以用与上述相同的平均请求率但方差系数（CV）更高的伽马请求到达过程来证明这一点。如 <a data-reference="fig:illustrative-example-high-cv" data-reference-type="ref+label" href="#fig:illustrative-example-high-cv">3</a>所示，平均延迟加速提升至1.9<span class="math inline">\(\times\)</span>。 <a data-reference="fig:cluster-utilization-illustration" data-reference-type="ref+label" href="#fig:cluster-utilization-illustration">5</a> 显示了对应总集群利用率随时间的代表性迹。注意，对于每个请求突发，模型并行布置可以使用整个集群，且处理时间仅为一半，而简单布置则只能使用半数集群。</p>
+<p>此外，我们还评估了某一模型收到的请求多于另一模型的情况。在 <a data-reference="fig:illustrative-example-nonuniform" data-reference-type="ref+label" href="#fig:illustrative-example-nonuniform">4</a>中，我们使用泊松到达法，但允许20%的请求请求使用模型1,80%请求模型2。虽然复制在模型1请求中表现略佳，但在模型2请求中相比模型并行放置则明显差。对于模型并行部署，由于两个GPU在两个型号之间共享，对两个型号的请求遵循相同的延迟分布。总体而言，模型并行布置平均延迟降低了6.6<span class="math inline">\(\times\)</span>。</p>
+<h3 id="subsec:serving-performance-factors">3.2 模型并行何时有益</h3>
+<p>为了进一步探讨模型并行在服务中的细微差别，我们将部署规模扩大到8个GPU和8个Transformer模型，每个模型参数为2.6B。作为基础设置，我们将每个模型的请求设置为Gamma进程，平均请求率为20个/秒，视值为3;然后我们调整一系列因素以观察其影响。注意，我们评估的一些设置在真实硬件上是不可能实现的（例如，超过单个设备的内存容量），因此我们利用第<a data-reference="sec:implementation" data-reference-type="ref" href="#sec:implementation">5</a>节引入的模拟器。正如第<a data-reference="subsec:exp-setup" data-reference-type="ref" href="#subsec:exp-setup">6.1</a>节所验证的，模拟器的保真度非常高。</p>
+<figure class="figure" data-latex-placement="t" id="fig:selective-replication-mem-illustration">
+<img alt="复制和模型并行布局示例，内存预算不同，内存预算设置为单个模型大小的倍数。" loading="lazy" src="../assets/papers/alpaserve-full/figure-07.png"/>
+<figcaption class="caption">复制和模型并行布局示例，内存预算不同，内存预算设置为单个模型大小的倍数。</figcaption>
+</figure>
+<figure class="figure" id="fig:mem-latency">
+<p><img alt="通过调整每GPU内存预算来满足性能。模型并行对有限的内存预算有利。虚线垂直线是16GB V100的实际每GPU内存限制。由于需要存储激活和其他运行时上下文，这个数值大约是13GB。" loading="lazy" src="../assets/papers/alpaserve-full/figure-08.png"/> <img alt="??????? 1" loading="lazy" src="../assets/papers/alpaserve-full/figure-801.png"/></p>
+<figcaption class="caption">通过调整每GPU内存预算来满足性能。模型并行对有限的内存预算有利。虚线垂直线是16GB V100的实际每GPU内存限制。由于需要存储激活和其他运行时上下文，这个数值大约是13GB。 </figcaption>
+</figure>
+<p>在这种情况下，模型较小（5.2GB），因此一块GPU也可以存储多个模型，无需模型并行。我们比较两种放置方法：（1） <em>复制。</em> 在此环境中，我们会将模型复制到不同设备，直到每个设备无法容纳额外的模型。由于所有模型平均承受相同数量的载荷，我们对每个模型重复次数相同（<a data-reference="fig:selective-replication-mem-illustration" data-reference-type="ref+label" href="#fig:selective-replication-mem-illustration">7</a>a）。（2） <em>模型并行。</em> 这里我们使用操作员间并行，并均匀地将Transformer层分配给不同的 GPU。</p>
+<figure class="figure" id="fig:changing-rate">
+<p><img alt="在不断变化的到达率下提供性能服务。模型并行对较小速率有利。" loading="lazy" src="../assets/papers/alpaserve-full/figure-09.png"/> <img alt="??????? 2" loading="lazy" src="../assets/papers/alpaserve-full/figure-802.png"/></p>
+<figcaption class="caption">在不断变化的到达率下提供性能服务。模型并行对较小速率有利。</figcaption>
+</figure>
+<p><strong>设备内存。</strong> 我们评估了两种放置方法在不同设备内存容量下的均值和尾部延迟。为了复制，更多的GPU内存可以把更多模型装到一个GPU上。对于模型并行，更多的GPU内存还可以减少流水线阶段数量，并降低开销，如 <a data-reference="fig:selective-replication-mem-illustration" data-reference-type="ref+label" href="#fig:selective-replication-mem-illustration">7</a>b。所得的平均值和P99延迟在 <a data-reference="fig:mem-latency" data-reference-type="ref+label" href="#fig:mem-latency">8</a>中显示。随着内存增加，更多模型可以容纳在一个GPU中，因此统计复用的好处会减弱，因为复制也可以有效地利用多台设备来向单一模型提供突发请求。当GPU内存容量足够大以容纳所有模型时，模型并行不会带来任何益处。</p>
+<figure class="figure" data-latex-placement="t" id="fig:changing-cv">
+<p><img alt="在不断变化的 CV 中提供性能。模型并行对大型 CV 很有帮助。" loading="lazy" src="../assets/papers/alpaserve-full/figure-10.png"/> <img alt="??????? 3" loading="lazy" src="../assets/papers/alpaserve-full/figure-803.png"/></p>
+<figcaption class="caption">在不断变化的 CV 中提供性能。模型并行对大型 CV 很有帮助。</figcaption>
+</figure>
+<p><strong>请求到达。</strong> 我们改变到达过程的参数，并将复制的布置与带有8级流水线并行的模型并行布置进行比较。9展示了到达率变化的平均值和P99延迟 <a data-reference="fig:changing-rate" data-reference-type="ref+label" href="#fig:changing-rate">结果。</a>当到达率较低时，模型并行可以大幅降低服务延迟。然而，当到达率接近集群的峰值服务率时，模型并行布置的优势开始减弱。最终，它的表现开始比复制差。这是因为当所有模型均等饱和时，复制的配置能够实现高效的簇利用，而模型并行带来的统计复用则无益处。相反，模型并行的开销（第<a data-reference="subsec:model-parallel-overhead" data-reference-type="ref" href="#subsec:model-parallel-overhead">3.3</a>节）开始成为一个重要因素。</p>
+<p>CV变化的平均值和P99延迟结果均为 <a data-reference="fig:changing-cv" data-reference-type="ref+label" href="#fig:changing-cv">10</a>。随着CV的提升，请求变得更加突发，模型并行的益处也更加显著。结果显示，在更高的 CV 下，模型并行能远远超过复制的性能。</p>
+<figure class="figure" data-latex-placement="t" id="fig:changing-slo-goodput-custom">
+<figure class="figure" id="fig:changing-slo-goodput-custom">
+<img alt="调整开销。" loading="lazy" src="../assets/papers/alpaserve-full/figure-13.png"/>
+<figcaption class="caption">调整开销。</figcaption>
+</figure>
+<figcaption>SLO的变更成就。模型并行对较小的 SLO 很有帮助。</figcaption>
+</figure>
+<h4 id="service-level-objectives.">3.2.1 服务水平目标。</h4>
+<p>在预测服务环境中，通常存在严格的延迟SLO，且在这些截止日期之后的预测往往会被舍弃。例如，广告系统可能选择不显示广告，而不是延迟用户内容的渲染。在这种情况下，服务系统的目标是优化在截止时间内完成请求的百分比，即 <em>SLO达成</em>率。</p>
+<p>本实验中，我们测量SLO如何影响安置方法的性能。我们将复制和模型并行放置与8级流水线并行进行比较。在执行过程中，即使我们立即安排了截止日期，也会放弃那些会超过截止日期的请求。我们将SLO调整到单设备执行延迟的不同乘数（SLO按<a data-reference="fig:changing-slo-goodput" data-reference-type="ref+label" href="#fig:changing-slo-goodput">11</a><em>倍缩放</em>），并比较两种方法的SLO实现情况。</p>
+<p>与 <a data-reference="fig:changing-slo-goodput" data-reference-type="ref+label" href="#fig:changing-slo-goodput">11</a>类似，当SLO紧缩（<span class="math inline">\(&lt;10\times\)</span> 模型延迟）时，模型并行可以大幅提升SLO的实现。然而，当SLO变得松散时，其SLO的实现率趋于平稳，但复制位置的实现则持续增长。这一结果与之前的实验共享核心逻辑：当SLO变得松散时，等待队列中可能保留更多请求，从而降低请求的有效突发性。当大量请求被排队时，系统受限于其总处理能力，而总处理能力可能会受到模型并行开销的影响。在现实世界中，SLO的要求通常低于模型执行延迟的 <span class="math inline">\(5\times\)</span> ，而模型并行可以提升SLO的实现。</p>
+<h3 id="subsec:model-parallel-overhead">3.3 模型并行开销</h3>
+<figure class="figure" id="fig:overhead-decomposition">
+<figure class="figure" id="fig:overhead-decomposition-op">
+<img alt="手术中的平行性。" loading="lazy" src="../assets/papers/alpaserve-full/figure-16.png"/>
+<figcaption class="caption">手术中的平行性。</figcaption>
+</figure>
+<figcaption>头顶的分解。运内并行的开销主要来自不均匀的分区，而运内并行的开销则来自通信。</figcaption>
+</figure>
+<figure class="figure" id="fig:model-parallel-throughput-latency-memory">
+<figure class="figure" id="fig:model-parallel-throughput">
+<img alt="吞吐量。" loading="lazy" src="../assets/papers/alpaserve-full/figure-19.png"/>
+<figcaption class="caption">吞吐量。</figcaption>
+</figure>
+<figure class="figure" id="fig:model-parallel-memory">
+<img alt="总内存使用量。" loading="lazy" src="../assets/papers/alpaserve-full/figure-20.png"/>
+<figcaption class="caption">总内存使用量。</figcaption>
+</figure>
+<figcaption>跨运并行、运内并行和复制的延迟、吞吐量和内存使用与 #GPUs。在子图（c）中，操作间和操作内并行的线有重叠。</figcaption>
+</figure>
+<p>本节进一步探讨不同模型并行策略的开销及其对服务性能的影响。类似于 <a data-reference="fig:changing-slo-goodput" data-reference-type="ref+label" href="#fig:changing-slo-goodput">11</a>的设置，我们手动修改模型并行的开销。具体来说，让单个模型在GPU上运行的延迟被 <span class="math inline">\(L\)</span> ，流水线阶段的数量 <span class="math inline">\(n\)</span>。我们设置了流水线执行的总延迟为 <span class="math inline">\(\alpha L\)</span> ，每个流水线阶段的延迟为 <span class="math inline">\(\alpha L/n,\)</span> ，其中 <span class="math inline">\(\alpha\)</span> 是控制开销的参数。当 <span class="math inline">\(\alpha = 1,\)</span> 并行性没有开销，而 <span class="math inline">\(\alpha\)</span> 越大意味着开销越高时。</p>
+<p>我们展示了 <a data-reference="fig:changing-slo-goodput-custom" data-reference-type="ref+label" href="#fig:changing-slo-goodput-custom">13</a>年。如果模型并行没有开销（<span class="math inline">\(\alpha = 1\)</span>），它总能胜过复制，因为它能够多路复用设备。当开销增加且SLO较低时，模型并行仍然优于复制。然而，随着SLO的增加，有效突发性降低，性能主要依赖开销。</p>
+<p>鉴于开销会极大影响服务性能，我们在 <a data-reference="fig:overhead-decomposition" data-reference-type="ref+label" href="#fig:overhead-decomposition">16</a>中对模型并行开销的多重来源进行了详细研究。对于操作间并行性，当将单个模型划分为多个阶段时，不同阶段需要通信中间张量，我们将此开销记为 <em>通信开销</em>。此外，流水线执行会被最慢阶段的执行时间限制，使得有效延迟为流水线阶段数乘以最慢阶段的延迟。我们记作 <em>不均匀划分开销</em>。与 <a data-reference="fig:overhead-decomposition-pp" data-reference-type="ref+label" href="#fig:overhead-decomposition-pp">14</a>类似，对于操作间并行，大部分开销来自不同流水线阶段之间的延迟不平衡，而非阶段间的通信。虽然我们之前的讨论主要聚焦于运内并行，但另一种模型并行——运内并行，性能特性截然不同。其开销仅由多个设备之间的集体通信带来，由于数据依赖性，无法与神经网络计算重叠。从 <a data-reference="fig:overhead-decomposition-op" data-reference-type="ref+label" href="#fig:overhead-decomposition-op">15</a>开始，我们可以看到运内并行的通信开销远高于运内并行。</p>
+<p>最后，我们比较了不同模型并行布置与 <a data-reference="fig:model-parallel-throughput-latency-memory" data-reference-type="ref+label" href="#fig:model-parallel-throughput-latency-memory">复制</a>布置的延迟、吞吐量和内存消耗。由于不同阶段之间的顺序依赖性，操作间并行无法降低单个输入数据的执行延迟。相反，由于阶段间的通信，延迟略高。另一方面，运内并行通过不同GPU的并行执行在很大程度上可以降低延迟（<a data-reference="fig:model-parallel-latency" data-reference-type="ref+label" href="#fig:model-parallel-latency">17</a>）。然而，由于运内并行可以流水线化不同阶段的执行，且仅传输相对较小的数据量，因此其吞吐量优于运内并行（<a data-reference="fig:model-parallel-throughput" data-reference-type="ref+label" href="#fig:model-parallel-throughput">18</a>）。由于两种方法都将模型权重张量分配到不同的GPU上，总内存使用量随着GPU数量的增加保持不变（<a data-reference="fig:model-parallel-memory" data-reference-type="ref+label" href="#fig:model-parallel-memory">19</a>）。这使得不同GPU在多个模型间的统计复用成为可能。</p>
+<p>最终，并行化策略与其与集群资源、到达模式和服务目标的相互作用之间的权衡构成了一个复杂的设计空间。</p>
+<h3 id="subsec:queueing-theory-analysis">3.4 排队理论分析</h3>
+<p>在本节中，我们利用排队理论对<a data-reference="subsec:serving-performance-factors" data-reference-type="ref" href="#subsec:serving-performance-factors">第3.2</a>节和<a data-reference="subsec:model-parallel-overhead" data-reference-type="ref" href="#subsec:model-parallel-overhead">第3.3</a>节的结论进行数学验证。具体来说，我们分析输入遵循泊松到达过程的情况。由于深度学习推理任务的执行时间高度可预测，我们假设请求的服务时间是确定性的。对于单设备情况，假设对某型号的请求速率为<span class="math inline">\(\lambda_0\)</span>且单设备延迟与利用<span class="math inline">\(\lambda_0 D &lt; 1\)</span> <span class="math inline">\(D\)</span>，则该 M/D/1 队列中<span class="math inline">\(L_Q\)</span>请求数和平均延迟<span class="math inline">\(W\)</span>为：<span class="math display">\[L_Q = \frac{\lambda_0 D}{2 (1 - \lambda_0 D)},\quad W = D + L_Q D = D + \frac{\lambda_0 D^2}{2 (1 - \lambda_0 D)}.\]</span></p>
+<p>现在考虑<a data-reference="subsec:illustrative-example" data-reference-type="ref" href="#subsec:illustrative-example">第3.1</a>节中的例子。设 <span class="math inline">\(p\lambda, (1 - p)\lambda\)</span> 为两个模型的平均请求率，其中 <span class="math inline">\(p \in [0, 1]\)</span> 控制两个模型的请求百分比。对于简单的放置，平均延迟可以作为两个独立队列的平均延迟推导出来： <span class="math display">\[W_\mathit{simple} = D + \frac{p^2\lambda D^2}{2 (1 - p\lambda D)} + \frac{(1 - p)^2\lambda D^2}{2 (1 - (1 - p)\lambda D)}.\]</span> 注意， <span class="math inline">\(W_\mathit{simple}\)</span> 在 <span class="math inline">\(p = 1/2.\)</span> 时达到最小值 <span class="math inline">\(p\)</span> 直观地说，当不完全是一半时，一种模型接收的请求比另一种多。这部分请求的队列延迟较长，导致整体平均延迟更高。</p>
+<p>对于模型并行情况，两个模型的请求合并为一个速率为 <span class="math inline">\(\lambda.\)</span> 的泊松进程。对于流水线并行，假设单一输入的延迟为 <span class="math inline">\(D_s\)</span> ，最大阶段延迟为 <span class="math inline">\(D_m\)</span>，则平均延迟为 <span class="math display">\[W_\mathit{pipeline} = D_s + \frac{\lambda D_m^2}{2 (1 - \lambda D_m)}.\]</span></p>
+<p>假设模型并行开销不存在，那么 <span class="math inline">\(D_s = 2 D_m = D.\)</span> 首先考虑 <span class="math inline">\(p = 1/2\)</span> （<a data-reference="fig:illustrative-example-uniform" data-reference-type="ref+label" href="#fig:illustrative-example-uniform">2</a>）的情况。我们有 <span class="math display">\[\begin{aligned}
+    W_\mathit{simple} = D + \frac{\lambda D^2}{4 - 2\lambda D}, \quad W_\mathit{pipeline} = D + \frac{\lambda D^2}{8 - 4\lambda D}.
+\end{aligned}\]</span> 在这种情况下，模型并行执行的等待时间是简单放置等待时间的一半，如 <a data-reference="fig:illustrative-example-uniform" data-reference-type="ref+label" href="#fig:illustrative-example-uniform">2</a>中的垂直线所示。当 <span class="math inline">\(p\)</span> 不 <span class="math inline">\(1/2,\)</span>时， <span class="math inline">\(W_\mathit{simple}\)</span> 会增加，而 <span class="math inline">\(W_\mathit{pipeline}\)</span> 保持不变，因此 <span class="math inline">\(W_\mathit{simple}\)</span> 和 <span class="math inline">\(W_\mathit{pipeline}\)</span> 之间的差距会更大，比如 <a data-reference="fig:illustrative-example-nonuniform" data-reference-type="ref+label" href="#fig:illustrative-example-nonuniform">4</a>。</p>
+<figure class="figure" id="fig:queueing_theory">
+<img alt="最大通信开销 \(\alpha\) 和不均分区开销 \(\beta\) 满足 \(W_\mathit{pipeline} \le W_\mathit{simple}\) 作为总利用 \(\lambda D\) 的函数。" loading="lazy" src="../assets/papers/alpaserve-full/figure-21.png"/>
+<figcaption class="caption">最大通信开销 <span class="math inline">\(\alpha\)</span> 和不均分区开销 <span class="math inline">\(\beta\)</span> 满足 <span class="math inline">\(W_\mathit{pipeline} \le W_\mathit{simple}\)</span> 作为总利用 <span class="math inline">\(\lambda D\)</span>的函数。</figcaption>
+</figure>
+<p>接下来，我们考虑模型并行产生开销的情况。我们分别测量§<a data-reference="subsec:model-parallel-overhead" data-reference-type="ref" href="#subsec:model-parallel-overhead">3.3</a> 中的两种开销：通信开销 <span class="math inline">\(D_s = 2D_m = \alpha D\)</span>，其中 <span class="math inline">\(\alpha \ge 1\)</span> 为开销因子。考虑到不平整赛段带来的开销，我们认为 <span class="math inline">\(D_s = D\)</span> 仍然成立，但 <span class="math inline">\(D_m = \beta D /2\)</span> <span class="math inline">\(\beta \ge 1\)</span> 是开销因素。为了保持 <span class="math inline">\(W_\mathit{pipeline} \le W_\mathit{simple},\)</span> 我们可以分别得到最大 <span class="math inline">\(\alpha\)</span> 和 <span class="math inline">\(\beta\)</span> 作为总利用率的函数， <span class="math inline">\(\lambda D\)</span> 我们可视化函数为 <a data-reference="fig:queueing_theory" data-reference-type="ref+label" href="#fig:queueing_theory">21</a>。当利用率较高时，统计复用的好处会减弱，因此开销需要较低，如第<a data-reference="subsec:serving-performance-factors" data-reference-type="ref" href="#subsec:serving-performance-factors">3.2</a>节所述。另一方面，当利用率非常低时，大多数请求不会排队，因此通信开销 <span class="math inline">\(\alpha\)</span> 必须很低，才能保持处理延迟较低。注意，这里的最大开销基于均匀泊松到达分布。更突发或不均匀的到达分布会使简单布置表现更差，而模型并行布置的效果优于简单复制布置，且开销更高。</p>
+<h2 id="sec:methods">4 方法</h2>
+<p>从<a data-reference="sec:motivation" data-reference-type="ref" href="#sec:motivation">第3</a>节我们可以看到，有效利用模型并行进行深度学习服务存在几个关键挑战：</p>
+<ul>
+<li><p>推导高效的模型并行推断策略，以减少模型并行的开销。具体来说，找到一种划分策略，以最小化操作员间的阶段不平衡。</p></li>
+<li><p>根据到达模式确定模型并行位置，以最大化SLO实现。</p></li>
+</ul>
+<p>我们专门创建 <em>了AlpaServe</em> ，以应对这些挑战。AlpaServe的运行时架构如图所示。<a data-reference="fig:architecture" data-reference-type="ref" href="#fig:architecture">22</a>. AlpaServe 利用集中式控制器向不同组发送请求。<a class="footnote-ref" href="#fn3" id="fnref3" role="doc-noteref"><sup>3</sup></a> 每个组在共享的模型并行运行时托管多个模型副本。本节介绍了AlpaServe的架构以及在模型服务系统中高效利用模型并行的关键算法。</p>
+<figure class="figure" id="fig:architecture">
+<img alt="AlpaServe 运行时系统架构" loading="lazy" src="../assets/papers/alpaserve-full/figure-22.png"/>
+<figcaption class="caption">AlpaServe 运行时系统架构</figcaption>
+</figure>
+<h3 id="subsec:auto-parallel">4.1 自动并行推断</h3>
+<p>由于不同的并行化配置在延迟和吞吐量上有不同的权衡，我们需要为每个模型枚举多个可能配置，并让布局算法为整个集群中的所有模型选择最佳组合。因此，给定一个模型，AlpaServe首先运行一个带有各种约束的自动并行编译器，生成可能配置的列表。我们在现有的自动并行训练系统Alpa基础上构建了多个扩展，使其适合生成服务并行化策略。Alpa 包含两种高效模型并行分区的流程：操作间切换和操作内切换。运内通道使用动态规划（DP）算法来确定最优的运内并行计划，并调用每个潜在流水线阶段的运内通道，该阶段以整数线性规划（ILP）问题表述，以分析其与最优运内并行计划的延迟。在AlpaServe中，我们保留了两个编译通行证，但会延长这两张通行证用于发货。</p>
+<p>Alpa 中的操作间传递优化了整体流水线执行延迟，包括前向和反向传播时间以及权重同步。然而，在工作负载服务中，仅执行前向传播，无需权重同步。因此，我们将AlpaServe中的动态规划重新表述为仅专注于最小化最大阶段延迟。具体来说，将 <span class="math inline">\(F(s, k)\)</span> 表示为将第1层切片到<span class="math inline">\(k\)</span>为<span class="math inline">\(s\)</span>阶段时的最大延迟。我们可以推导出<span class="math inline">\(F\)</span>为<span class="math display" id="eq:dp">\[\begin{aligned}
+    F(s, k)
+    = \min_{1 \le i \le k} \left\{\max\{F(s-1, i - 1), \mathit{latency}(i, k)\}\right\},
 
-</style>
-<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-</head>
-<body>
-<main class="paper">
-<nav class="paper-nav" data-six-paper-revision><a href="../index.html">← 论文目录</a><a href="paper-qa/alpaserve-2302.11665-qa.html">Q1–Q7 详细问答 →</a></nav>
-<h1>AlpaServe：基于模型并行性的统计复用深度学习服务：中文精读与校订</h1>
-<div class="authors">Zhuohan Li, Lianmin Zheng, Yinmin Zhong, Vincent Liu, Ying Sheng, Xin Jin, Yanping Huang, Zhifeng Chen, Hao Zhang, Joseph E. Gonzalez, Ion Stoica</div>
-<div class="meta">源文件：arXiv 2302.11665 | OSDI 2023 | 17 页 | 保留术语：statistical multiplexing、model parallelism、intra-operator parallelism、inter-operator parallelism、colocation、SLO、bursty workload</div>
-<section class="columns">
-<section class="overview"><h2>这篇论文做什么？</h2><p class="doing">把模型并行从“模型放不下时的被迫选择”变成多模型 serving 的统计复用工具：用跨设备模型副本吸收不同模型的突发峰值，并联合优化放置与并行策略。</p><ul><li>问题：每模型独占副本会在突发、低相关到达流下产生严重容量闲置。</li><li>方法：在复制开销与跨设备统计复用收益之间搜索 model placement。</li><li>结果：在 >99% 请求满足延迟约束时，承载率最高提高 10×或可容忍 6× 更强突发。</li></ul><p class="revision-note">校订说明：本页按原论文的论证顺序重写术语与因果关系；图均裁自论文原图，数据结论保留论文适用条件，不把峰值结果泛化为固定加速。</p></section>
-<section class="abstract"><p><strong>摘要。</strong>模型并行性传统上被视为将单个大型深度学习模型扩展到超出单设备内存限制的方法。论文证明，模型并行性还可用于在服务多个模型时实现多设备的统计复用（statistical multiplexing），即使单个模型可以放入单个设备。研究揭示了模型并行性引入的开销与突发工作负载下利用统计复用降低服务延迟的机会之间的基本权衡。论文探索了这一新的权衡空间，提出 AlpaServe 系统，自动确定跨分布式集群放置和并行化大型深度学习模型集合的高效策略。在生产工作负载上评估显示，AlpaServe 可以在满足 99% 以上请求延迟约束的前提下，处理高达 10 倍更高的请求速率或 6 倍更大的突发性。</p></section>
-
-<h2>1 引言</h2>
-<p>服务大型模型面临双重挑战：模型参数量指数增长（如 GPT-3 需 325GB 内存），且请求到达具有高度突发性——生产 trace 显示峰值可达平均值的 50 倍。满足延迟 SLO 通常意味着为峰值负载配置资源，而额外设备大部分时间闲置。更复杂的是，实践中常需同时服务多个模型和同一模型的多个变体（如 A/B 测试或领域微调模型）。</p>
-
-<h3>1.1 核心观察</h3>
-<p>考虑两个模型和两个 GPU 的场景，每个 GPU 内存足以容纳一个完整模型。传统做法是为每个模型分配一个专用 GPU（图 1a）。这看似合理——模型分区跨 GPU 会引入通信开销增加延迟。但论文发现，引入额外模型并行性（即使单样本执行时间增加）可以启用更广泛的放置策略（如模型共置），在突发工作负载下改善统计复用。</p>
-<p>具体地，假设单模型执行时间为 y。不共置时，4 个突发请求的平均延迟为 (1y+2y+3y+4y)/4 = 2.5y。使用模型并行共置后（假设 10% 开销），平均延迟降至 (1.1y+1.6y+2.1y+2.6y)/4 = 1.85y。共置加模型并行可以利用更多设备处理突发请求，尽管有额外开销，仍降低了平均完成时间。</p>
-
-<h2>2 模型并行性在服务中的权衡</h2>
-<h3>2.1 Intra-Operator 并行</h3>
-<p>将单个算子（如矩阵乘法）分区到多个设备上并行执行。好处是减少单请求端到端延迟，扩展可用内存。代价是参与 GPU 间的通信开销（如 all-reduce）。对于 TTFT 敏感的 prefill 阶段，intra-operator 并行通过减少执行时间来降低延迟。</p>
-
-<h3>2.2 Inter-Operator 并行</h3>
-<p>将模型的不同算子分配到不同设备上以流水线方式执行。不减少单请求执行时间（通常因阶段间通信而增加），主要用于突破单 GPU 内存限制。但在服务场景中，pipeline parallelism 可以线性扩展系统的速率容量——每个新增 GPU 线性增加可服务的请求速率。</p>
-
-<h3>2.3 统计复用效应</h3>
-<p>关键洞察是：模型并行性减少每设备内存使用，从而可以在一台设备上放入更多模型，在处理突发请求时实现更好的统计复用。当多个模型的请求突发到达时，共置的模型可以利用所有可用 GPU 并行处理，而专用分配方案下每个模型只能使用自己的 GPU。这种统计复用在突发性越高时收益越大。</p>
-
-<h2>3 权衡空间分析</h2>
-<p>论文通过排队理论分析了模型并行性的开销与统计复用收益之间的权衡。关键发现：模型并行性的有效性取决于多个因素——每 GPU 内存容量（决定可共置的模型数量）、请求到达模式（突发性越高收益越大）、SLO 严格程度（越严格越能从降低延迟中受益）。当工作负载突发性低时，模型并行开销可能超过统计复用收益；当突发性高时，统计复用收益显著超过开销。</p>
-
-<h2>4 AlpaServe 系统设计</h2>
-<h3>4.1 模型放置算法</h3>
-<p>AlpaServe 接收集群资源规格、模型集合和周期性工作负载 profile，输出模型分区和放置策略以优化 SLO 达标率。核心是一个迭代模拟器引导的模型放置算法：在每轮迭代中，模拟器评估当前放置策略下的服务性能，指导算法调整模型共置和并行度配置。</p>
-
-<h3>4.2 分组分区算法</h3>
-<p>集群被划分为不相交的模型并行组。每组内的 GPU 共同服务共置的模型集合。分组分区算法搜索最优的组划分方式，平衡组内模型并行开销与跨组的统计复用收益。</p>
-
-<h3>4.3 自动并行化</h3>
-<p>AlpaServe 扩展了训练自动并行化算法以适应推理场景。训练场景优化吞吐量，而推理场景需要同时考虑延迟和速率容量，对并行策略的选择有不同偏好。</p>
-
-<h2>5 实验评估</h2>
-<p>在 64-GPU 集群上使用生产工作负载评估。结果显示，当逐个优化指标时，AlpaServe 可以将请求处理速率提高 10 倍、将延迟截止时间收紧 2.5 倍、或容忍 6 倍更突发的工作负载，同时保持 99% 以上请求在 SLO 内。这些收益在突发性高的工作负载下尤为显著，因为统计复用的价值随突发性增长。</p>
-
-<h2>6 局限与选题启发</h2>
-<p>AlpaServe 的放置策略是静态的，基于周期性工作负载 profile 确定，不随实时负载动态调整。在模型数量众多且工作负载变化频繁的场景下，静态放置可能次优。此外，AlpaServe 主要关注传统 DL 模型服务，未深入 LLM 特有的 prefill-decoding 两阶段特征和 KV cache 管理问题。</p>
-<div class="callout"><p><strong>对本仓库方向的意义。</strong>AlpaServe 揭示了模型并行性在服务场景中的统计复用价值——这不仅是扩展大模型的手段，更是处理突发工作负载的资源优化策略。在多 LLM agent 工作流中，不同 agent 可能使用不同模型，请求到达高度突发。AlpaServe 的共置与统计复用思想可以指导工作流调度器在异构 GPU 上做模型放置决策，这正是 Chimera（异构多智能体服务）和 Coral（异构云 GPU 多 LLM 服务）的理论基础。</p></div>
-
-<h2>公式与目标函数</h2><div class="equation"><div class="math">\[\min_{\mathcal P}\ \Pr\!\left(T_{\mathcal P}>S\right)\quad\text{s.t. device memory and placement constraints}\]</div><p>目标不是让单次推理最快，而是选择放置方案 P，使突发流量下超过 SLO 的概率尽可能低。适量模型并行会增加单请求开销，却扩大可共享设备池。</p></div><h2>原论文图解</h2><figure class="figure wide"><img src="../assets/papers/alpaserve/fig-01-placement.png" alt="图 1：无共置的复制方案与模型并行共置方案；后者让两模型共享两张 GPU 的容量。" loading="lazy"><figcaption class="caption">图 1：无共置的复制方案与模型并行共置方案；后者让两模型共享两张 GPU 的容量。</figcaption></figure>
-<figure class="figure wide"><img src="../assets/papers/alpaserve/fig-02-06-multiplexing.png" alt="图 2–6：负载、到达率、突发程度与显存条件变化时的延迟和 SLO 表现。" loading="lazy"><figcaption class="caption">图 2–6：负载、到达率、突发程度与显存条件变化时的延迟和 SLO 表现。</figcaption></figure><h2>证据边界与校订结论</h2><p>AlpaServe 的结论针对多模型在线推理，不是 LLM token-level P/D serving。关键前提是不同模型的突发并非完全同步，因而共享池能平滑峰值；如果流量高度相关或模型并行通信过重，统计复用优势会下降。</p>
-<h2>参考说明</h2>
-<pre class="note">参考文献保留在原 PDF 中。本文译稿覆盖摘要、模型并行性权衡分析、统计复用效应、AlpaServe 系统设计和实验结果。</pre>
-
-<div class="source-actions"><a class="primary" href="paper-qa/alpaserve-2302.11665-qa.html">阅读 Q1–Q7 详细问答</a><a href="https://arxiv.org/abs/2302.11665">查看原论文</a><a href="../index.html">返回目录</a></div>
+\end{aligned}\]</span>，其中<span class="math inline">\(\mathit{latency}(i, k)\)</span>表示由<span class="math inline">\(i\)</span>层到<span class="math inline">\(k\)</span>的阶段延迟。在 Alpa 中，由于前向和后向传递之间的复杂依赖关系，所有可能<span class="math inline">\(O(K^2)\)</span>组合的 <span class="math inline">\(\mathit{latency}\)</span> 功能都作内传递来分析。在AlpaServe中，由于流水线阶段只进行前向传播，且只在层边界之间传递一次中间结果，我们可以通过只对<span class="math inline">\(K\)</span>层进行分析，并将<span class="math inline">\(\mathit{latency}(i, k)\)</span>作为层<span class="math inline">\(i\)</span>到<span class="math inline">\(k\)</span>的延迟之和来加速剖析.这种加速使我们能够高效枚举不同的操作内和内部设备分区设置，并在第<a data-reference="subsec:placement-alg" data-reference-type="ref" href="#subsec:placement-alg">4.2</a>节生成配置算法的并行策略列表。</p>
+<p>在操作内，我们扩展了 Alpa 中的 ILP，去除所有使用数据并行的配置。对于服务工作负载，由于不需要权重同步，数据并行性可以通过复制放置实现。是否复制模型的决定留给了第<a data-reference="subsec:placement-alg" data-reference-type="ref" href="#subsec:placement-alg">4.2</a>节的布局算法。</p>
+<h3 id="subsec:placement-alg">4.2 放置算法</h3>
+<p>给定一组模型和固定集群，AlpaServe将集群划分为若干设备组。每组设备选择部分模型进行共享的并行配置。不同群体可以持有相同的模型作为复制品。对模型的请求会被分派到拥有该模型副本的组。我们称特定集群组分区、模型选择和并行配置为 <em>一种布局</em>。我们的目标是找到一个能最大化SLO 达成率的放置方案。</p>
+<p>然而，找到最优位置是一个复杂的组合优化问题。整体的配置空间随着设备数量和模型数量的增加呈指数增长。更糟糕的是，客观的“SLO达成”没有简单的任意到达分布解析公式。现有的队列理论工具和近似只能分析§<a data-reference="subsec:queueing-theory-analysis" data-reference-type="ref" href="#subsec:queueing-theory-analysis">3.4</a> 中的简单情况，无法建模更复杂的情况。因此，我们采用了模拟器引导的贪婪算法，调用模拟器来计算SLO的达成。</p>
+<p>在 AlpaServe 中，为了计算给定请求和位置下的 SLO 实现，我们假设事先知道到达过程。虽然短期爆发性无法预测，但较长时间尺度（如小时或天）的到来模式通常是可预测的。鉴于这种可预测性，AlpaServe要么直接使用历史请求迹，要么从该迹线拟合一个分布，并从该分布重新采样新的轨迹作为模拟器的输入负载，以计算SLO的实现。</p>
+<div class="algorithm">
+<div class="algorithm">
+<p>模型列表<span class="math inline">\(M\)</span>、设备组列表<span class="math inline">\(G\)</span>、组并行配置<span class="math inline">\(P\)</span>、工作负载<span class="math inline">\(W\)</span>、波束大小<span class="math inline">\(k\)</span>（默认=1）。模型选择<span class="math inline">\(\mathit{best\_sel}.\)</span> <span class="math inline">\(\mathit{best\_sel} \leftarrow \emptyset\)</span> <span class="math inline">\(\mathit{beam\_sels} \leftarrow \{\emptyset\}\)</span> <span class="math inline">\(\mathit{new\_sels} \leftarrow \emptyset\)</span> <em> 像<a data-reference="subsec:auto-parallel" data-reference-type="ref" href="#subsec:auto-parallel">第4.1</a>节所述的并行化模型。</em> <span class="math inline">\(\mathit{m_{parallelized}} \leftarrow \text{parallelize}(m, g, p)\)</span> <span class="math inline">\(\mathit{sel}' \leftarrow
+            \mathit{sel}.\text{add\_model\_to\_group}(\mathit{m_{parallelized}}, g)\)</span> <span class="math inline">\(\mathit{sel}'.\mathit{slo\_attainment} \leftarrow \text{simulate}(\mathit{sel}', W)\)</span> <span class="math inline">\(\mathit{new\_sels}.\text{append}(\mathit{sel}')\)</span> <strong> </strong> <span class="math inline">\(\mathit{beam\_sels} \leftarrow \text{top-}k\text{\_SLO\_attainment}(new\_sels)\)</span> <span class="math inline">\(\mathit{sel}^* \leftarrow \text{pick\_highest\_SLO\_attainment}(\mathit{beam\_sels})\)</span> <span class="math inline">\(\mathit{best\_sel} \leftarrow \mathit{sel}^*\)</span><strong>返回</strong> <span class="math inline">\(\mathit{best\_sel}\)</span></p>
+</div>
+</div>
+<p>我们设计了一个两级的布局算法：给定一个集群组划分和每个组共享的模型并行配置， <span>[alg：greedy-placement]</span> 使用模拟器引导的贪婪算法决定每个组应选择哪些模型。然后， <span>[alg：group-partition]</span> 枚举了各种潜在的簇划分和并行配置，并比较从 <span>[alg：greeddy-placement]</span> 获得的 SLO 实现，以确定最优位置。</p>
+<p>给定一个群组划分，每个组模型并行配置固定， <span>[alg：greedy-placement]</span> 通过波束搜索算法迭代选择模型副本：每次迭代时，枚举所有可能的（模型、组）对，并用§<a data-reference="subsec:auto-parallel" data-reference-type="ref" href="#subsec:auto-parallel">4.1</a>中的算法对设备组的模型并行化，并检查模型是否可在内存约束下归入该组。对于所有有效选择，它运行模拟器并计算SLO达成。然后选择顶部<span class="math inline">\(k\)</span> 解，进入下一次迭代。当无法再将副本放入任何组时，算法终止。</p>
+<p><span>[算法：贪婪布局]</span>的复杂度为<span class="math inline">\(O(MGRSB)\)</span>，其中<span class="math inline">\(M\)</span>是模型数量，<span class="math inline">\(G\)</span>是组数，<span class="math inline">\(R\)</span>是根据内存约束可放置的副本数，<span class="math inline">\(S\)</span>是工作负载中的请求数（仿真时间与请求数成正比），<span class="math inline">\(B\)</span>是梁的大小。当请求数量较少时，对于我们的中型集群来说，它运行得相当快。当请求数量非常大时，我们提出另一种启发式来加速：我们无需在每次迭代中评估所有（模型、组）对，而是只需运行一次模拟器，并将未服务请求最多的模型放入利用率最低的可用组。这将时间复杂度降低到<span class="math inline">\(O((M+G)RS)\)</span>。我们发现该启发式解的SLO达成率高于基准测试中原始算法的98%。</p>
+<div class="algorithm">
+<div class="algorithm">
+<p>模型列表<span class="math inline">\(M\)</span>、集群<span class="math inline">\(C\)</span>、工作负载<span class="math inline">\(W\)</span>。<span class="math inline">\(\mathit{best\_plm}.\)</span> <span class="math inline">\(\mathit{best\_plm} \leftarrow \emptyset\)</span> <span class="math inline">\(\mathcal{B} \leftarrow \text{get\_potential\_model\_buckets}(M)\)</span> <span class="math inline">\(\mathcal{H} \leftarrow \text{get\_potential\_device\_buckets}(C, B, k)\)</span>每个<em>桶单独获取位置。</em><span class="math inline">\(\mathit{plm}_i^* \leftarrow \emptyset\)</span> <span class="math inline">\(\mathcal{G} \leftarrow \text{get\_potential\_group\_partitions}(H_i)\)</span> <span class="math inline">\(\mathcal{P} \leftarrow \text{get\_potential\_parallel\_configs}(G)\)</span> <span class="math inline">\(\mathit{plm} \leftarrow \text{greedy\_selection}(B_i, G, P, W)\)</span> <span class="math inline">\(\mathit{plm}_i^* \leftarrow \mathit{plm}\)</span> <span class="math inline">\(\mathit{plm}^* \leftarrow \text{concat}(\mathit{plm}_1^*,..., \mathit{plm}_k^*)\)</span> <span class="math inline">\(\mathit{best\_plm} \leftarrow \mathit{plm}^*\)</span> <strong></strong> <span class="math inline">\(\mathit{best\_plm}\)</span></p>
+</div>
+</div>
+<p><span>[alg：group-division]</span> 枚举了不同的组划分和模型并行配置，并通过多次调用 <span>[alg：greedy-placement]</span> 选择最佳方案。在设计 <span>[alg：group-partition]</span>时，我们首先注意到的是将小模型和大模型放在同一组中会导致护送效应，小模型的请求必须等待大型模型的请求，从而错过SLO。因此，在 <span>[alg：group-division]</span>中，我们首先将模型聚类到模型桶中。每个桶包含一组大小相近的模型，每个模型只分配到一个桶。具体来说，该函数 <code>get_potential_model_buckets</code> 返回所有可能将延迟差异大于阈值的模型分拆到不同的不相交桶中。然后我们枚举了所有可能将设备分配到每个桶的方法 <code>get_potential_device_buckets</code>。</p>
+<p>由于不同的桶包含不相交的模型集合，我们可以单独找出每个桶的最佳位置。对于每个桶，我们枚举了将该桶中设备划分为多个组的可能方法， <code>get_potential_group_partitions</code> 并用该方法 <code>get_potential_parallel_configs</code>枚举每个组的潜在并行配置。然后我们将[ <span>alg：greedy-placement]</span> 调用，将 <code>greedy_placement</code> 模型放入模型桶中的模型，映射到设备桶中的组。我们会把整个工作负载 <span class="math inline">\(W\)</span> 发送到 <span>[alg：greedy-placement]</span>，它会忽略当前桶外的模型请求。最后，通过将所有桶的解串接得到完整解。算法返回在枚举搜索过程中找到的最佳解。</p>
+<p>枚举所有可能选项可能较慢，因此我们使用以下启发式方法来修剪搜索空间。直观上，我们希望不同桶每秒响应的请求数量相近。因此，我们剔除了每个桶每秒可处理请求数估计差异较大的桶配置。此外，在 <code>get_potential_group_partitions</code> 和 <code>get_potential_parallel_configs</code>中，我们假设所有组的大小和并行配置相同，唯独最后一组在设备数不能被组大小整除时使用。</p>
+<h3 id="subsec:runtime-schedulig">4.3 运行时调度</h3>
+<p>我们使用一个简单的策略在运行时调度和调度请求。所有请求都会发送到集中式控制器。控制器将每个请求分派到队列长度最短的组。每个组管理先到先得的队列。当一个组收到请求时，会检查是否能在SLO下执行请求，如果无法就拒绝请求。这是因为DNN模型的执行时间非常可预测，可以通过分析提前获得。在我们的大多数实验中，我们不包含如batch、交换和抢占等高级运行时策略。这些技术与模型并行是互补的。尽管如此，我们讨论了他们如何融入我们的体系。</p>
+<p><strong>batch 处理。</strong> batch 处理同一模型的多个请求可以提高GPU利用率，从而提高服务系统的吞吐量。在我们的系统中，batch确实有帮助，但收益有限。这是因为我们主要面向大型模型，小批量的GPU已经能完全供给GPU，这一点在§<a data-reference="subsec:batching-exp" data-reference-type="ref" href="#subsec:batching-exp">6.5</a>中有验证。为了隔离模型并行的好处并使结果更易解释，我们决定禁用本文中除<a data-reference="subsec:batching-exp" data-reference-type="ref" href="#subsec:batching-exp">第6.5</a>节实验外的所有batch。</p>
+<p><strong>抢先。</strong> 最佳调度决策通常依赖于未来的到货，利用优先权可以帮助纠正之前的次优决策。先到先得政策可能导致在执行时间差异显著的模型被放入同一组时，导致车队效应。我们预计，优先优先的“最少松懈”政策可以缓解这些问题。</p>
+<p><strong>交换。</strong> 从CPU或磁盘到GPU内存的加载开销对于大型模型来说非常重要，这正是本文的目标，因此我们在AlpaServe中不实现交换功能。我们假设所有模型都放在显卡上。这通常是因为SLO要求严格且速率较高，尤其是大型模型。模型在AlpaServe中的配置可以通过定期更换（例如每24小时更新一次）进行更新。</p>
+<p><strong>容错性。</strong> 虽然当前AlpaServe设计并未将容错性作为重点，但我们也承认容错性面临的几个潜在新挑战：在模型并行下，单个GPU的故障可能导致整个组发生故障。此外，使用集中式控制器还存在单点故障。</p>
+<h2 id="sec:implementation">5 实现</h2>
+<p>我们用大约4000行Python代码实现了一个真实系统和一个AlpaServe模拟器。实际系统是在现有的模型并行训练系统Alpa之上实现的。我们扩展了其推理设置的自动并行算法，以获得模型并行策略。然后我们为每个组启动 Alpa 运行时，并通过集中控制器向这些组发送请求。</p>
+<p>该模拟器是一种连续时间的离散事件模拟器。模拟器维护全局时钟，并模拟集群上的所有请求和建模执行。由于模拟器只模拟离散事件，其速度比真实实验快了几个数量级。在我们的实验中，24小时的追踪不到1小时。由于DNN模型执行的可预测性，模拟器的保真度非常高，这一点在§<a data-reference="subsec:exp-setup" data-reference-type="ref" href="#subsec:exp-setup">6.1</a>中得到了验证。</p>
+<h2 id="sec:evaluation">6 实验评估</h2>
+<p>本节评估AlpaServe在多种模型和工作负载条件下的服务能力。评估涵盖多种型号尺寸，包括适合和不适合单一GPU的型号，我们证明AlpaServe在所有型号尺寸下始终优于强基线。此外，我们评估AlpaServe对不断变化的到达模式的鲁棒性，并对拟议技术进行消融研究。评估结果显示，AlpaServe能够大幅提升各项性能指标。具体来说，AlpaServe可以选择节省多达 <span class="math inline">\(2.3\times\)</span> 台设备，处理 <span class="math inline">\(10\times\)</span> 更高速率、 <span class="math inline">\(6\times\)</span> 更强的突发性，或 <span class="math inline">\(2.5\times\)</span> 严格的SLO，同时满足超过99%请求的延迟SLO。</p>
+<h3 id="subsec:exp-setup">6.1 实验装置</h3>
+<p><strong>集群测试场。</strong> 我们将AlpaServe部署在一个拥有8个节点和64个GPU的集群上。每个节点都是AWS EC2 p3.16xlarge实例，配备8块NVIDIA Tesla V100（16GB）GPU。</p>
+<p><strong>模型设置。</strong> 由于Transformer是大型模型的默认骨干，我们选择了两个具有代表性的大型Transformer模型族：BERT和GShard MoE进行评估。<a class="footnote-ref" href="#fn4" id="fnref4" role="doc-noteref"><sup>4</sup></a> 在机器学习的实践中，大型模型权重通常先预训练，然后针对不同任务进行微调成不同版本。因此，对于每个模型族，我们选择几个最常用的模型尺寸，然后在每个尺寸创建多个模型实例进行实验。此外，我们设计了一些模型集，以测试不同模型条件下的服务系统;关于模型大小、测试平台GPU上的推理延迟以及每个模型集中的模型实例数量的详细信息，详见<a data-reference="table:model_config" data-reference-type="ref" href="#table:model_config">表 1</a>。</p>
+<div id="table:model_config">
+<table>
+<caption>The first three columns list the sizes and inference latency of the models. The latency is measured for a single query with a sequence length of 2048 on a single GPU. BERT-104B’s latency is reported using a minimal degree of inter-op parallelism. The latter columns list the number of instances for each model in different model sets named as S1-S4. </caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>名称</strong></th>
+<th style="text-align: left;"><strong>规模</strong></th>
+<th style="text-align: left;"><strong>延迟（毫秒）</strong></th>
+<th style="text-align: left;">S1</th>
+<th style="text-align: left;">S2</th>
+<th style="text-align: left;">S3</th>
+<th style="text-align: left;">S4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">BERT-1.3B</td>
+<td style="text-align: left;">2.4GB</td>
+<td style="text-align: left;">151</td>
+<td style="text-align: left;">32</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">0</td>
+</tr>
+<tr>
+<td style="text-align: left;">BERT-2.7B</td>
+<td style="text-align: left;">5.4 GB</td>
+<td style="text-align: left;">238</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">0</td>
+</tr>
+<tr>
+<td style="text-align: left;">BERT-6.7B</td>
+<td style="text-align: left;">13.4 GB</td>
+<td style="text-align: left;">395</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">32</td>
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">0</td>
+</tr>
+<tr>
+<td style="text-align: left;">BERT-104B</td>
+<td style="text-align: left;">208 GB</td>
+<td style="text-align: left;">4600</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">4</td>
+</tr>
+<tr>
+<td style="text-align: left;">MoE-1.3B</td>
+<td style="text-align: left;">2.6 GB</td>
+<td style="text-align: left;">150</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">0</td>
+</tr>
+<tr>
+<td style="text-align: left;">MoE-2.4B</td>
+<td style="text-align: left;">4.8 GB</td>
+<td style="text-align: left;">171</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">0</td>
+</tr>
+<tr>
+<td style="text-align: left;">MoE-5.3B</td>
+<td style="text-align: left;">10.6 GB</td>
+<td style="text-align: left;">234</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span data-label="table:model_config" id="table:model_config"></span></p>
+<p><strong>指标。</strong> 我们以 <em>SLO 达成率</em> 作为主要评估指标。在特定的SLO达成目标（比如99%）下，我们还关注另外四个指标：（1）系统所需的最小设备数量，（2）最大平均请求率，（3）系统可支持的最大流量突发，以及（4）系统可处理的最小SLO。我们特别关注SLO达到 <span class="math inline">\(99\%\)</span> （所有曲线图中均用垂直线表示），但也会调整（1）至（4）中的每个变量，并观察SLO达成的变化。</p>
+<p><strong>模拟器保真度。</strong> 我们希望在广泛的模型、工作负载和资源设置下研究系统行为，但有些设置超出了我们的测试平台能力。此外，在测试平台上进行所有实验以获取持续数天的真实痕迹成本和时间都非常高。为缓解该问题，我们使用§<a data-reference="sec:implementation" data-reference-type="ref" href="#sec:implementation">5</a> 中引入的模拟器进行大多数实验，注意到DNN模型的执行即使在并行设置下也具有高度可预测性。我们在第<a data-reference="table:simulator_fidelity" data-reference-type="ref" href="#table:simulator_fidelity">3</a>页研究模拟器的保真度。给定两种模型布置算法，我们比较模拟器和测试平台在不同 <em>SLO尺度</em>下实际运行报告的SLO成就。所有情况下误差均小于2%，验证了我们模拟器的准确性。此外，我们在第<a data-reference="sec:evaluation:large_models" data-reference-type="ref" href="#sec:evaluation:large_models">6.3</a>节中对集群测试平台进行实验。</p>
+<div id="table:simulator_fidelity">
+<table>
+<caption>Comparison of the SLO attainment reported by the simulator and the real system under different SLO scales.</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><div id="table:simulator_fidelity">
+<table>
+<caption>模拟器报告的SLO成就与真实系统在不同SLO尺度下的比较。</caption>
+<tbody>
+<tr>
+<td style="text-align: center;">圣路易斯</td>
+</tr>
+<tr>
+<td style="text-align: center;">比例</td>
+</tr>
+</tbody>
+</table>
+</div></th>
+<th colspan="2" style="text-align: center;">选择性复制</th>
+<th colspan="2" style="text-align: center;">阿尔帕塞尔夫</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><span>2-3</span></td>
+<td style="text-align: center;">真实系统</td>
+<td style="text-align: center;">模拟器</td>
+<td style="text-align: center;">真实系统</td>
+<td style="text-align: center;">模拟器</td>
+</tr>
+<tr>
+<td style="text-align: center;">0.5x</td>
+<td style="text-align: center;">00.0%</td>
+<td style="text-align: center;">00.0%</td>
+<td style="text-align: center;">33.3%</td>
+<td style="text-align: center;">33.3%</td>
+</tr>
+<tr>
+<td style="text-align: center;">1x</td>
+<td style="text-align: center;">00.0%</td>
+<td style="text-align: center;">00.0%</td>
+<td style="text-align: center;">53.5%</td>
+<td style="text-align: center;">53.2%</td>
+</tr>
+<tr>
+<td style="text-align: center;">1.5x</td>
+<td style="text-align: center;">29.7%</td>
+<td style="text-align: center;">30.2%</td>
+<td style="text-align: center;">64.1%</td>
+<td style="text-align: center;">64.7%</td>
+</tr>
+<tr>
+<td style="text-align: center;">2x</td>
+<td style="text-align: center;">36.9%</td>
+<td style="text-align: center;">36.8%</td>
+<td style="text-align: center;">79.0%</td>
+<td style="text-align: center;">80.6%</td>
+</tr>
+<tr>
+<td style="text-align: center;">3x</td>
+<td style="text-align: center;">49.5%</td>
+<td style="text-align: center;">48.5%</td>
+<td style="text-align: center;">91.4%</td>
+<td style="text-align: center;">92.1%</td>
+</tr>
+<tr>
+<td style="text-align: center;">4x</td>
+<td style="text-align: center;">58.6%</td>
+<td style="text-align: center;">57.8%</td>
+<td style="text-align: center;">96.4%</td>
+<td style="text-align: center;">96.5%</td>
+</tr>
+<tr>
+<td style="text-align: center;">5x</td>
+<td style="text-align: center;">64.9%</td>
+<td style="text-align: center;">64.0%</td>
+<td style="text-align: center;">97.6%</td>
+<td style="text-align: center;">97.9%</td>
+</tr>
+<tr>
+<td style="text-align: center;">10x</td>
+<td style="text-align: center;">83.1%</td>
+<td style="text-align: center;">82.6%</td>
+<td style="text-align: center;">100.0%</td>
+<td style="text-align: center;">99.7%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span data-label="table:simulator_fidelity" id="table:simulator_fidelity"></span></p>
+<figure class="figure" data-latex-placement="t" id="fig:realistic_workloads_results">
+<p><img alt="SLO在各种环境下的成就。在第S1@MAF1列，我们在模型集S1上重放MAF1的trace，依此类推。在每一行中，我们聚焦于第 6.2 节提到的一项具体指标，以观察其变异如何影响每个服务系统的性能。如果有，虚线垂直线显示系统何时能实现99%的SLO实现率。" loading="lazy" src="../assets/papers/alpaserve-full/figure-23.png"/> <img alt="??????? 4" loading="lazy" src="../assets/papers/alpaserve-full/figure-804.png"/> <img alt="??????? 5" loading="lazy" src="../assets/papers/alpaserve-full/figure-805.png"/> <img alt="??????? 6" loading="lazy" src="../assets/papers/alpaserve-full/figure-806.png"/></p>
+<figcaption class="caption">SLO在各种环境下的成就。在第S1@MAF1列，我们在模型集S1上重放MAF1的trace，依此类推。在每一行中，我们聚焦于第<a data-reference="sec:e2e-results" data-reference-type="ref" href="#sec:e2e-results">6.2</a> 节提到的一项具体指标，以观察其变异如何影响每个服务系统的性能。如果有，虚线垂直线显示系统何时能实现99%的SLO实现率。</figcaption>
+</figure>
+<h3 id="sec:e2e-results">6.2 与真实工作负载的端到端结果</h3>
+<p>本节将 AlpaServe 与公开真实痕迹的基线方法进行比较。</p>
+<p><strong>工作量。</strong> 据我们所知，目前还不存在开源生产的机器学习推断方法。因此，我们使用以下两个生产跟踪作为代理：Microsoft Azure 函数跟踪 2019（MAF1）和 2021（MAF2）。它们最初是在两周内从 Azure 无服务器函数调用中收集的，现已被重新用于机器学习服务于研究。这两条线路的交通模式各异。在MAF1中，每个函数接收稳定且密集的请求，速率逐渐变化;在MAF2中，流量非常 <em>突发</em> ，且以高度 <em>偏斜</em> 的方式分布在各个函数之间——某些函数接收的请求数量级多于其他函数。请注意，大多数之前的作品仅在MAF1上进行评估。由于函数数量多于模型，按照之前的工作，给定标签<a data-reference="table:model_config" data-reference-type="ref" href="#table:model_config">1</a>中的模型集，我们对模型进行轮询函数，以为每个模型生成流量。</p>
+<p><strong>布置。</strong> SLO的成就取决于许多因素。对于第<a data-reference="subsec:exp-setup" data-reference-type="ref" href="#subsec:exp-setup">6.1</a>节提到的每个度量（1）-（4），我们设定一个默认值，例如默认SLO与推理延迟（SLO比例=5） <span class="math inline">\(5\times\)</span> 紧密。这形成了 <em>默认设置</em>，基于此，我们一次调整一个变量（同时修正其他变量），观察其如何影响最终的SLO成就。为了改变描述交通模式的两个变量（3）和（4），我们遵循Clockwork和Inferline，将原始痕迹切入时间窗口，并用参数化速率和方差系数（CV）的伽马过程拟合每个时间窗口的到达者。通过对速率和CV进行扩展，并从过程中重采样，我们可以分别控制速率和突发性。</p>
+<p><strong>基线。</strong> 我们将AlpaServe与两种基线方法进行比较：（1） <em>选择性复制（SR）：</em>使用AlpaServe的放置算法而不使用模型并行，该算法模拟了多种现有服务系统的策略;（2） <em>Clockwork++</em>：服务于Clockwork系统的最先进模型的改进版。最初的Clockwork会不断更换型号到GPU中。这对非常小的模型（例如有数百万参数）有帮助，但在较大模型中会带来显著的交换开销。为了公平对比，我们在模拟器中实现了Clockwork++，它按照Clockwork的替换策略在每隔两个窗口<a class="footnote-ref" href="#fn5" id="fnref5" role="doc-noteref"><sup>5</sup></a> 的边界处交换模型，使用SR算法，但 <em>假设交换开销为零</em>。我们认为这代表了Clockwork表现的假设上限。由于所有基线只能支持能够容纳于一个GPU内存的模型，<a class="footnote-ref" href="#fn6" id="fnref6" role="doc-noteref"><sup>6</sup></a> 我们在本实验中使用了Tab <a data-reference="table:model_config" data-reference-type="ref" href="#table:model_config">1</a> 中的S1、S2和S3模型集。</p>
+<p><strong>SLO 达成率与集群规模的比较。</strong><a data-reference="fig:realistic_workloads_results" data-reference-type="ref+label" href="#fig:realistic_workloads_results">23</a>的第一行显示了服务特定（模型集，trace）对时簇大小不同的SLO达成。AlpaServe始终优于这两个基线，且使用更少的设备，凭借模型并行实现99%的SLO实现。通过将一个模型副本拆分到<span class="math inline">\(N\)</span>设备，AlpaServe可以实现类似于为仅复制方法创建副本<span class="math inline">\(N\)</span>吞吐量;但请注意，AlpaServe只使用一个内存副本。令人惊讶的是，虽然我们让Clockwork++动态调整流量且零开销，但AlpaServe在静态放置中仍然胜出;这是因为模型并行布置本质上对突发流量更具鲁棒性。</p>
+<p>值得注意的是，仅复制方法最多只能在 V100（13GB 内存预算）上放置 2 个 BERT-2.6B 副本，从而获得相当大的内存比例，而模型并行则可以避免这些内存分数，并实现模型的更灵活布局。</p>
+<p><strong>SLO 达成率与请求率。</strong><a data-reference="fig:realistic_workloads_results" data-reference-type="ref+label" href="#fig:realistic_workloads_results">23</a>号的第二排会根据工作量的速率变化。对于像MAF1这样稳定的trace，AlpaServe可以处理比基线更高的速率。对于偏斜且高度动态的MAF2，其流量由少数模型主导且变化迅速，而基于复制的方法则必须分配大部分GPU为“热”模型创建多个副本以应对突发流量;然而，这些GPU在突发间隙可能处于空闲状态，即使像Clockwork++那样频繁更换。在 AlpaServe 中，每个模型需要更少的副本来处理其峰值流量。</p>
+<p><strong>SLO 达成率与CV的比较。</strong><a data-reference="fig:realistic_workloads_results" data-reference-type="ref+label" href="#fig:realistic_workloads_results">23</a>的第三排会改变工作负载的CV。随着CV升高，流量会变得更加爆发，这加剧了系统的排队效应，增加了SLO违规的可能性。传统的解决方式是过度配置，浪费大量资源。AlpaServe揭示了一个隐藏的机会，可以通过模型并行处理这个问题。</p>
+<p><strong>SLO 达成率与SLO的比较。</strong><a data-reference="fig:realistic_workloads_results" data-reference-type="ref+label" href="#fig:realistic_workloads_results">23</a>号的第4行显示了不同SLO的影响。以往针对小模型服务的工作通常将SLO设定为数百毫秒，尽管实际推理延迟不到10毫秒。得益于运内并行性，AlpaServe在提供推理延迟超过100毫秒的大型模型时，能够在类似SLO下保持良好性能。当SLO紧张，甚至比模型推理时间更短时，AlpaServe偏好运内并行以降低推理延迟，这也降低了AlpaServe的峰值吞吐量（因通信开销），但可以发出更多请求以满足SLO的要求。当SLO变得更宽松时，AlpaServe会自动切换到更多操作间并行以获得更高的吞吐量。</p>
+<h3 id="sec:evaluation:large_models">6.3 服务于超大型模型</h3>
+<p>当今大型模型可能拥有数千亿参数。为了满足如此大规模的大型模型，生产中的常见做法是手动选择模型并行策略，并为每个模型使用专用 GPU 。为了展示AlpaServe在服务超大型模型方面的能力提升，我们在测试平台部署了S4型号集，每个模型集至少需要16个GPU来提供内存使用。作为基线，对于每个模型，我们列举了16块GPU上所有运内和运内并行的组合。相比之下，AlpaServe根据到达流量搜索最优GPU组分配和模型位置，并尝试实现统计复用。</p>
+<p><strong>被提供了负担。</strong> 在默认设置量通过Gamma进程生成，平均请求速率为每秒8个，计算机验证值为4个。然后我们将请求分配到每个模型，采用幂律分布，指数为0.5，以模拟现实世界的偏态。<a class="footnote-ref" href="#fn7" id="fnref7" role="doc-noteref"><sup>7</sup></a> 类似于§<a data-reference="sec:e2e-results" data-reference-type="ref" href="#sec:e2e-results">6.2</a>，我们调整默认设置中的一个速率、CV或SLO，以观察每个因素如何影响最终表现。值得注意的是，本节中所有结果均通过测试平台集群的实际执行获得。</p>
+<p><strong>SLO 达成率。</strong><a data-reference="fig:large_results" data-reference-type="ref+label" href="#fig:large_results">24</a> 显示了各系统在不同设置下的 SLO 达成情况。虽然列举并选择最佳并行策略可以提升性能，但与 AlpaServe 相比，这仍然存在较大差距。这意味着传统的专用GPU为大型模型提供服务的方式并不理想。我们检查AlpaServe的解决方案，发现它将集群均匀划分为两组，每组采用（4， 8）运内/运内并行配置，并以平衡请求的方式将模型分组。这进一步证明了我们在<a data-reference="subsec:illustrative-example" data-reference-type="ref" href="#subsec:illustrative-example">第3.1</a>节中的动机对极大型模型依然成立。通过设备空间共享，AlpaServe可以利用统计复用的新机遇，这对突发式工作负载有利，但以往工作大多未被充分开发。</p>
+<figure class="figure" id="fig:large_results">
+<img alt="随着我们调整费率、CV和SLO等级表，SLO的成就。（8,2）指的是8路运内并行，并且在每个流水线阶段使用两路运内并行。" loading="lazy" src="../assets/papers/alpaserve-full/figure-24.png"/>
+<figcaption class="caption">随着我们调整费率、CV和SLO等级表，SLO的成就。（8,2）指的是8路运内并行，并且在每个流水线阶段使用两路运内并行。</figcaption>
+</figure>
+<figure class="figure" id="fig:robustness_results">
+<img alt="AlpaServe和SR的实际到达流量与它们的算法假设不同，而Clockwork++则直接运行在实际流量上。" loading="lazy" src="../assets/papers/alpaserve-full/figure-25.png"/>
+<figcaption class="caption">AlpaServe和SR的实际到达流量与它们的算法假设不同，而Clockwork++则直接运行在实际流量上。</figcaption>
+</figure>
+<h3 id="robustness-to-changing-traffic-patterns">6.4 对变化流量模式的鲁棒性</h3>
+<p>迄今为止，AlpaServe的良好性能基于我们在布局算法中假设我们事先知道抵达过程。实际上，抵达过程可以通过历史迹近似，但不可避免的现实世界方差可能使预测不准确。在本实验中，我们研究了流量模式变化时AlpaServe的表现。</p>
+<p>我们在第<a data-reference="sec:e2e-results" data-reference-type="ref" href="#sec:e2e-results">6.2</a>节对S2@MAF1重复使用相同设置，但这次AlpaServe和SR从MAF1随机切入两条一小时的痕迹，一条是它们算法假设的，另一条作为实际到达过程。而对于Clockwork++，我们仍然直接在实际到达过程中运行算法，以尊重其在线特性。同样，我们会变换不同因素，并计算每个系统的 SLO 达成。我们重复实验三次，平均结果见图 <a data-reference="fig:robustness_results" data-reference-type="ref" href="#fig:robustness_results">25</a>岁。</p>
+<p>毫不意外，当流量变化时，SR的性能会大幅下降。相比之下，AlpaServe保持良好性能，且仍优于Clockwork++，这是一种在线调整算法，采用由截然不同的流量模式生成的静态位置。这证实了，面对高度动态的流量模式，带模型并行的统计复用比现有基于复制或替换的算法更简单且更优。</p>
+<figure class="figure" id="fig:batching_res">
+<img alt="启用batch 处理时的SLO实现。mb=2 表示最大batch大小为 2。" loading="lazy" src="../assets/papers/alpaserve-full/figure-26.png"/>
+<figcaption class="caption">启用batch 处理时的SLO实现。mb=2 表示最大batch大小为 2。</figcaption>
+</figure>
+<h3 id="subsec:batching-exp">6.5 动态batch的优势</h3>
+<p>batch是其他服务系统中常见的优化方式，batch大小的选择对性能至关重要，因为它能提高GPU利用率，从而提高系统吞吐量。然而，在大型模型场景中，batch的好处主要受限于两个原因。首先，对于大型模型，小批量会让GPU饱和，这意味着batch 处理更多请求几乎没有什么收益。其次，执行延迟随着batch规模线性增长，所以当SLO很紧（比如SLO规模小于2）时，batch根本不是选择。</p>
+<p>为了隔离模型并行的好处并使结果更易解释，我们决定在其他实验中禁用任何batch，但证明该batch策略完全与本篇论文的讨论范围正交。为证明这一点，我们在AlpaServe中实现了标准batch算法并评估其性能。</p>
+<p><strong>batch 处理策略。</strong> 当请求到达时，如果有任何设备组可用，请求会立即执行。否则，它会被放入每个模型的请求队列进行batch。当设备组进入空闲状态时，它会选择带有副本的模型，并尽可能多地从该模型的请求队列中batch 处理请求，同时满足SLO要求。</p>
+<p><strong>布置。</strong> 随着模型规模的增大，batch的潜在益处会减少。因此，我们选择评估模型集 S1。我们生成合成伽马过程流量，平均每秒4个请求，每个模型的计算机生成4个请求。</p>
+<p><strong>SLO 达成率。</strong><a data-reference="fig:batching_res" data-reference-type="ref+label" href="#fig:batching_res">26</a>（左）展示了AlpaServe在不同SLO尺度下，最大batch大小设置下的SLO实现。当SLO要求严格时，任何batch处理都会违反SLO，所以启用batch时没有增益。此外，虽然我们选择在标签<a data-reference="table:model_config" data-reference-type="ref" href="#table:model_config">页1</a>中服务最小型号，但像2这样的小批量和2048的长序列长度已经让GPU过饱和，因此最大批量更大并不会带来性能提升。<a data-reference="fig:batching_res" data-reference-type="ref+label" href="#fig:batching_res">26</a>（右）比较了启用batch算法后 AlpaServe 和 Clockwork++ 的改进。<a class="footnote-ref" href="#fn8" id="fnref8" role="doc-noteref"><sup>8</sup></a> 当SLO要求放宽时，AlpaServe和Clockwork++在某种程度上都能获得更好的SLO实现。由于即使不进行batch，AlpaServe 的性能也良好，且不同batch大小的batch请求在运算间并行中会出现阶段不平衡和流水线气泡，因此 Clockwork++ 的绝对提升略有提升。</p>
+<h3 id="sec:ablation">6.6 消融研究</h3>
+<p>本节将研究我们提出的自动并行化（§<a data-reference="subsec:auto-parallel" data-reference-type="ref" href="#subsec:auto-parallel">4.1</a>）和放置算法（§<a data-reference="subsec:placement-alg" data-reference-type="ref" href="#subsec:placement-alg">4.2</a>）的有效性。</p>
+<p><strong>自动并行化的好处。</strong> 我们证明，自动并行化能力不仅使AlpaServe能够推广到任意模型架构，甚至还能降低并行开销——从而提升了服务性能（详见<a data-reference="subsec:model-parallel-overhead" data-reference-type="ref" href="#subsec:model-parallel-overhead">§3.3</a> ）。为此，事实 <em>系统</em> 中典型的手动模型并行化策略是为每个流水线阶段分配相等数量的（Transformer）层。这些策略往往无法在分布式GPU间实现负载平衡，因为现代大型模型存在异构层，如嵌入操作。§<a data-reference="subsec:auto-parallel" data-reference-type="ref" href="#subsec:auto-parallel">4.1</a> 引入的扩展在计算图层面自动划分模型，并生成近乎平衡的阶段。从经验上看，如图所示。<a data-reference="fig:ablation_auto_parallel" data-reference-type="ref" href="#fig:ablation_auto_parallel">27</a>，对于8个流水线阶段，自动并行化分别将Transformer1.3B和2.6B的总开销降低32.9%和46.7%，这对于使用模型并行进行服务时实现良好服务性能是必要的。</p>
+<figure class="figure" id="fig:ablation_auto_parallel">
+<figure class="figure">
+<img alt="Transformer2.6B。" loading="lazy" src="../assets/papers/alpaserve-full/figure-29.png"/>
+<figcaption class="caption">Transformer2.6B。</figcaption>
+</figure>
+<figcaption>比较模型中手动划分（较浅颜色）与自动算法划分（较深颜色）之间并行开销。</figcaption>
+</figure>
+<p><strong>定位算法的有效性。</strong> 我们现在测试部署算法在合成工作负载上的有效性。我们在测试平台上服务最具挑战性的模型集S3（标签<a data-reference="table:model_config" data-reference-type="ref" href="#table:model_config">1</a>）。模型的速率分布遵循幂律分布。每个模型的到达模式都属于伽马过程。评估了配置算法的三种变体。 <em>轮询</em> 是指以轮询方式放置模型，并为所有组使用四阶段流程。贪 <em>婪配置</em> 使用了我们的贪婪配置和四阶段流程，适用于所有群体。 <em>贪婪配置 + 组划分</em> 执行贪婪配置加组划分搜索。如图所示。<a data-reference="fig:ablation-mixed" data-reference-type="ref" href="#fig:ablation-mixed">28</a>，要实现良好的SLO成就，必须同时进行分组和分组划分。左侧子图中，分组划分比贪婪放置时提高1.5<span class="math inline">\(\times\)</span> ，而轮流分组则永远无法达到99%的SLO成就。在右侧子图中，分区增加了流量突发性，从而达到 <span class="math inline">\(1.3\times\)</span>实现99%的SLO实现率。</p>
+<figure class="figure" id="fig:ablation-mixed">
+<img alt="放置算法的消融研究。" loading="lazy" src="../assets/papers/alpaserve-full/figure-30.png"/>
+<figcaption class="caption">放置算法的消融研究。</figcaption>
+</figure>
+<h2 id="related-work">7 相关工作</h2>
+<p><strong>模拟服务系统。</strong> 近年来，模型服务系统数量激增。这些系统包括通用的生产级系统，如TensorFlow Serserving和NVIDIA Triton，这些系统被广泛使用，但不支持自动放置或延迟约束。它们还包括为单模型服务或特定类别模型（例如Transformer）优化的系统。AlpaServe的目标车型和功能比这些系统更广泛。</p>
+<p>对于SLO感知的分布式服务，大多数服务系统忽略模型间的布局级交互。例如，《发条》主要关注可预测性;调度时，它贪婪地加载并执行模型，运行在可用的 GPU 上。Shepherd利用抢占权来纠正次优的排班决策。对于大型模型，加载模型权重和抢占式很容易让实际的SLO不堪重负。其他系统如Clipper、Infaas和DVABach也不会考虑同址模型的延迟。</p>
+<p>Nexus与我们的工作密切相关，因为它考察模型的定位;然而，Nexus是一个采用§<a data-reference="sec:motivation" data-reference-type="ref" href="#sec:motivation">3</a> 中传统复制方法的系统示例，因此错过了本文中探讨的广泛潜在并行化策略类别。</p>
+<p>大型<strong>模型的推理优化。</strong>AlpaServe是另一批关于大型模型推理优化工作的补充。这些技术包括量化、蒸馏、卸载、更好的算子并行性和CUDA核优化等技术。其中一些优化旨在遏制模型规模不断扩大的趋势;然而，这些成果都是部分性的——尽管有这些努力，服务大型模型的挑战仍在迅速升级。</p>
+<p>用于<strong>训练的并行模型。</strong>AlpaServe在很大程度上与关于训练中模型并行的大量研究是正交的。如第<a data-reference="sec:motivation" data-reference-type="ref" href="#sec:motivation">3</a>节所述，服务提供了一套独特的约束和机会，培训工作负载中没有。然而，这些系统与AlpaServe的交叉点在于其实现模型并行的方法。特别是，AlpaServe基于中引入的一些并行化技术。</p>
+<p><strong>资源分配和复用。</strong> 如何将有限资源复用到来的请求的问题是计算机科学中最古老的课题之一，并且在不同的应用领域中都有研究。近期关于DL调度的研究利用交换、抢占、交错和空间共享实现细粒度资源共享。相反，本文的贡献在于对这些思想在新兴领域——服务多个大型模型——的应用进行了深入的实证分析。</p>
+<h2 id="conclusion-and-future-work">8 结论与未来工作</h2>
+<p>本文介绍了AlpaServe，一种用于预测多个大型深度学习模型的系统。AlpaServe的关键创新是将模型并行整合进多模型服务中。由于模型并行本身存在开销，这种并行性传统上被保守地应用——仅限于模型无法在单个GPU内或无法在所需SLO内执行的情况。AlpaServe展示了模型并行在许多其他场景中也很有用，量化了权衡，并提供了自动导航权衡空间的技术。</p>
+<p>未来，我们将将AlpaServe扩展到更复杂的场景，包括服务多参数高效的适配模型（如LoRA）、带依赖的模型以及自回归模型。</p>
+<h2 id="acknowledgement">致谢</h2>
+<p>我们感谢OSDI的评审者以及我们的牧者蔡海明给予的宝贵反馈。这项工作部分得到了NSF CISE远征奖CCF1730628、NSFC的资助号62172008，以及Astronomer、Google、IBM、Intel、Lacework、Microsoft、Nexla、三星SDS、Uber和VMware的捐赠支持。钟银敏和欣晋也在北京大学教育部高信心软件技术重点实验室工作。</p>
+<section class="footnotes footnotes-end-of-document" id="footnotes" role="doc-endnotes">
+<hr/>
+<ol>
+<li id="fn1"><p><span class="math inline">\(^*\)</span>平等贡献。<span>↩︎</span></p></li>
+<li id="fn2"><p>https://github.com/alpa-projects/mms<a class="footnote-back" href="#fnref2" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>对于更大的服务，AlpaServe可以扩展为分层部署，每个控制器只管理部分设备，如。<a class="footnote-back" href="#fnref3" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>本文重点介绍了通过一次前向传递进行推断的非自回归大型模型，但请注意，本文提出的技术可以扩展到像GPT-3这样的自回归模型。<a class="footnote-back" href="#fnref4" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>对于MAF1，我们按照Clockwork设置窗口大小为60秒。对于MAF2，我们设定为5.4K秒。<a class="footnote-back" href="#fnref5" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>在我们的集群测试平台中，每个GPU的内存是16GB，但由于需要存储激活和其他运行时上下文，模型权重的实际可用空间大约是13GB。<a class="footnote-back" href="#fnref6" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>均匀分配结果也类似。<a class="footnote-back" href="#fnref7" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>为了让数字更清晰，SR被省略了，因为它比Clockwork++还差。<a class="footnote-back" href="#fnref8" role="doc-backlink">↩︎</a></p></li>
+</ol>
 </section>
-</main>
-</body>
-</html>
+<h2>完整图表补充</h2><p>以下图表在原 LaTeX 中由自定义宏或多子图环境生成，正文转换时未能自动嵌入，现按源文件顺序补全。</p><figure class="figure" id="fig:illustrative-example-uniform"><img alt="泊松到达。" loading="lazy" src="../assets/papers/alpaserve-full/figure-921.png"/><img alt="泊松到达。" loading="lazy" src="../assets/papers/alpaserve-full/figure-922.png"/><img alt="泊松到达。" loading="lazy" src="../assets/papers/alpaserve-full/figure-923.png"/><img alt="泊松到达。" loading="lazy" src="../assets/papers/alpaserve-full/figure-924.png"/><figcaption class="caption">泊松到达。</figcaption></figure><figure class="figure" id="fig:changing-slo-goodput"><img alt="真实模型延迟。" loading="lazy" src="../assets/papers/alpaserve-full/figure-971.png"/><img alt="真实模型延迟。" loading="lazy" src="../assets/papers/alpaserve-full/figure-972.png"/><figcaption class="caption">真实模型延迟。</figcaption></figure><figure class="figure" id="fig:overhead-decomposition-pp"><img alt="运算间并行。" loading="lazy" src="../assets/papers/alpaserve-full/figure-981.png"/><img alt="运算间并行。" loading="lazy" src="../assets/papers/alpaserve-full/figure-982.png"/><figcaption class="caption">运算间并行。</figcaption></figure><figure class="figure" id="fig:model-parallel-latency"><img alt="单输入延迟。" loading="lazy" src="../assets/papers/alpaserve-full/figure-991.png"/><img alt="单输入延迟。" loading="lazy" src="../assets/papers/alpaserve-full/figure-992.png"/><img alt="单输入延迟。" loading="lazy" src="../assets/papers/alpaserve-full/figure-993.png"/><figcaption class="caption">单输入延迟。</figcaption></figure><h2>参考文献</h2><div class="refs-note">
+<p>Reza Yazdani Aminabadi, Samyam Rajbhandari, Minjia Zhang, Ammar Ahmad Awan, Cheng Li, Du Li, Elton Zheng, Jeff Rasley, Shaden Smith, Olatunji Ruwase, et al. Deepspeed inference: Enabling efficient inference of transformer models at unprecedented scale. , 2022.</p>
+<p>Zhihao Bai, Zhen Zhang, Yibo Zhu, and Xin Jin. <span class="math inline">\(\{\)</span>PipeSwitch<span class="math inline">\(\}\)</span>: Fast pipelined context switching for deep learning applications. In <span><em>14th USENIX Symposium on Operating Systems Design and Implementation (OSDI 20)</em></span>, pages 499–514, 2020.</p>
+<p>Nirvik Baruah, Peter Kraft, Fiodar Kazhamiaka, Peter Bailis, and Matei Zaharia. Parallelism-optimizing data placement for faster data-parallel computations. , 16(4):760–771, 2022.</p>
+<p>Anirban Bhattacharjee, Ajay Dev Chhokra, Zhuangwei Kang, Hongyang Sun, Aniruddha Gokhale, and Gabor Karsai. Barista: Efficient and scalable serverless serving system for deep learning prediction services. In <span><em>2019 IEEE International Conference on Cloud Engineering (IC2E)</em></span>, pages 23–33. IEEE, 2019.</p>
+<p>Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, et al. Language models are few-shot learners. , 33:1877–1901, 2020.</p>
+<p>Aakanksha Chowdhery, Sharan Narang, Jacob Devlin, Maarten Bosma, Gaurav Mishra, Adam Roberts, Paul Barham, Hyung Won Chung, Charles Sutton, Sebastian Gehrmann, et al. Palm: Scaling language modeling with pathways. , 2022.</p>
+<p><span>Copy.ai</span>. Copy.ai: Write better marketing copy and content with ai. <a class="uri" href="https://www.copy.ai/">https://www.copy.ai/</a>.</p>
+<p>Daniel Crankshaw, Gur-Eyal Sela, Xiangxi Mo, Corey Zumar, Ion Stoica, Joseph Gonzalez, and Alexey Tumanov. Inferline: latency-aware provisioning and scaling for prediction serving pipelines. In <span><em>Proceedings of the 11th ACM Symposium on Cloud Computing</em></span>, pages 477–491, 2020.</p>
+<p>Daniel Crankshaw, Xin Wang, Guilio Zhou, Michael J Franklin, Joseph E Gonzalez, and Ion Stoica. Clipper: A low-latency online prediction serving system. In <span><em>14th USENIX Symposium on Networked Systems Design and Implementation (NSDI 17)</em></span>, pages 613–627, 2017.</p>
+<p>Weihao Cui, Han Zhao, Quan Chen, Hao Wei, Zirui Li, Deze Zeng, Chao Li, and Minyi Guo. Dvabatch: Diversity-aware multi-entry multi-exit batching for efficient processing of dnn services on gpus. In <span><em>2022 USENIX Annual Technical Conference (USENIX ATC 22)</em></span>, pages 183–198, 2022.</p>
+<p>Tri Dao, Daniel Y Fu, Stefano Ermon, Atri Rudra, and Christopher R<span>é</span>. Flashattention: Fast and memory-efficient exact attention with io-awareness. , 2022.</p>
+<p>Robert I Davis, Ken W Tindell, and Alan Burns. Scheduling slack time in fixed priority pre-emptive systems. In <span><em>1993 Proceedings Real-Time Systems Symposium</em></span>, pages 222–231. IEEE, 1993.</p>
+<p>Tim Dettmers, Mike Lewis, Younes Belkada, and Luke Zettlemoyer. Llm. int8 (): 8-bit matrix multiplication for transformers at scale. , 2022.</p>
+<p>Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. Bert: Pre-training of deep bidirectional transformers for language understanding. , 2018.</p>
+<p>Mengnan Du, Subhabrata Mukherjee, Yu Cheng, Milad Shokouhi, Xia Hu, and Ahmed Hassan Awadallah. What do compressed large language models forget? robustness challenges in model compression. , 2021.</p>
+<p>Jiarui Fang, Yang Yu, Chengduo Zhao, and Jie Zhou. Turbotransformers: an efficient gpu serving system for transformer models. In <span><em>Proceedings of the 26th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming</em></span>, pages 389–402, 2021.</p>
+<p>William Fedus, Barret Zoph, and Noam Shazeer. Switch transformers: Scaling to trillion parameter models with simple and efficient sparsity. , 23(120):1–39, 2022.</p>
+<p><span>Github</span>. Github copilot: Your ai pair programmer. <a class="uri" href="https://github.com/features/copilot">https://github.com/features/copilot</a>.</p>
+<p>Arpan Gujarati, Reza Karimi, Safya Alzayat, Wei Hao, Antoine Kaufmann, Ymir Vigfusson, and Jonathan Mace. Serving <span class="math inline">\(\{\)</span>DNNs<span class="math inline">\(\}\)</span> like clockwork: Performance predictability from the bottom up. In <span><em>14th USENIX Symposium on Operating Systems Design and Implementation (OSDI 20)</em></span>, pages 443–462, 2020.</p>
+<p>Mingcong Han, Hanze Zhang, Rong Chen, and Haibo Chen. Microsecond-scale preemption for concurrent <span>GPU-accelerated</span> <span>DNN</span> inferences. In <span><em>16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)</em></span>, pages 539–558, Carlsbad, CA, July 2022. USENIX Association.</p>
+<p>Mingcong Han, Hanze Zhang, Rong Chen, and Haibo Chen. Microsecond-scale preemption for concurrent <span class="math inline">\(\{\)</span>GPU-accelerated<span class="math inline">\(\}\)</span><span class="math inline">\(\{\)</span>DNN<span class="math inline">\(\}\)</span> inferences. In <span><em>16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)</em></span>, pages 539–558, 2022.</p>
+<p>Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, and Weizhu Chen. Lora: Low-rank adaptation of large language models, 2021.</p>
+<p>Yanping Huang, Youlong Cheng, Ankur Bapna, Orhan Firat, Dehao Chen, Mia Chen, HyoukJoong Lee, Jiquan Ngiam, Quoc V Le, Yonghui Wu, et al. Gpipe: Efficient training of giant neural networks using pipeline parallelism. , 32, 2019.</p>
+<p><span>Huggingface</span>. Models - huggingface. <a class="uri" href="https://huggingface.co/models">https://huggingface.co/models</a>.</p>
+<p>Vatche Ishakian, Vinod Muthusamy, and Aleksander Slominski. Serving deep learning models in a serverless platform. In <span><em>2018 IEEE International Conference on Cloud Engineering (IC2E)</em></span>, pages 257–262. IEEE, 2018.</p>
+<p>Andrei Ivanov, Nikoli Dryden, Tal Ben-Nun, Shigang Li, and Torsten Hoefler. Data movement is all you need: A case study on optimizing transformers. , 3:711–732, 2021.</p>
+<p>Dmitry Lepikhin, HyoukJoong Lee, Yuanzhong Xu, Dehao Chen, Orhan Firat, Yanping Huang, Maxim Krikun, Noam Shazeer, and Zhifeng Chen. Gshard: Scaling giant models with conditional computation and automatic sharding. In <span><em>International Conference on Learning Representations</em></span>, 2020.</p>
+<p>Zhuohan Li, Siyuan Zhuang, Shiyuan Guo, Danyang Zhuo, Hao Zhang, Dawn Song, and Ion Stoica. Terapipe: Token-level pipeline parallelism for training large-scale language models. In <span><em>International Conference on Machine Learning</em></span>, pages 6543–6552. PMLR, 2021.</p>
+<p>Xiaoqiao Meng, Canturk Isci, Jeffrey Kephart, Li Zhang, Eric Bouillet, and Dimitrios Pendarakis. Efficient resource provisioning in compute clouds via vm multiplexing. In <span><em>Proceedings of the 7th international conference on Autonomic computing</em></span>, pages 11–20, 2010.</p>
+<p>Deepak Narayanan, Aaron Harlap, Amar Phanishayee, Vivek Seshadri, Nikhil R Devanur, Gregory R Ganger, Phillip B Gibbons, and Matei Zaharia. Pipedream: generalized pipeline parallelism for dnn training. In <span><em>Proceedings of the 27th ACM Symposium on Operating Systems Principles</em></span>, pages 1–15, 2019.</p>
+<p>Deepak Narayanan, Mohammad Shoeybi, Jared Casper, Patrick LeGresley, Mostofa Patwary, Vijay Korthikanti, Dmitri Vainbrand, Prethvi Kashinkunti, Julie Bernauer, Bryan Catanzaro, Amar Phanishayee, and Matei Zaharia. Efficient large-scale language model training on gpu clusters using megatron-lm. In <span><em>Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis</em></span>, SC ’21, New York, NY, USA, 2021. Association for Computing Machinery.</p>
+<p><span>NVIDIA</span>. Fastertransformer. <a class="uri" href="https://github.com/NVIDIA/FasterTransformer">https://github.com/NVIDIA/FasterTransformer</a>.</p>
+<p>NVIDIA. Triton inference server. <a class="uri" href="https://developer.nvidia.com/nvidia-triton-inference-server">https://developer.nvidia.com/nvidia-triton-inference-server</a>.</p>
+<p>Christopher Olston, Noah Fiedel, Kiril Gorovoy, Jeremiah Harmsen, Li Lao, Fangwei Li, Vinu Rajashekhar, Sukriti Ramesh, and Jordan Soyke. Tensorflow-serving: Flexible, high-performance ml serving. , 2017.</p>
+<p><span>OpenAI</span>. Chatgpt. <a class="uri" href="https://chat.openai.com/chat">https://chat.openai.com/chat</a>.</p>
+<p>Reiner Pope, Sholto Douglas, Aakanksha Chowdhery, Jacob Devlin, James Bradbury, Anselm Levskaya, Jonathan Heek, Kefan Xiao, Shivani Agrawal, and Jeff Dean. Efficiently scaling transformer inference. , 2022.</p>
+<p>Samyam Rajbhandari, Jeff Rasley, Olatunji Ruwase, and Yuxiong He. Zero: Memory optimizations toward training trillion parameter models. In <span><em>SC20: International Conference for High Performance Computing, Networking, Storage and Analysis</em></span>, pages 1–16. IEEE, 2020.</p>
+<p>KV Rashmi, Mosharaf Chowdhury, Jack Kosaian, Ion Stoica, and Kannan Ramchandran. Ec-cache: Load-balanced, low-latency cluster caching with online erasure coding. In <span><em>12th USENIX Symposium on Operating Systems Design and Implementation (OSDI 16)</em></span>, pages 401–417, 2016.</p>
+<p>Stewart Robinson. . Bloomsbury Publishing, 2014.</p>
+<p>Francisco Romero, Qian Li, Neeraja J. Yadwadkar, and Christos Kozyrakis. : Automated model-less inference serving. In <span><em>2021 USENIX Annual Technical Conference (USENIX ATC 21)</em></span>, pages 397–411. USENIX Association, July 2021.</p>
+<p>Victor Sanh, Lysandre Debut, Julien Chaumond, and Thomas Wolf. Distilbert, a distilled version of bert: smaller, faster, cheaper and lighter. , 2019.</p>
+<p>Mohammad Shahrad, Rodrigo Fonseca, <span>Í</span><span>ñ</span>igo Goiri, Gohar Chaudhry, Paul Batum, Jason Cooke, Eduardo Laureano, Colby Tresness, Mark Russinovich, and Ricardo Bianchini. Serverless in the wild: Characterizing and optimizing the serverless workload at a large cloud provider. In <span><em>2020 USENIX Annual Technical Conference (USENIX ATC 20)</em></span>, pages 205–218, 2020.</p>
+<p>Noam Shazeer, Youlong Cheng, Niki Parmar, Dustin Tran, Ashish Vaswani, Penporn Koanantakool, Peter Hawkins, HyoukJoong Lee, Mingsheng Hong, Cliff Young, Ryan Sepassi, and Blake Hechtman. : Deep learning for supercomputers. In <span><em>Neural Information Processing Systems</em></span>, 2018.</p>
+<p>Haichen Shen, Lequn Chen, Yuchen Jin, Liangyu Zhao, Bingyu Kong, Matthai Philipose, Arvind Krishnamurthy, and Ravi Sundaram. Nexus: A gpu cluster engine for accelerating dnn-based video analysis. In <span><em>Proceedings of the 27th ACM Symposium on Operating Systems Principles</em></span>, pages 322–337, 2019.</p>
+<p>Mohammad Shoeybi, Mostofa Patwary, Raul Puri, Patrick LeGresley, Jared Casper, and Bryan Catanzaro. Megatron-lm: Training multi-billion parameter language models using model parallelism. , 2019.</p>
+<p>John F Shortle, James M Thompson, Donald Gross, and Carl M Harris. , volume 399. John Wiley &amp; Sons, 2018.</p>
+<p>Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, <span>Ł</span>ukasz Kaiser, and Illia Polosukhin. Attention is all you need. , 30, 2017.</p>
+<p>Qizhen Weng, Wencong Xiao, Yinghao Yu, Wei Wang, Cheng Wang, Jian He, Yong Li, Liping Zhang, Wei Lin, and Yu Ding. Mlaas in the wild: Workload analysis and scheduling in large-scale heterogeneous gpu clusters. In <span><em>19th USENIX Symposium on Networked Systems Design and Implementation (NSDI 22)</em></span>, pages 945–960, 2022.</p>
+<p>Bingyang Wu, Zili Zhang, Zhihao Bai, Xuanzhe Liu, and Xin Jin. Transparent <span>GPU</span> sharing in container clouds for deep learning workloads. In <span><em>20th USENIX Symposium on Networked Systems Design and Implementation (NSDI 23)</em></span>, pages 69–85, Boston, MA, April 2023. USENIX Association.</p>
+<p>Yuanzhong Xu, HyoukJoong Lee, Dehao Chen, Blake Hechtman, Yanping Huang, Rahul Joshi, Maxim Krikun, Dmitry Lepikhin, Andy Ly, Marcello Maggioni, et al. Gspmd: general and scalable parallelization for ml computation graphs. , 2021.</p>
+<p>Gyeong-In Yu, Joo Seong Jeong, Geon-Woo Kim, Soojeong Kim, and Byung-Gon Chun. Orca: A distributed serving system for transformer-based generative models. In <span><em>16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)</em></span>, pages 521–538, 2022.</p>
+<p>Hong Zhang, Yupeng Tang, Anurag Khandelwal, and Ion Stoica. <span class="math inline">\(\{\)</span>SHEPHERD<span class="math inline">\(\}\)</span>: Serving <span class="math inline">\(\{\)</span>DNNs<span class="math inline">\(\}\)</span> in the wild. In <span><em>20th USENIX Symposium on Networked Systems Design and Implementation (NSDI 23)</em></span>, pages 787–808, 2023.</p>
+<p>Susan Zhang, Stephen Roller, Naman Goyal, Mikel Artetxe, Moya Chen, Shuohui Chen, Christopher Dewan, Mona Diab, Xian Li, Xi Victoria Lin, et al. Opt: Open pre-trained transformer language models. , 2022.</p>
+<p>Yanqi Zhang, <span>Í</span><span>ñ</span>igo Goiri, Gohar Irfan Chaudhry, Rodrigo Fonseca, Sameh Elnikety, Christina Delimitrou, and Ricardo Bianchini. Faster and cheaper serverless computing on harvested resources. In <span><em>Proceedings of the ACM SIGOPS 28th Symposium on Operating Systems Principles</em></span>, pages 724–739, 2021.</p>
+<p>Yihao Zhao, Yuanqiang Liu, Yanghua Peng, Yibo Zhu, Xuanzhe Liu, and Xin Jin. Multi-resource interleaving for deep learning training. In <span><em>Proceedings of the ACM SIGCOMM 2022 Conference</em></span>, pages 428–440, 2022.</p>
+<p>Lianmin Zheng, Zhuohan Li, Hao Zhang, Yonghao Zhuang, Zhifeng Chen, Yanping Huang, Yida Wang, Yuanzhong Xu, Danyang Zhuo, Joseph E Gonzalez, et al. Alpa: Automating inter-and intra-operator parallelism for distributed deep learning. In <span><em>16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)</em></span>, 2022.</p>
+<p>Zhe Zhou, Xuechao Wei, Jiejing Zhang, and Guangyu Sun. Pets: A unified framework for parameter-efficient transformers serving. In <span><em>2022 USENIX Annual Technical Conference (USENIX ATC 22)</em></span>, pages 489–504, 2022.</p>
+</div><div class="qa-link"><a href="paper-qa/alpaserve-2302.11665-qa.html">继续阅读 Q1-Q7 详细问答</a></div></section></main></body></html>

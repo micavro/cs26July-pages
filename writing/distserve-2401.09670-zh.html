@@ -1,76 +1,589 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DistServe：解耦 Prefill 与 Decoding 的 Goodput 优化 LLM 服务：中文精读与校订</title>
-<style>
-:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
-*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
-h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
-h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
-.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
-.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
-@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+<!DOCTYPE html>
 
-.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-34px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a{color:var(--accent);text-decoration:none}.paper-nav a:hover{text-decoration:underline}
-.overview{margin:0 0 28px;padding:20px 22px;border:1px solid #cddbe6;border-radius:8px;background:linear-gradient(135deg,#f7fbfd,#fff)}.overview h2{margin:0 0 10px;padding:0;font-size:21px}.overview ul{margin-bottom:0}.doing{font-size:18px;line-height:1.75}.equation{margin:24px 0;padding:18px 20px;border-left:4px solid var(--accent);background:var(--soft);overflow-x:auto}.equation .math{margin:6px 0 10px;text-align:center;font-size:1.05em}.source-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}.source-actions a{display:inline-block;padding:8px 12px;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:14px}.source-actions a.primary{background:var(--accent);color:#fff}.figure img{width:auto;max-height:760px}.revision-note{color:var(--muted);font-size:13px}.qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.qa-links a{padding:5px 9px;border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:13px}
-@media(max-width:820px){.paper-nav{margin:-8px 0 24px}.overview{padding:16px}.doing{font-size:16px}}
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>DistServe：面向 Goodput 优化的大语言模型 Prefill-Decoding 解耦服务：中文全文翻译</title><style>
+:root{--ink:#161616;--muted:#5f6368;--rule:#d9dde3;--paper:#fff;--bg:#f4f6f8;--accent:#184c7f;--soft:#f8fafc}
+html{font-size:16px;scroll-behavior:smooth}*,*::before,*::after{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.76;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:70px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}h1{margin:0 auto 22px;max-width:900px;text-align:center;font-size:32px;line-height:1.28;font-weight:700;overflow-wrap:anywhere;text-wrap:balance}.authors{margin:0 auto 18px;max-width:900px;text-align:center;font-size:14px;line-height:1.6}.meta{margin:0 0 28px;color:var(--muted);text-align:center;font-size:13px}.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-35px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a,.qa-link a{color:var(--accent);text-decoration:none}.paper-nav a:hover,.qa-link a:hover{text-decoration:underline}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 13px;padding-top:4px;font-size:24px}h3{margin:27px 0 10px;font-size:20px}h4{margin:21px 0 8px;font-size:17px}p{margin:0 0 14px;overflow-wrap:anywhere}ul,ol{margin:0 0 17px 1.5em;padding:0}li{margin:0 0 9px;padding-left:.1em}.abstract,.keywords{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}.keywords{padding-top:11px;padding-bottom:11px}.qa-link{margin:0 0 26px;padding:13px 16px;border:1px solid #cbd8e4;border-radius:5px;background:#fbfdff;font-family:"Microsoft YaHei",sans-serif;text-align:center}.figure{break-inside:avoid;max-width:820px;margin:28px auto 34px;text-align:center}.figure img{display:block;max-width:100%;height:auto;max-height:780px;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:800px;margin:0 auto;font-size:14px;font-weight:700;line-height:1.55;text-align:left;color:#202124}table{width:100%;margin:22px auto 30px;border-collapse:collapse;font-size:14px;line-height:1.55;display:block;overflow-x:auto}th,td{padding:7px 9px;border:1px solid #d8dde3;vertical-align:top}th{background:#f4f7fa}.math.display{display:block;margin:20px auto;padding:12px 8px;overflow-x:auto;text-align:center}.math.inline{white-space:nowrap}.footnotes{margin-top:32px;padding-top:16px;border-top:1px solid var(--rule);font-size:13px;color:#424850}.refs-note{white-space:pre-wrap;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-size:13.5px;line-height:1.55}.translation-note{margin:20px 0;padding:14px 16px;border-left:4px solid #8a6d3b;background:#fffaf0;font-size:14px}.citation:empty{display:none}code{font-family:Consolas,"Courier New",monospace;font-size:.9em}.algorithm{margin:22px 0;padding:15px 17px;border:1px solid #d9e0e7;background:#fbfcfd;border-radius:4px;overflow-x:auto}.algorithm p{margin-bottom:7px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 26px 52px;border:0;box-shadow:none}.paper-nav{margin:-8px 0 24px}h1{font-size:24px}.columns{font-size:16px;line-height:1.84}.figure{max-width:100%}table{font-size:12.5px}}
+</style><script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script><script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head><body><main class="paper"><nav class="paper-nav"><a href="../index.html">← 论文目录</a><a href="paper-qa/distserve-2401.09670-qa.html">Q1-Q7 详细问答 →</a></nav><h1>DistServe：面向 Goodput 优化的大语言模型 Prefill-Decoding 解耦服务<br/>中文全文翻译</h1><div class="authors">Yinmin Zhong · Shengyu Liu · Junda Chen · Jianbo Hu · Yibo Zhu · Xuanzhe Liu · Xin Jin · Hao Zhang</div><div class="meta">OSDI 2024 · arXiv 2401.09670 · 公式统一使用 LaTeX/MathJax</div><section class="columns"><section class="abstract"><h2>摘要</h2><p>DistServe 通过解耦 prefill 与 decoding 来提升 LLM 服务性能。共置式系统既会产生阶段间干扰，也会耦合两个阶段的资源配置与并行方案。DistServe 将两阶段分配到不同 GPU，依据应用的 TTFT 与 TPOT 目标分别优化资源和并行策略，并按集群带宽放置实例以降低 KV 传输开销。评估显示，它可在满足延迟约束的前提下服务最多 7.4 倍请求，或提供 12.6 倍更严格的 SLO。</p></section><section class="keywords"><p><strong>关键词：</strong>LLM serving；prefill-decoding disaggregation；TTFT；TPOT；goodput；资源规划</p></section><div class="qa-link"><a href="paper-qa/distserve-2401.09670-qa.html">阅读比正文更聚焦的 Q1-Q7 详细论文问答</a></div><div class="translation-note"><strong>翻译说明：</strong>本页以论文公开 LaTeX 源码为底稿，按原章节顺序逐段翻译；保留英文系统名、指标名和必要术语。所有数学表达式保留原始 LaTeX，由 MathJax 渲染。图表来自原论文素材。</div><h2 id="sec:introduction">1 简介</h2>
+<p>大语言模型（LLM），如GPT-4、Bard和LLaMA，代表了生成式人工智能的一次突破性转变。它们开始重塑现有的互联网服务，从搜索引擎到个人助理，并支持诸如通用聊天机器人和编程助手等根本性新应用。然而，这些进步也带来了重大挑战：处理端到端LLM查询的速度可能远低于标准搜索查询。为了满足各种应用严格的延迟要求，服务提供商需要过度配置计算资源，尤其是许多GPU，导致成本效率下降。因此，在遵守高 <em>SLO达成</em> （即满足SLO的请求比例）的同时，优化每次LLM查询的成本，正变得对所有LLM服务都变得越来越重要。</p>
+<figure class="figure" data-latex-placement="t" id="fig:teaser">
+<img alt="在一台 NVIDIA 80GB A100 上，在输入长度 = 512、输出长度 = 64 的合成工作负载下，提供具有 13B 参数的 LLM 时的性能。 上层 ：P90首次token时间（TTFT）延迟，比较现有系统与仅服务prefill阶段的系统。 下 行：P90 每个输出token时间（TPOT）延迟，比较现有系统与仅服务decode 阶段的系统。" loading="lazy" src="../assets/papers/distserve-full/figure-01.png"/>
+<figcaption class="caption"> 在一台 NVIDIA 80GB A100 上，在输入长度 = 512、输出长度 = 64 的合成工作负载下，提供具有 13B 参数的 LLM 时的性能。 <em>上层</em>：P90首次token时间（TTFT）延迟，比较现有系统与仅服务prefill阶段的系统。 <em>下</em>行：P90 每个输出token时间（TPOT）延迟，比较现有系统与仅服务decode 阶段的系统。</figcaption>
+</figure>
+<p>LLM服务对用户查询的响应分为两个阶段。 <em>prefill阶段</em> 处理用户的prompt，由一系列token组成，一步生成响应的第一个令 <em>牌。</em>随后， <em>decode 阶段</em> 会按顺序生成多个 <em>步骤</em>的后续符号;每个解码步骤都会根据前一步生成的token生成一个新token，直到达到一个终止token。这一双阶段过程将LLM服务与传统服务区分开来——LLM服务的延迟通过两个关键指标唯一衡量： <em>到第一个token</em> 的时间（TTFT），即prefill阶段的持续时间，以及 <em>每输出 token 时间</em> （TPOT），代表每个请求生成token的平均时间（除第一个token外）<a class="footnote-ref" href="#fn1" id="fnref1" role="doc-noteref"><sup>1</sup></a>.不同应用对每个指标的要求各不相同。例如，实时聊天机器人优先考虑低TTFT以保证响应速度，而TPOT仅在超过人类阅读速度（即250字/分钟）时才重要。相反，文档摘要强调低TPOT以加快摘要生成速度。</p>
+<p>因此，鉴于应用的TTFT和TPOT要求，一个有效的LLM服务系统应当平衡这些需求，最大化 <em>每个GPU的goodput</em>，即每个 GPU达到SLO目标（比如90%）下可被服务的最大请求率——更高的每个GPUgoodput直接意味着每次查询的成本越低。</p>
+<p>由于prefill和decode 阶段共享LLM权重和工作内存，现有LLM服务系统通常会在GPU上共址两个阶段，并通过batch 处理prefill和解码步骤，最大化整体系统吞吐量——即每秒在所有用户和请求中生成的token数。然而，为了满足延迟要求，我们发现这些系统必须过度配置计算资源。为此，图<a data-reference="fig:teaser" data-reference-type="ref" href="#fig:teaser">1</a> 展示了在使用现有系统服务13B大语言模型时，P90 TTFT和TPOT如何随着请求速率的增加而变化，且工作负载模式和两个延迟约束设定为模拟使用LLM生成文章简要摘要。在 SLO 达到 90% 的条件下，单个 A100 GPU 的最大可实现goodput（受更严格的 TTFT 和 TPOT 要求限制）约为每秒 1.6 请求（rps）。当每个阶段独立运行到独立的GPU上时，性能形成鲜明对比，显示为橙色和绿色曲线，prefill阶段每 GPU goodput为5.6 rps，解码为10 rps。理想情况下，通过分配2块GPU用于prefill和1块GPU用于解码，我们可以有效地为模型提供10 RPS的整体吞吐量，也就是每块GPU3.3 RPS，比现有系统高出2.1倍。goodput的缺口主要源于prefill和解码的共址——这两阶段在计算特性和延迟要求上非常不同（§<a data-reference="sec:llm-inference" data-reference-type="ref" href="#sec:llm-inference">2.1</a>）。</p>
+<p>首先，共置会导致强烈的 <em>prefill-解码干扰</em>。prefill步骤通常比解码步骤花费的时间长得多。batch 处理时，batch中的解码步骤会被prefill步骤延迟，显著延长了TPOT时间;同样，包含解码步骤也有助于TTFT的非平凡增加，如图<a data-reference="fig:interference" data-reference-type="ref" href="#fig:interference">2</a>所示。即使我们分开安排，问题依然存在，因为他们开始争夺资源。等待GPU执行的解码任务由于持续的prefill任务而出现排队延迟，反之亦然。优先调度一阶段有可能未能满足另一阶段的延迟要求。</p>
+<p>其次，prefill和解码计算在延迟要求和对不同并行形式的偏好上有所不同（§<a data-reference="sec:tradeoff" data-reference-type="ref" href="#sec:tradeoff">3</a>）。然而，prefill和解码共址会使它们的资源分配耦合，从而阻止了更适合满足各阶段特定延迟要求的不同并行策略。</p>
+<p>为克服这些挑战，我们提出将LLM推理中的prefill和decode 阶段拆分，分别分配给不同的GPU。我们的方法有两个好处。首先，在不同GPU上独立运行各相可以消除prefill-解码的干扰。其次，它允许通过定制的资源分配和模型并行策略，独立扩展每个阶段，以满足其特定的延迟需求。虽然拆分会导致GPU之间传递中间状态，但我们表明现代GPU集群中的通信开销微乎其微（§<a data-reference="subsec:practical_problems" data-reference-type="ref" href="#subsec:practical_problems">3.3</a>），在适当管理下，拆分显著提升了每个GPU的良好产权。</p>
+<p>基于上述见解，本研究构建了DistServe<a class="footnote-ref" href="#fn2" id="fnref2" role="doc-noteref"><sup>2</sup></a>，这是一个通过拆分prefill和decode 阶段的goodput优化LLM服务系统。鉴于TTFT和TPOT需求，DistServe首先通过协同优化prefill和decode 阶段的GPU分配和并行策略，独立扩展每个阶段，假设服务单一模型副本。优化确保最大化每GPU的goodput，并根据各自的延迟需求，可能为每个阶段分配不同的GPU数量和并行策略。随后，DistServe通过复制将分配扩展到多个实例，直到达到用户要求的流量率（§<a data-reference="sec:method" data-reference-type="ref" href="#sec:method">4</a>）。DistServe还具备一套算法，根据分配方案和集群带宽配置prefill和解码计算，以最小化相间通信中间状态的开销。</p>
+<p>我们将DistServe作为LLM推理引擎之上的编排层实现。我们根据三个重要的现实大语言模型应用：聊天机器人、编程助手和文档摘要，调整了DistServe在各种大语言模型上的工作负载。与最先进的解决方案相比，DistServe在各种延迟约束下，最多可提供 <span class="math inline">\(7.4\times\)</span> 个请求或 <span class="math inline">\(12.6\times\)</span> 更紧凑的SLO。我们的贡献包括：</p>
+<ul>
+<li><p>识别现有LLM服务系统中prefill-解码干扰和资源耦合的问题，并提议将两阶段拆分。</p></li>
+<li><p>设计一种新颖的布局算法，自动选择善置最优的prefill和decode 实例模式。</p></li>
+<li><p>以现实的工作量进行全面评估DistServe。</p></li>
+</ul>
+<h2 id="sec:background">2 背景与动机</h2>
+<p>LLM服务遵循客户端-服务器架构：客户端向服务器提交一段文本序列作为请求;服务器在GPU上托管LLM，对请求进行推理，并将生成过程回应（或流式传输）回客户端。如§<a data-reference="sec:introduction" data-reference-type="ref" href="#sec:introduction">1</a>所述，由于独特的prefill-解码过程，LLM服务可能会对TTFT和TPOT施加激进的服务级目标（SLO），并根据应用需求而变化。服务系统必须满足这两种SLO要求，同时最大限度地减少昂贵GPU的成本。换句话说，我们希望服务系统在每秒服务请求中达到SLO目标的每个 GPU最大化—— <em>最大化每个GPU的goodput</em>。接下来，我们详细介绍LLM的推理计算（§<a data-reference="sec:llm-inference" data-reference-type="ref" href="#sec:llm-inference">2.1</a>），并讨论现有的LLM服务优化（§<a data-reference="sec:llm-serving" data-reference-type="ref" href="#sec:llm-serving">2.2</a>）。</p>
+<h3 id="sec:llm-inference">2.1 LLM 推理</h3>
+<p>现代大语言模型在输入序列下预测下一个token。该预测涉及为序列中的每个token计算隐藏表示。LLM可以接受可变数量的输入token并并行计算其隐藏表示，其计算工作负载随着并行处理的token数量呈超线性增长。无论输入token数多少，计算都需要大量的输入输出（I/O）才能将 GPU 的 HBM 权重和中间状态迁移到 SRAM。这一过程在不同输入大小下是一致的。</p>
+<p>prefill步骤处理一个新序列，通常包含多个token，并并发处理这些token。与prefill不同，每个解码步骤只处理一个由前一步生成的新token。这导致两阶段在计算上存在显著差异。当处理不简短的用户prompt时，prefill步骤往往受计算限制。例如，对于一个13B的LLM，计算512token序列的prefill使A100接近计算界限（见<a data-reference="subsec:analysis_prefill" data-reference-type="ref" href="#subsec:analysis_prefill">§3.1</a>）。相比之下，尽管每步只处理一个新token，decode 阶段却承担与prefill阶段相似的I/O水平，受GPU内存带宽限制。</p>
+<p>在这两个阶段，每个token位置都会生成称为KV cache的中间状态，这些缓存在后续解码步骤中再次需要。为了避免重新计算，它们被保存在 GPU 内存中。由于内存中共享LLM权重和KV cache，大多数LLM推理引擎选择在GPU上共置prefill和decode 阶段，尽管它们在计算特性上各有不同。</p>
+<h3 id="sec:llm-serving">2.2 LLM 服务优化</h3>
+<p>在实时在线送达中，多个请求必须在SLO内送达。batch 处理和并行处理计算对于实现低延迟、高吞吐量和高GPU利用率至关重要。</p>
+<p><strong>batch 处理。</strong> 电流服务系统采用一种称为 <em>continuous batching</em>的batch技术。该方法将新请求的prefillbatch 处理，同时解码正在进行的请求。它提高了GPU利用率，最大化了整体系统吞吐量——即所有用户和请求中每秒产生的token数。然而，正如<a data-reference="sec:introduction" data-reference-type="ref" href="#sec:introduction">第1</a> 节所述并在第<a data-reference="sec:problem-opportunity" data-reference-type="ref" href="#sec:problem-opportunity">2.3</a>节后面详细阐述的，这种方法导致TTFT和TPOT之间的权衡。continuous batching的高级变体尝试通过将长prefill分割成块，并将解码作业与分块prefill连接来平衡TTFT和TPOT——但本质上，它用TPOT替代TTFT，无法消除干扰（§<a data-reference="sec:problem-opportunity" data-reference-type="ref" href="#sec:problem-opportunity">2.3</a>）。总之，批量prefill和解码不可避免地导致TTFT或TPOT的妥协。</p>
+<p><strong>模型并行。</strong> 在LLM服务中，模型并行通常分为内部并行性和操作者间并行性。两者都可以支持较大的模型，但对服务性能的影响可能有所不同。操作员内并行性将计算密集型算符（如矩阵乘法）划分到多个GPU上，加速计算但导致大量通信。它将执行时间缩短<a class="footnote-ref" href="#fn3" id="fnref3" role="doc-noteref"><sup>3</sup></a>倍，从而降低延迟，尤其是在prefill阶段的TTFT中，但需要GPU间高带宽连接（例如NVLINK）。操作员间并行将LLM层组织成多个阶段，每个阶段运行在GPU上形成流水线。由于阶段间通信，它适度增加执行时间，但随着每增加一个GPU，系统速率容量会线性提升。本文揭示了模型并行的另一个好处：减少prefill和decode 阶段的排队延迟，因执行时间更短而导致蒸汽。我们在<a data-reference="sec:tradeoff" data-reference-type="ref" href="#sec:tradeoff">第3</a>节中进一步探讨。除了模型并行外，复制模型实例，无论其模型并行配置如何，都能线性地扩展系统的速率容量。</p>
+<p>这些并行策略创造了一个复杂的优化空间，需要根据应用的延迟需求做出谨慎权衡。</p>
+<h3 id="sec:problem-opportunity">2.3 问题与机遇</h3>
+<p>像现有系统一样，将prefill和解码计算的同址和batch 处理以最大化整体系统吞吐量，对服务提供商来说具有成本效益。然而，在SLO存在的情况下，现有方法难以同时保持高服务质量和低成本，原因如下所述。</p>
+<figure class="figure" data-latex-placement="t" id="fig:interference">
+<p><img alt="当batch规模增加时，服务一个13B型LLM时的batch时间。比较了仅解码的batch和添加一个prefill任务的batch。" loading="lazy" src="../assets/papers/distserve-full/figure-02.png"/> （a） 输入长度 = 128 （b） 输入长度 = 1024</p>
+<figcaption class="caption">当batch规模增加时，服务一个13B型LLM时的batch时间。比较了仅解码的batch和添加一个prefill任务的batch。</figcaption>
+</figure>
+<p><strong>prefill解码干扰。</strong> 如图<a data-reference="fig:interference" data-reference-type="ref" href="#fig:interference">2</a> 所示，在一批解码请求中添加单一prefill任务会显著减慢两个进程，导致TTFT和TPOT显著增加。具体来说，batch中的解码任务必须等待更长的prefill作业完成，从而延长TPOT;随着prefill时间变长，减速会加剧，如图<a data-reference="fig:interference" data-reference-type="ref" href="#fig:interference">2</a><span style="color: green!80!black">（b）</span>所示。在prefill中添加解码作业也会增加完成prefill任务的时间，尤其是在GPU已满载时（见图<a data-reference="fig:interference" data-reference-type="ref" href="#fig:interference">2</a> 蓝色曲线）。</p>
+<p>一种缓解这种干扰的尝试称为 <em>带搭载的分块prefill</em>。它提议将长prefill拆分成多个块，并batch 处理一个prefill块，进行少量解码任务（即搭便车）。该技术缓解了因prefill时间较长导致的解码减慢，但并不能完全消除该问题。此外，这还会导致prefill工作额外的开销，而这些开销无法通过调整块大小来轻松缓解。首先，如果块大小远低于能饱和GPU的拐点，那么prefill作业的执行时间会更长，因为它会与同一批解码作业竞争，无法单独利用GPU资源。其次，如果我们把分块大小增加到几乎饱和GPU，搭便车的可能性会降低，因为剩余的解码token槽位有限。此外，分块prefill会显著增加prefill作业的内存访问量。这是因为所有之前分块的KV cache必须反复从HBM加载到SRAM，以计算后续的每个分块。具体来说，如果prefill作业被拆分成 <span class="math inline">\(N\)</span> 相等的块，我们总共需要加载 <span class="math inline">\(N + (N-1) + ... + 1 = O(N^2)\)</span> 块KV cache，而非分块情况下则是O（N）。随着上下文长度的延长，这种开销会增加。</p>
+<p><strong>无效的排班。</strong> 解码prefill、解码作业并按顺序调度并不能减少干扰。解码作业可能会因等待GPU上的持续prefill作业而出现更长的排队延迟。此外，专门用于解码的batch常常导致GPU利用率不足。在任一阶段优先排序任务都会不利于另一阶段的延迟，使优先调度失效。</p>
+<p><strong>资源耦合与并行耦合。</strong> 在同一GPU上共址prefill和解码相位不可避免地共享资源和并行设置。然而，每个相都有其独特的计算特性和延迟要求，需要更异构的资源分配。例如，prefill阶段通常受计算限制，且通过更多的运内并行性来缩短执行时间，以满足TTFT上的严格SLO要求。相比之下，decode 阶段的最优并行配置取决于运行batch大小。在现有系统中，由于耦合，资源分配和并行性计划会针对TTFT和TPOT中 <em>要求更高的</em> 方案进行定制，这两者可能并不理想。这常常导致资源过度配置以满足两个SLO的要求。</p>
+<p><strong>机会。</strong> 为解决这些问题，我们提议将prefill和decode 阶段拆分。我们 <em>使用实例一</em> 词来表示管理一个完整模型权重副本的资源单位。当应用模型并行时，一个实例可以对应多个GPU。注意，当我们将两阶段拆分到不同的GPU时，每个阶段管理其模型权重的副本，从而产生 <em>prefill实例</em> 和 <em>decode 实例</em>。prefill实例在收到请求时，仅对该请求进行prefill计算，以生成第一个输出token。然后它将中间结果（主要是KV cache）发送到decode 实例，该实例负责后续的解码步骤。由于解码计算通常占用GPU较低，我们可能会为每个decode 实例分配多个prefill实例。这允许batch 处理更多解码作业，以实现更高的GPU利用率。</p>
+<p>拆分prefill和解码自然解决了两相之间的干扰，使每个阶段都能专注于其优化目标——TTFT或TPOT。每种实例类型都可以采用不同的资源和并行策略，以满足不同的延迟需求。通过调整GPU数量和提供给这两种实例的并行性，我们可以最大化整个系统的每设备goodput，避免过度配置，最终转化为符合服务质量的每次查询成本的降低。接下来，我们开发方法，找出每个阶段最佳的资源分配和并行计划。</p>
+<h2 id="sec:tradeoff">3 权衡分析</h2>
+<p>拆分将两个阶段解耦，允许对每个阶段的特性进行独立分析，为算法设计提供宝贵见解。它还扩展了设计空间：现在每个阶段都需要根据其延迟需求独立扩展和调度。</p>
+<p>本节分析了<em>分解后</em>prefill（§<a data-reference="subsec:analysis_prefill" data-reference-type="ref" href="#subsec:analysis_prefill">3.1</a>）和decode 实例（§<a data-reference="subsec:analysis_decoding" data-reference-type="ref" href="#subsec:analysis_decoding">3.2</a>）的计算模式。我们旨在确定关键参数，并制定各阶段batch和并行处理的指导方针。随后，我们重点介绍了若干实际部署的考虑因素（§<a data-reference="subsec:practical_problems" data-reference-type="ref" href="#subsec:practical_problems">3.3</a>）。本节为每GPU的善价投资优化奠定了基础。</p>
+<h3 id="subsec:analysis_prefill">3.1 prefill实例分析</h3>
+<figure class="figure" data-latex-placement="!t" id="fig:prefill_decode_tpt">
+<p><img alt="在提供13B参数的LLM时，处理不同batch大小和输入长度的两相吞吐量。" loading="lazy" src="../assets/papers/distserve-full/figure-03.png"/> （a） prefill阶段 （b） decode 阶段</p>
+<figcaption class="caption">在提供13B参数的LLM时，处理不同batch大小和输入长度的两相吞吐量。</figcaption>
+</figure>
+<p>拆分后，prefill阶段通过并行处理用户prompt的所有token生成第一个token。假设给定的到达率，我们旨在用最少的资源满足TTFT上的服务延迟要求。</p>
+<p><strong>batch 处理策略。</strong> prefill步骤通常计算量较大。图<a data-reference="fig:prefill_decode_tpt" data-reference-type="ref" href="#fig:prefill_decode_tpt">3</a><span style="color: green!80!black">（a）</span> 展示了prefill阶段吞吐量随输入长度和batch大小的变化。对于一个13B参数的LLM，处理一个包含512个token的序列即可完全激活A100 GPU。一旦GPU变得对计算受限，增加更多请求就不再能提升GPU效率。相反，它会按比例延长batch的总处理时间，无意中延迟所有包含的请求。因此，对于prefill实例，需要提前分析特定的LLM和GPU配置，以确定一个关键输入长度阈值，记为 <span class="math inline">\(L_m\)</span>，超过此阈值后prefill阶段将被计算限制。只有当调度请求的输入长度低于 <span class="math inline">\(L_m\)</span>时，才应考虑batch 处理更多请求。实际上，用户prompt通常平均分布在数百个token上。prefill实例的batch尺寸通常保持较小。</p>
+<p><strong>并行计划。</strong> 为了研究仅prefill实例的并行性偏好，我们在两台A100 GPU上提供一个66B的大语言模型，采用运内或运内并行策略。为了简化问题，我们假设请求的输入长度为512个token，并且存在泊松到达过程。我们比较图<a data-reference="fig:prefill_intra_op" data-reference-type="ref" href="#fig:prefill_intra_op">4</a><span style="color: green!80!black">（a）</span>中不同到达率下所得的平均TTFT：运内并行在较低到达率下更高效，而运内并行性随着速率增加获得优越性。拆分使prefill阶段类似于M/D/1队列，因此我们可以利用排队理论验证观察结果。</p>
+<p>我们首先采用无并行的单设备情形开发符号：每个请求的执行时间（记为 <span class="math inline">\(D\)</span>）由于prefill长度均匀，保持不变。由于一个请求会让GPU过饱和，我们采用先到先得（FCFS）方式安排请求，无需batch 处理。假设泊松到达率为 <span class="math inline">\(R\)</span> ，利用条件为 <span class="math inline">\(RD &lt; 1\)</span>，平均TTFT（<span class="math inline">\(Avg\_TTFT\)</span>）可由M/D/1队列以近形式建模： <span class="math display" id="eq1">\[
+\small
+    Avg\_TTFT = D + \frac{RD^2}{2(1-RD)}.
 
-</style>
-<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-</head>
-<body>
-<main class="paper">
-<nav class="paper-nav" data-six-paper-revision><a href="../index.html">← 论文目录</a><a href="paper-qa/distserve-2401.09670-qa.html">Q1–Q7 详细问答 →</a></nav>
-<h1>DistServe：解耦 Prefill 与 Decoding 的 Goodput 优化 LLM 服务：中文精读与校订</h1>
-<div class="authors">Yinmin Zhong, Shengyu Liu, Junda Chen, Jianbo Hu, Yibo Zhu, Xuanzhe Liu, Xin Jin, Hao Zhang</div>
-<div class="meta">源文件：arXiv 2401.09670 | OSDI 2024 | 18 页 | 保留术语：disaggregation、prefill、decoding、TTFT、TPOT、goodput、continuous batching、model parallelism</div>
-<section class="columns">
-<section class="overview"><h2>这篇论文做什么？</h2><p class="doing">把计算密集的 prefill 与带宽密集的 decode 放到不同 GPU 池，分别选择并行度和副本数，再以 TTFT/TPOT 双 SLO 下的 per-GPU goodput 为目标做资源规划。</p><ul><li>问题：共置执行会产生 prefill/decode 干扰，并把两个阶段的并行与扩容策略错误地绑在一起。</li><li>方法：P/D 实例解耦、KV 传输、阶段专属并行策略与带宽感知放置。</li><li>结果：可服务请求率最高提高 7.4×，或在相同负载下提供 12.6× 更紧的 SLO。</li></ul><p class="revision-note">校订说明：本页按原论文的论证顺序重写术语与因果关系；图均裁自论文原图，数据结论保留论文适用条件，不把峰值结果泛化为固定加速。</p></section>
-<section class="abstract"><p><strong>摘要。</strong>DistServe 通过解耦 prefill 和 decoding 计算来改善 LLM 服务性能。现有系统将两个阶段共置（colocate）并跨所有用户和请求批量处理。论文发现这种策略不仅导致强烈的 prefill-decoding 干扰，还耦合了两阶段的资源分配和并行方案。LLM 应用通常关注各阶段的单独延迟：prefill 阶段的 TTFT（time to first token）和 decoding 阶段的 TPOT（time per output token）。DistServe 将 prefill 和 decoding 分配到不同 GPU，消除干扰，并针对每个阶段协同优化资源分配和并行策略，同时根据集群带宽优化两阶段的物理放置以最小化解耦带来的通信开销。评估表明，DistServe 相比 SOTA 可服务 7.4 倍更多请求或实现 12.6 倍更紧的 SLO。</p></section>
+\]</span> ，其中第一项代表执行时间，第二项对应排队延迟。基于方程<a data-reference="eq1" data-reference-type="ref" href="#eq1">[eq1]</a>，我们在下方加入了并行性。</p>
+<p>在双向操作间并行中，我们假设请求级延迟会变 <span class="math inline">\(D_s\)</span>，最慢的阶段需要 <span class="math inline">\(D_m\)</span> 才能完成。由于几乎无关紧要的层间激活通信，我们有 <span class="math inline">\(D \approx D_s \approx 2 \times D_m\)</span>。具有两路操作间并行性的平均TTFT可推导如下：</p>
+<p><span class="math display" id="eq2">\[
+\small
+    Avg\_TTFT_{inter} = D_s + \frac{RD_m^2}{2(1-RD_m)} = D + \frac{RD^2}{4(2-RD)}.
 
-<h2>1 引言</h2>
-<p>LLM 服务的延迟由两个指标衡量：TTFT（首 token 延迟，即 prefill 阶段时长）和 TPOT（每输出 token 平均时间，即 decoding 阶段指标）。不同应用对两者的侧重不同：实时聊天机器人优先低 TTFT，文档摘要优先低 TPOT。有效的服务系统应在满足 TTFT 和 TPOT 约束的前提下最大化每 GPU goodput——即满足 SLO 达标率（如 90%）的最大请求速率。</p>
-<p>现有系统将 prefill 和 decoding 共置在 GPU 上，通过连续批处理（continuous batching）跨请求合并两阶段计算以最大化总吞吐量。但这种共置存在两个根本问题。</p>
+\]</span></p>
+<p>对于运内并行性，我们引入了一个加速系数 <span class="math inline">\(K\)</span>，其中 <span class="math inline">\(1 &lt; K &lt; 2\)</span>，反映了运内并行性高通信开销导致的不完美加速。执行时间 <span class="math inline">\(D_s = \frac{D}{K}\)</span>度运内并行的平均TTFT为：</p>
+<p><span class="math display" id="eq3">\[
+\small
+    Avg\_TTFT_{intra} = \frac{D}{K} + \frac{RD^2}{2K(K-RD)}.
 
-<h3>1.1 Prefill-Decoding 干扰</h3>
-<p>一个 prefill 步骤通常远长于 decoding 步骤。当两者被批量处理在一起时，decoding 步骤被 prefill 步骤拖延，显著延长 TPOT；反之，decoding 步骤的加入也增加了 TTFT。即使分开调度，两阶段仍竞争资源：等待执行的 decoding 任务因进行中的 prefill 任务而排队延迟增加，反之亦然。优先调度某一阶段则可能违反另一阶段的延迟要求。实验显示，在 13B 模型上，单独运行 prefill 可达 5.6 rps/GPU，单独运行 decoding 可达 10 rps/GPU，但共置仅 1.6 rps/GPU。</p>
-
-<h3>1.2 资源分配耦合</h3>
-<p>Prefill 和 decoding 对并行策略有不同偏好。Prefill 是计算密集型，适合 intra-operator 并行（张量并行）来减少执行时间；decoding 是内存带宽密集型，适合 inter-operator 并行（流水线并行）来扩展速率容量。共置两阶段则耦合了资源分配，无法为各阶段实施最适合的并行策略。</p>
-
-<h2>2 解耦架构</h2>
-<p>DistServe 将 prefill 和 decoding 分配到不同 GPU，各自独立运行。这带来两个好处：消除 prefill-decoding 干扰；允许各阶段独立扩展，采用量身定制的资源分配和模型并行策略。</p>
-<p>解耦的代价是两阶段之间需要传输中间状态（KV cache）。但论文论证，在现代 GPU 集群中这一通信开销不大——Prefill 和 decoding 实例之间通过 RDMA/NCCL 传输 KV cache，在 A100 的 400 Gbps 带宽下，传输 512 token 的 KV cache 仅需几毫秒，相对于 prefill 本身的执行时间可以忽略。</p>
-
-<h2>3 Goodput 优化</h2>
-<h3>3.1 单实例优化</h3>
-<p>给定应用的 TTFT 和 TPOT 要求，DistServe 首先为单个模型副本协同优化 GPU 分配和并行策略。Prefill 实例优先选择张量并行以降低 TTFT；decoding 实例可选择流水线并行以线性扩展速率容量。优化目标是在满足 SLO 的前提下最大化每 GPU goodput。两个阶段可能获得不同的 GPU 数量和并行配置。</p>
-
-<h3>3.2 多实例扩展</h3>
-<p>单实例优化后，DistServe 通过复制（replication）扩展到多个实例，直到满足用户要求的总流量速率。放置算法根据集群带宽拓扑选择最优的 prefill 和 decoding 实例位置，最小化跨阶段通信延迟。</p>
-
-<h2>4 Prefill-Decoding 干扰的量化</h2>
-<p>论文用实验量化了干扰的严重性。在已有 decoding 请求的 batch 中加入一个 prefill 请求，TPOT 可增加 2-10 倍，具体取决于 prefill 长度。prefill 越长，干扰越严重。即使在 chunked-prefill 方案中将长 prefill 拆分为小块并 piggyback 到 decoding 上，也只能在 TTFT 和 TPOT 之间做权衡，无法消除干扰。</p>
-
-<h2>5 实现与实验</h2>
-<p>DistServe 作为编排层实现在 LLM 推理引擎之上。评估覆盖 chatbot、编程助手和文档摘要三类工作负载，使用 LLaMA-13B、LLaMA-70B 等模型。对比 vLLM 和 Sarathi-Serve。结果显示：DistServe 在各种延迟约束下可服务 7.4 倍更多请求，或实现 12.6 倍更紧的 SLO，同时保持 90% 以上请求在延迟约束内。改进来自消除干扰和独立优化的叠加效果。</p>
-
-<h2>6 局限与选题启发</h2>
-<p>DistServe 的解耦策略是静态的——prefill 和 decoding 实例的 GPU 分配在部署时确定，不随负载动态变化。在突发流量下，某一阶段可能成为瓶颈而另一阶段资源闲置。此外，跨阶段的 KV cache 传输虽然单次开销小，但在高 QPS 下累积带宽消耗不可忽视。后续工作如 Splitwise 进一步探索了异构硬件和集群级优化。</p>
-<div class="callout"><p><strong>对本仓库方向的意义。</strong>DistServe 确立了 prefill-decoding 解耦这一重要设计范式。在 agentic workflow 场景下，一个 agent 的 prefill 可能是另一个 agent 的 decoding 输入，解耦后可以分别为各阶段优化调度策略。这为工作流级调度器（如 SAIL 的状态亲和插入、FATE 的未来状态感知）提供了底层资源管理的理论依据。</p></div>
-
-<h2>公式与目标函数</h2><div class="equation"><div class="math">\[G=\max_{\lambda}\left\{\lambda\;\middle|\;\Pr(T_{\mathrm{TTFT}}\le S_p)\ge 0.9,\ \Pr(T_{\mathrm{TPOT}}\le S_d)\ge 0.9\right\}\]</div><p>Goodput 不是裸吞吐：只有同时满足首 token 和逐 token 延迟目标的请求才算有效。DistServe 优化的是每张 GPU 能承载的合规到达率。</p></div><h2>原论文图解</h2><figure class="figure wide"><img src="../assets/papers/distserve/fig-01-interference.png" alt="图 1：共置系统中提高请求率会同时破坏 TTFT 与 TPOT SLO。" loading="lazy"><figcaption class="caption">图 1：共置系统中提高请求率会同时破坏 TTFT 与 TPOT SLO。</figcaption></figure>
-<figure class="figure wide"><img src="../assets/papers/distserve/fig-03-04-goodput.png" alt="图 3–4：prefill/decode 的批量扩展性不同，且 prefill 排队直接推高 TTFT。" loading="lazy"><figcaption class="caption">图 3–4：prefill/decode 的批量扩展性不同，且 prefill 排队直接推高 TTFT。</figcaption></figure>
-<figure class="figure wide"><img src="../assets/papers/distserve/fig-06-architecture.png" alt="图 6：控制器、prefill 实例、decode 实例与 KV 传输组成的运行时架构。" loading="lazy"><figcaption class="caption">图 6：控制器、prefill 实例、decode 实例与 KV 传输组成的运行时架构。</figcaption></figure><h2>证据边界与校订结论</h2><p>论文把离线 profiling、单实例并行方案搜索、多实例副本配置和集群放置串成规划器。需要注意：7.4× 是特定模型、工作负载和 SLO 组合下的最高 goodput 改善，而不是所有场景的固定加速；当网络不足以隐藏 KV 传输时，解耦收益会被通信成本侵蚀。</p>
-<h2>参考说明</h2>
-<pre class="note">参考文献保留在原 PDF 中。本文译稿覆盖摘要、干扰问题、解耦架构、goodput 优化、干扰量化和实验结果。</pre>
-
-<div class="source-actions"><a class="primary" href="paper-qa/distserve-2401.09670-qa.html">阅读 Q1–Q7 详细问答</a><a href="https://arxiv.org/abs/2401.09670">查看原论文</a><a href="../index.html">返回目录</a></div>
+\]</span></p>
+<p>比较方程<a data-reference="eq2" data-reference-type="ref" href="#eq2">[eq2]</a> 和<a data-reference="eq3" data-reference-type="ref" href="#eq3">方程[eq3]</a>：在较低速率下，执行时间（第一项）为主要因素，运内并行性减少执行时间使其更高效。随着速率增加且排队延迟（第二项）变得更显著，运算间并行性变得有利，这一点与图<a data-reference="fig:prefill_intra_op" data-reference-type="ref" href="#fig:prefill_intra_op">4</a><span style="color: green!80!black">（a）</span>一致。</p>
+<p>prefill阶段对并行性的偏好也受到TTFT、SLO和加速系数 <span class="math inline">\(K\)</span>的影响。从图<a data-reference="fig:prefill_intra_op" data-reference-type="ref" href="#fig:prefill_intra_op">4</a><span style="color: green!80!black">（a）</span>看：更严格的SLO将使运内并行性更具优势，因为它能够缩短执行时间。K 的值取决于输入长度、模型架构、通信带宽和位置等因素。如图<a data-reference="fig:prefill_intra_op" data-reference-type="ref" href="#fig:prefill_intra_op">4</a><span style="color: green!80!black">（b）</span>所示，K的减少显著降低了操作内并行的有效性。§<a data-reference="sec:method" data-reference-type="ref" href="#sec:method">4</a> 开发了优化资源和并行配置的算法，考虑这些旋钮。</p>
+<figure class="figure" data-latex-placement="!t" id="fig:prefill_intra_op">
+<p><img alt="在两块A100 GPU上使用不同并行方式服务一个66B参数的LLM时，平均TTFT。" loading="lazy" src="../assets/papers/distserve-full/figure-04.png"/> （a） 真实实验结果 （b） 改变术中加速</p>
+<figcaption class="caption">在两块A100 GPU上使用不同并行方式服务一个66B参数的LLM时，平均TTFT。 </figcaption>
+</figure>
+<h3 id="subsec:analysis_decoding">3.2 实例解码分析</h3>
+<p>与prefill实例不同，decode 实例遵循独特的计算模式：它接收prefill实例的KV cache和第一个输出token，然后逐个生成后续token。对于decode 实例，我们的优化目标是以最小的计算资源满足应用的TPOT要求。</p>
+<p><strong>batch 处理策略。</strong> 由于单个解码作业带宽受限较大，batch是避免低GPU利用率（因此每GPUgoodput高）的关键，如图<a data-reference="fig:prefill_decode_tpt" data-reference-type="ref" href="#fig:prefill_decode_tpt">3</a><span style="color: green!80!black">（b）</span>所示。在prefill和decode 阶段共址的现有系统中，增加解码batch规模较为困难，因为这与满足延迟目标冲突，尤其是在请求率较高的场景中。这是因为共享GPU会导致prefill和解码作业之间的竞争，导致TTFT和TPOT之间的权衡。例如，更高的到达率会产生更多prefill任务，如果优先处理prefill任务，需要更多GPU时间来满足TTFT要求，这反过来对TPOT产生不利影响。</p>
+<p>相反，拆分通过允许将多个prefill实例分配到单一decode 实例，提供了解决方案。这种方法允许在专用GPU上累积更大的batch以完成decode 阶段，同时不牺牲TPOT。</p>
+<figure class="figure" data-latex-placement="!t" id="fig:decode_parallel">
+<img alt="在不同并行度下，处理batch大小=128、输入长度=256的13B型LLM时，解码相位延迟和吞吐量。" loading="lazy" src="../assets/papers/distserve-full/figure-05.png"/>
+<figcaption class="caption">在不同并行度下，处理batch大小=128、输入长度=256的13B型LLM时，解码相位延迟和吞吐量。</figcaption>
+</figure>
+<p><strong>并行计划。</strong> 拆分后，解码的batch大小可能受GPU内存容量限制，因为必须维护所有活跃请求的KV cache。通过模型并行扩展decode 实例，或利用LLM KV cache的高级内存管理技术，如PagedAttention（Paged-Attention）和GQA，可以进一步扩展解码batch大小，接近计算限制。随着解码batch规模持续增加，接近计算限制，解码计算开始类似于prefill阶段。基于这一观察，我们研究图<a data-reference="fig:decode_parallel" data-reference-type="ref" href="#fig:decode_parallel">5</a>中大批量条件下不同并行度下的延迟和吞吐量变化：运内并行性降低延迟，但收益递减，原因是通信和分区后利用率降低。运用间并行几乎可以线性地扩展吞吐量。因此，当TPOT的SLO要求严格时，运内并行性对于降低TPOT以达到延迟目标至关重要。此外，更倾向于采用运偶间并行性，以线性提升吞吐量。</p>
+<p>值得注意的是，当模型能够容纳于单个GPU内存时，复制是一种竞争性选项，此外还包括prefill和decode 实例的模型并行，以线性扩展系统速率容量。它也可能通过用<span class="math inline">\(R\)</span>替换为<span class="math inline">\(R/N\)</span>来减少排队延迟——如方程<a data-reference="eq1" data-reference-type="ref" href="#eq1">[eq1]</a>所示，假设请求均等分发到<span class="math inline">\(N\)</span>副本，但代价是维护GPU内存中模型权重的额外副本。</p>
+<h3 id="subsec:practical_problems">3.3 实际问题</h3>
+<p>我们制定了针对每个阶段选择batch和并行的基础原则。本节讨论并解决了在拆分prefill和decode 阶段实际部署过程中遇到的若干挑战。</p>
+<p><strong>可变prefill长度。</strong> §<a data-reference="sec:tradeoff" data-reference-type="ref" href="#sec:tradeoff">3</a> 假设各请求的prompt长度统一。在实际部署中，根据LLM应用的不同，请求长度是不统一的。这种不统一性可能导致prefill实例出现流水线气泡，因为不同长度请求间的流水线阶段执行时间会有所不同。这导致与使用M/D/1队列模型所显示的结论略有偏差。为解决这个问题，第<a data-reference="sec:method" data-reference-type="ref" href="#sec:method">4</a> 节开发了基于工作负载搜索并行性的算法，并采用调度以最小化气泡（第<a data-reference="subsec:online_scheduling" data-reference-type="ref" href="#subsec:online_scheduling">4.3</a>节）。</p>
+<p><strong>沟通负担。</strong> 将 KV 缓存从prefill转移到decode 实例会产生显著开销。例如，OPT-66B上单个512token请求的KV cache大小约为1.13GB。假设平均到达率为10 rps，我们需要传输每秒11.3GB的数据——相当于90Gbps带宽，才能使开销变得无形。虽然许多现代LLMGPU集群配备了InfiniBand（例如800 Gbps），但在跨节点带宽有限的情况下，DistServe依赖常见的节点内NVLINK，其中A100 GPU之间的峰值带宽为600 GB/s，同样使传输开销可以忽略不计（见<a data-reference="exp:breakdown" data-reference-type="ref" href="#exp:breakdown">§6.3</a>）。然而，这一要求对prefill和decode 实例的放置施加了额外限制，我们将在下一节中加以考虑。</p>
+<p>通过本节的分析，我们识别了工作负载模式、布局约束、SLO要求、并行性策略和资源分配，这些参数构成了设计拆分服务系统时的多重考量网络。如何自动导航搜索空间以找到实现每GPU最优商品配置的挑战，接下来将重点讨论。</p>
+<h2 id="sec:method">4 方法</h2>
+<p>我们创建DistServe是为了解决上述挑战。根据模型、工作负载特性、延迟需求和SLO达成目标，DistServe将确定（a）prefill和decode 实例的并行策略，（b）每种实例类型的部署数量，以及（c）如何将它们部署到物理集群。我们称之为 <em>“安置</em>”。我们的目标是找到一个最大化每显卡好评的布局。</p>
+<p>如<a data-reference="subsec:practical_problems" data-reference-type="ref" href="#subsec:practical_problems">第3.3</a>节所述，一个关键的设计考虑是管理分散prefill和decode 阶段之间的通信，前提是集群设置不同。本节首先介绍两种布置算法：一种用于拥有高速跨节点网络的集群（§<a data-reference="subsec:optimal_placement" data-reference-type="ref" href="#subsec:optimal_placement">4.1</a>），另一种适用于缺乏此类基础设施的环境（§<a data-reference="subsec:practical_placement" data-reference-type="ref" href="#subsec:practical_placement">4.2</a>）;后者引入了额外的约束。随后，我们开发了适应现实工作量细微差别的在线调度优化（§<a data-reference="subsec:online_scheduling" data-reference-type="ref" href="#subsec:online_scheduling">4.3</a>）。</p>
+<h3 id="subsec:optimal_placement">4.1 高带宽节点亲和性集群的布置</h3>
+<div class="algorithm">
+<div class="algorithm">
+<p>LLM<span class="math inline">\(G\)</span>、#node 限制每实例<span class="math inline">\(N\)</span>、#GPU 每节点<span class="math inline">\(M\)</span>、GPU内存<span class="math inline">\(C\)</span>、工作负载<span class="math inline">\(W\)</span>、流量<span class="math inline">\(R\)</span>。<span class="math inline">\(\mathit{best\_plm}.\)</span> <span class="math inline">\(\mathit{config_p}, \mathit{config_d} \leftarrow \emptyset, \emptyset\)</span> <span class="math inline">\(\mathit{config} \leftarrow (\mathit{inter\_op}, \mathit{intra\_op})\)</span> <span class="math inline">\(\hat{G} \leftarrow \text{parallel}(G, \mathit{config})\)</span> <span class="math inline">\(\mathit{config.goodput} \leftarrow \text{simu\_prefill}(\hat{G}, W)\)</span> <span class="math inline">\(\mathit{config_p} \leftarrow \mathit{config}\)</span> <span class="math inline">\(\mathit{config.goodput} \leftarrow \text{simu\_decode}(\hat{G}, W)\)</span> <span class="math inline">\(n, m \leftarrow \lceil \frac{R}{\mathit{config_p.goodput}} \rceil, \lceil \frac{R}{\mathit{config_d.goodput}} \rceil\)</span> <span class="math inline">\(\mathit{config_d} \leftarrow \mathit{config}\)</span> <strong>返回</strong><span class="math inline">\(\mathit{best\_plm}\)</span> <span class="math inline">\(\mathit{best\_plm} \leftarrow (n, \mathit{config_p}, m, \mathit{config_d})\)</span></p>
+</div>
+</div>
+<p>在配备Infiniband的高带宽节点亲和性集群上，KV cache跨节点的传输开销可忽略不计，DistServe可以在任意两个节点之间部署prefill和decode 实例，且无任何限制。我们为此类场景提出了一个两级布局算法：首先分别优化prefill和decode 实例的并行配置，以实现相位级最优的每GPU良好输入;然后，我们使用复制来匹配整体流量率。</p>
+<p>然而，由于缺乏简单的分析公式来计算SLO达成（即满足TTFT要求的请求百分比），由于工作负载输入、输出长度和到达模式不规则，找到最优并行配置仍然具有挑战性。通过真实测试平台画像来衡量SLO非常耗时。因此，我们不得不构建一个模拟器来估算SLO达成，前提是先验了解工作负载的到达过程以及输入和输出长度分布。虽然短期间隔无法预测，但较长时间尺度（如小时或天）的工作量模式通常是可预测的。DistServe从历史请求痕迹中拟合分布，并重新采样该分布的新痕迹作为输入负载，向模拟器计算SLO实现。接下来，DistServe简单地枚举了这些位置，并通过二分搜索和模拟试验找到达到SLO达成目标的最大速率。</p>
+<p>算法[<span>alg：optimal-placement]</span> 概述了整个过程。我们枚举了所有可行的并行配置，均受集群容量限制，适用于prefill和decode 实例。然后，对于特定的prefill相位配置，我们用来 <code>simu_prefill</code> 模拟并通过二分搜索找到其最大有效输入（类似 <code>simu_decode</code> 用于解码）。在确定prefill和decode 实例的最佳并行配置后，我们会复制它们，以实现用户根据其goodput所需的整体流量率。</p>
+<p>算法[<span>alg：optimal-placement]</span>的复杂度<span class="math inline">\(O(NM^2)\)</span>为每个实例的节点<span class="math inline">\(N\)</span>数限制，<span class="math inline">\(M\)</span>代表现代集群中每节点典型的GPU数量（例如8个）。搜索空间可控，在我们最大设置下，解决时间不到1.3分钟，如第<a data-reference="exp:run_time" data-reference-type="ref" href="#exp:run_time">6.5</a>节所示。</p>
+<p>模拟<strong>器制作。</strong>算法<span>[alg：optimal-placement]</span>依赖模拟器在不同SLO和SLO目标下，根据工作负载和并行计划估计goodput。为了构建一个准确的模拟器，我们分别分析了prefill和decode 阶段的FLOP和内存访问次数，并使用延迟模型近似推理执行时间。详情见附录<a data-reference="appendix:latency_model" data-reference-type="ref" href="#appendix:latency_model">10</a>。由于DNN工作负载具有高度可预测性，该模拟器与真实剖析结果高度契合，详见<a data-reference="exp:ablation" data-reference-type="ref" href="#exp:ablation">第6.4</a>节验证。</p>
+<p>迄今为止，我们已经开发了算法<span>[alg：optimal-placement]</span> ，假设我们可以将prefill和decode 实例放置在集群的任意两个节点之间（或同一节点），并且KV cache传输利用高带宽网络。在许多真实集群中，节点内的GPU可以访问高带宽的NVLINK，而分布在各节点的GPU带宽有限。接下来，我们开发一个算法来解决这一限制。</p>
+<div class="algorithm">
+<div class="algorithm">
+<p>LLM<span class="math inline">\(G\)</span>、#node 限制每实例<span class="math inline">\(N\)</span>、#GPU 每节点<span class="math inline">\(M\)</span>、GPU内存<span class="math inline">\(C\)</span>、工作负载<span class="math inline">\(W\)</span>、流量<span class="math inline">\(R\)</span>。<span class="math inline">\(\mathit{best\_plm}.\)</span> <span class="math inline">\(\mathit{config}^{*} \leftarrow \emptyset\)</span> <span class="math inline">\(\mathcal{P} \leftarrow \text{get\_intra\_node\_configs}(G, M, C, \mathit{inter\_op})\)</span> <span class="math inline">\(\mathit{config} \leftarrow (\mathit{inter\_op}, P_p, P_d)\)</span> <span class="math inline">\(\hat{G}_p, \hat{G}_d \leftarrow \text{parallel}(G, \mathit{config})\)</span> <span class="math inline">\(\mathit{config.goodput} \leftarrow \text{simulate}(\hat{G}_p, \hat{G}_d, W)\)</span> <span class="math inline">\(\mathit{config^{*}} \leftarrow \mathit{config}\)</span></p>
+<p><span class="math inline">\(n \leftarrow \lceil \frac{R}{\mathit{config.^{*}goodput}} \rceil\)</span> <span class="math inline">\(\mathit{best\_plm} \leftarrow (n, \mathit{config^{*}})\)</span></p>
+<p><strong>返回</strong><span class="math inline">\(\mathit{best\_plm}\)</span></p>
+</div>
+</div>
+<h3 id="subsec:practical_placement">4.2 低带宽节点亲和性集群的安置</h3>
+<p>一个简单的解决方案是始终在同一节点上共址prefill和decode 实例，利用 NVLINK，这通常存在于 GPU 节点内。对于大型模型，例如参数为175B（350GB），我们甚至无法在8-GPU节点（<span class="math inline">\(80G \times 8 = 640G &lt; 350 \times 2 GB\)</span>）中托管一对prefill和decode 实例。我们将此作为额外的放置约束纳入，并与模型并行协同优化，该方法见算法<span>[算法：低亲和性放置]。</span></p>
+<p>关键见解是，KV cache传输仅发生在相应的prefill和decode 实例层之间。利用操作间并行性，我们将层分组为多个阶段，并将每个实例划分为称为 <em>实例段</em>的段，每个段保持一个特定的操作间阶段。通过在同一节点内共置prefill和解码同一阶段的段，我们强制中间状态的传输仅通过NVLINK进行。在节点内部，我们为同一实例的段设置相同的并行性和资源分配。鉴于每个节点通常有8个GPU的典型限制，我们可以在一个节点内枚举可能的配置，并利用模拟器识别出产生最佳良好配置的配置。</p>
+<p>如算法[<span>alg：low-affinity-placement]</span>中所述，我们首先枚举操作间并行度，以获得所有可能的实例段。对于每个段，我们通过调用 <code>get_intra_node_configs</code>得到所有可能的节点内并行配置。然后我们用仿真找到最优方案，并复制它以满足目标流量率。</p>
+<h3 id="subsec:online_scheduling">4.3 在线调度</h3>
+<p>DistServe 的运行时架构如图 <a data-reference="fig:architecture" data-reference-type="ref" href="#fig:architecture">6</a> 所示。DistServe采用简单的FCFS调度策略。所有入站请求都到达一个集中式控制器，然后调度到队列最短的prefill实例进行prefill处理，再派遣到负载最小的decode 实例进行解码步骤。这种设置虽然简单，但通过多项关键增强优化，针对现实工作负载的细微差别量身定制。</p>
+<p><strong>减少流水线气泡。</strong>为了缓解因prompt长度不均引起的流水线气泡（§<a data-reference="subsec:practical_problems" data-reference-type="ref" href="#subsec:practical_problems">3.3</a>），我们以平衡管道中所有batch执行时间的方式调度请求。这是通过注意，对于prefill和decode 实例，batch中新token数量是batch实际执行时间的可靠指标来实现的。对于prefill实例，我们分析目标模型和GPU来确定最短的prompt时长<span class="math inline">\(L_m\)</span>以使GPU充满。我们通过batch 处理多个短于<span class="math inline">\(L_m\)</span>的请求，或单独调度超过<span class="math inline">\(L_m\)</span>的请求，来安排总序列长度接近<span class="math inline">\(L_m\)</span>的prefillbatch。对于decode 实例，我们设置<span class="math inline">\(L_m\)</span>为最大batch size。</p>
+<p><strong>战斗力。</strong> 工作负载的突发性可能导致大量 KV 缓存从prefill转移到decode 实例，从而增加decode 实例内存过载的风险。为规避此问题，DistServe采用“拉取”方法传输KV cache，而非“推送”方式——实例解码 <em>时根据需要</em>从prefill实例获取KV cache，使用prefill实例的GPU内存作为排队缓冲区。这样，prefill实例可以通过在处理prompt后将KV cache保留在GPU内存中，继续处理其他prefill任务。因此，每种实例都能以自己的节奏运行，无需复杂的协调。</p>
+<figure class="figure" data-latex-placement="!t" id="fig:architecture">
+<img alt="DistServe 运行时系统架构" loading="lazy" src="../assets/papers/distserve-full/figure-06.png"/>
+<figcaption class="caption">DistServe 运行时系统架构</figcaption>
+</figure>
+<p><strong>重新规划。</strong> DistServe中的资源和并行度计划针对特定工作负载模式进行了优化，如果工作负载模式随时间变化，该模式可能会变得次优。DistServe定期实施重新规划。工作负载分析器监控关键参数，如请求的平均输入和输出长度、平均到达率等。如果检测到显著的模式偏移，DistServe将根据近期历史数据触发重运行位置算法。这一过程非常快捷——所提算法只需几秒钟（§<a data-reference="exp:run_time" data-reference-type="ref" href="#exp:run_time">6.5</a>），且加载LLM权重可在几分钟内完成——远短于实际工作量变化的小时规模。</p>
+<p>抢<strong>占和容错。</strong>DistServe不实现高级运行时策略，如抢占和容错，这些策略是与拆分的补充。尽管如此，我们讨论了它们如何融入DistServe。在DistServe中，FCFS策略可能导致“车队效应”，即在prefill阶段阻挡较短请求。如现有文献建议的，采用先发制人策略，可以提升效率，并且在我们的系统架构中是可行的。虽然当前DistServe并非主要关注点，但容错性是一个关键考虑因素。在传统的基于共置和复制的系统中，一个实例的故障通常不会干扰其他副本实例。然而，在 DistServe 中，prefill与decode 实例之间的依赖性带来了故障传播的风险。例如，单个decode 实例映射到多个prefill实例中的故障，可能会使整个服务和集群瘫痪。我们把两者都留作未来的作品。</p>
+<h2 id="sec:implementation">5 实现</h2>
+<p>DistServe 是一个面向大语言模型的端到端分布式服务系统，包含布局算法模块、RESTful API 前端、编排层和并行执行引擎。算法模块、前端和编排层均由6.500行Python代码实现。并行执行引擎由8.1K行C++/CUDA代码实现。</p>
+<p>定位算法模块实现了§<a data-reference="sec:method" data-reference-type="ref" href="#sec:method">4</a> 中提到的算法和模拟器，给出特定模型和簇设置的布局决策。前端支持兼容 OpenAI API 的接口，客户端可以指定采样参数，如最大输出长度和温度。编排层管理prefill和decode 实例，负责请求调度、KV cache传输和结果传递。它采用 NCCL 进行跨节点 GPU 通信，异步 CudaMemcpy 进行节点间通信，避免在传输过程中阻塞 GPU 计算。每个实例由并行执行引擎驱动，该引擎使用Ray演员实现GPUworker，执行LLM推理并以分布式方式管理KV cache。它集成了许多近期的大语言模型优化，如continuous batching、FlashAttention、PagedAttention，并支持流行的开源大语言模型如OPT和LLaMA。</p>
+<h2 id="sec:evaluation">6 实验评估</h2>
+<p>本节中，我们将评估DistServe在不同规模的LLMs（从13B到175B）以及包括聊天机器人、代码完成和摘要等多种应用数据集下的应用。评估显示，DistServe在所有设置下始终优于当前最先进的系统（§<a data-reference="exp:end_to_end" data-reference-type="ref" href="#exp:end_to_end">6.2</a>）。具体来说，DistServe可以处理高达 <span class="math inline">\(7.4\times\)</span> 更高的速率 <span class="math inline">\(12.6\times\)</span> 和更严格的SLO，同时满足超过90%请求的延迟要求。此外，我们分析了DistServe中的延迟分解，证明由于我们的带宽感知布局算法（§<a data-reference="exp:breakdown" data-reference-type="ref" href="#exp:breakdown">6.3</a>），通信开销微乎其微，并对我们的技术进行了消融研究（§<a data-reference="exp:ablation" data-reference-type="ref" href="#exp:ablation">6.4</a>）。最后，我们分析了放置算法的执行时间（§<a data-reference="exp:run_time" data-reference-type="ref" href="#exp:run_time">6.5</a>）。</p>
+<div id="tab:app_config">
+<table>
+<caption>Workloads in evaluation and latency requirements.</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><strong>应用</strong></th>
+<th style="text-align: center;"><strong>模型尺寸</strong></th>
+<th style="text-align: center;"><strong>TTFT</strong></th>
+<th style="text-align: center;"><strong>TPOT</strong></th>
+<th style="text-align: center;"><strong>数据集</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">聊天机器人 OPT-13B</td>
+<td style="text-align: center;">26GB</td>
+<td style="text-align: center;">0.25s</td>
+<td style="text-align: center;">0.1s</td>
+<td style="text-align: center;">ShareGPT</td>
+</tr>
+<tr>
+<td style="text-align: center;">聊天机器人 OPT-66B</td>
+<td style="text-align: center;">132GB</td>
+<td style="text-align: center;">2.5s</td>
+<td style="text-align: center;">0.15s</td>
+<td style="text-align: center;">ShareGPT</td>
+</tr>
+<tr>
+<td style="text-align: center;">聊天机器人 OPT-175B</td>
+<td style="text-align: center;">350GB</td>
+<td style="text-align: center;">4.0s</td>
+<td style="text-align: center;">0.2s</td>
+<td style="text-align: center;">ShareGPT</td>
+</tr>
+<tr>
+<td style="text-align: center;">代码补全 OPT-66B</td>
+<td style="text-align: center;">132GB</td>
+<td style="text-align: center;">0.125s</td>
+<td style="text-align: center;">0.2s</td>
+<td style="text-align: center;">人类评估</td>
+</tr>
+<tr>
+<td style="text-align: center;">总结 OPT-66B</td>
+<td style="text-align: center;">132GB</td>
+<td style="text-align: center;">15s</td>
+<td style="text-align: center;">0.15s</td>
+<td style="text-align: center;">长凳</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="figure" data-latex-placement="!t" id="fig:dataset">
+<p><img alt="（a） ShareGPT、（b） HumanEval 和 （c） LongBench 数据集的输入和输出长度分布。" loading="lazy" src="../assets/papers/distserve-full/figure-07.png"/> （a） ShareGPT （b） HumanEval （c） LongBench</p>
+<figcaption class="caption">（a） ShareGPT、（b） HumanEval 和 （c） LongBench 数据集的输入和输出长度分布。</figcaption>
+</figure>
+<figure class="figure" data-latex-placement="!t" id="fig:chatbot">
+<p><img alt="在ShareGPT数据集上使用OPT模型的聊天机器人应用。" loading="lazy" src="../assets/papers/distserve-full/figure-08.png"/><img alt="??????? 1" loading="lazy" src="../assets/papers/distserve-full/figure-801.png"/> （A） OPT13B （b） OPT66B （C） OPT-175B</p>
+<figcaption class="caption">在ShareGPT数据集上使用OPT模型的聊天机器人应用。</figcaption>
+</figure>
+<h3 id="experiments-setup">6.1 实验设置</h3>
+<p><strong>集群测试场。</strong>我们将DistServe部署在一个拥有4个节点和32个GPU的集群上。每个节点配备8块NVIDIA SXM A100-80GB GPU通过NVLINK连接。跨节点带宽为25Gbps。由于跨节点带宽有限，除了消融研究（§<a data-reference="exp:ablation" data-reference-type="ref" href="#exp:ablation">6.4</a>）外，大多数实验中我们使用低带宽节点亲和性放置算法（§<span>[算法：低亲和性放置]</span>）。</p>
+<p><strong>模型和工作负载设置。</strong> 与之前关于LLM服务的工作类似，我们选择了OPT模型系列，这是一个在学术界和工业界广泛使用的代表性LLM家族。更新的GPT模型家族正在采用像GQA和MQA这样高效内存的注意力机制。由于KV cache容量减少，传输开销更低，DistServe在这些型号上表现会更好。我们选择了OPT，它使用经典的MHA系统来对变速箱的开销施加足够的压力。我们在所有实验中都采用FP16的精度。对于工作负载，如表<a data-reference="tab:app_config" data-reference-type="ref" href="#tab:app_config">1</a>所示，我们选择了三种典型的LLM应用，并根据其服务目标实证地设置SLO，因为据我们所知，这些应用目前尚无可用的SLO设置。对于每个应用，我们选择合适的数据集并从中抽样请求进行评估。由于所有数据集都不包含时间戳，我们使用泊松分布生成请求到达时间，且请求率不同。由于空间限制，我们在所有三个OPT模型上测试聊天机器人工作负载，另外两个工作负载在OPT-66B上测试，该模型规模符合近期开源LLM系列中的最大规模。</p>
+<ul>
+<li><p><strong>聊天机器人</strong>：我们使用 ShareGPT 数据集开发聊天机器人应用，该数据集是用户与 ChatGPT 共享的对话集合。对于OPT-13B，TTFT的SLO设置为0.25秒以提升响应速度，TPOT的SLO设置为0.1秒，这比正常的人类读取速度还要快。对于OPT-66B和OPT-175B，由于模型执行延迟增加，我们对两个SLO进行了略微放松。</p></li>
+<li><p><strong>代码补全</strong>：我们使用 HumanEval 数据集进行代码补全任务。它包含164个带有函数签名或docstring的编程问题，用于评估代码完成模型的性能。由于代码补全模型被用作个人实时编码助手，我们将两个SLO都设置为严格。</p></li>
+<li><p><strong>摘要</strong>：为一篇长文、论文甚至学术论文生成简明的摘要是一项流行的大语言模型任务。我们使用包含总结任务<a class="footnote-ref" href="#fn4" id="fnref4" role="doc-noteref"><sup>4</sup></a>的LongBench数据集。如图<a data-reference="fig:dataset" data-reference-type="ref" href="#fig:dataset">7</a>所示，LongBench的输入长度远长于另外两个数据集。所以我们设定了一个宽松的TTFT SLO，但要求严格的TPOT。</p></li>
+</ul>
+<p><strong>指标。</strong> 我们以 <em>SLO 达成率</em> 作为主要评估指标。在特定的SLO实现目标（比如90%）下，我们关注两点：每GPU的最大善置和系统能承受的最小SLO。我们特别关注SLO达到90%的实现（所有曲线图中的垂直线表示），但也会调整速率和延迟要求，以观察SLO实现的变化。我们还将 SLO 达到 99% 的成绩纳入附录，以展示在更严格 SLO 目标下的系统表现。</p>
+<p><strong>基线。</strong> 我们将DistServe与两个基线系统进行比较：</p>
+<ul>
+<li><p><strong>vLLM：</strong> vLLM是一种代表性的LLM服务系统，广泛应用于学术界和工业界。它支持 <em>continuous batching</em>以提高吞吐量，并支持分 <em>页注意力</em>以减少KV cache分配时的内存碎片。然而，它将prefill和解码计算共置，以最大化整体系统吞吐量，且难以以成本效益满足延迟要求。由于vLLM仅支持运内并行，我们沿用之前的工作，将三个OPT模型的运内分别设为1、4和8。</p></li>
+<li><p><strong>DeepSpeed-MII：</strong> DeepSpeed 推理模型实现（MII）支持分 <em>块prefill</em> ，通过将长prompt分解成更小的块，再用短prompt编写，精确填满目标token预算。它减少了由于prefill时间较长造成的prefill-解码干扰，但无法消除。我们把手术中OPT-13B和OPT-66B的手术中设置成与vLLM相同的标准，以便公平对比。然而，DeepSpeed-MII无法为其 <span class="math inline">\(vocab\_size=50272\)</span> 175B提供服务，因为其底层内核实现要求 <span class="math inline">\(vocab\_size/intra\_op\)</span> 为8的倍数，且操作内等于8不满足。将操作内设置为4可以满足此要求，但会导致内存不足的问题。</p></li>
+</ul>
+<figure class="figure" data-latex-placement="!t" id="fig:other_apps">
+<p><img alt="分别在HumanEval和LongBench数据集上完成代码完成和总结任务。" loading="lazy" src="../assets/papers/distserve-full/figure-09.png"/> （a） 代码补全 （b） 摘要</p>
+<figcaption class="caption">分别在HumanEval和LongBench数据集上完成代码完成和总结任务。</figcaption>
+</figure>
+<h3 id="exp:end_to_end">6.2 端到端实验</h3>
+<p>本节将DistServe的端到端性能与真实应用数据集的基线进行比较。</p>
+<p><strong>聊天机器人。</strong> 我们评估了DistServe在聊天机器人应用中对三种OPT模型的性能。图<a data-reference="fig:chatbot" data-reference-type="ref" href="#fig:chatbot">8</a> 的第一行说明，当我们逐步提高速率时，更多请求会违反延迟要求，SLO实现率下降。竖线显示系统为满足超过 90% 请求延迟要求所能处理的最大每 GPU 速率。</p>
+<p>在 ShareGPT 数据集上，DistServe 的请求率比 vLLM 高出 <span class="math inline">\(2.0\times\)</span> <span class="math inline">\(4.6\times\)</span> 。这是因为DistLLM通过拆分消除了prefill-解码的干扰。两个阶段可以通过分配不同资源和采用定制化的并行策略来优化各自的目标。具体来说，通过分析175B的选择置<a class="footnote-ref" href="#fn5" id="fnref5" role="doc-noteref"><sup>放策略5</sup></a> ，我们发现prefill实例的互操作性=3，操作内=3;decode 实例间操作间 = 3，运内 = 4。在此配置下，DistServe能够有效平衡ShareGPT两个实例之间的负载，以最低成本满足延迟要求。这种非平凡的放置策略难以手动找到，证明了算法的有效性。在vLLM中，prefill和解码的同源会大幅减缓decode 阶段，从而显著增加TPOT。由于聊天机器人应用对TPOT的要求非常严格，尽管vLLM在大多数请求中符合TTFT SLO标准，但整体SLO的达成因大量违反TPOT SLO的请求而被拖累。与 DeepSpeed-MII 相比，DistServe 能够维持更高的请求率 <span class="math inline">\(1.6\times\)</span> <span class="math inline">\(7.4\times\)</span> 。DeepSpeed-MII在较大型号上表现更好，因为prefill工作更大，分块prefill在一定程度上减轻了干扰。然而，由于第<a data-reference="sec:problem-opportunity" data-reference-type="ref" href="#sec:problem-opportunity">2.3</a>节讨论的原因，分块prefill速度比完全prefill慢，因此作为更好的TPOT的牺牲，难以满足TTFT的SLO要求。</p>
+<p>图<a data-reference="fig:chatbot" data-reference-type="ref" href="#fig:chatbot">8</a>的第二行显示了两系统对不断变化的延迟需求的鲁棒性。我们固定速率，然后使用称为<em>SLO尺度</em>的参数同时线性扩展表<a data-reference="tab:app_config" data-reference-type="ref" href="#tab:app_config">1</a>中的两种延迟要求。随着SLO规模的降低，延迟要求也更加严格。我们的目标是遵循系统能够承受的最严格SLO量表，同时实现达成目标。图<a data-reference="fig:chatbot" data-reference-type="ref" href="#fig:chatbot">8</a>显示，DistServe能够实现比vLLM更严格<span class="math inline">\(1.8\times\)</span>–<span class="math inline">\(3.2\times\)</span>的SLO，比DeepSpeed-MII更严格<span class="math inline">\(1.7\times\)</span>–<span class="math inline">\(1.8\times\)</span>，从而为用户提供更具吸引力的服务质量。</p>
+<p><strong>代码完成。</strong> 图<a data-reference="fig:other_apps" data-reference-type="ref" href="#fig:other_apps">9</a><span style="color: green!80!black">（a）</span> 显示了DistServe在提供OPT-66B时代码完成任务的表现。DistServe能够承受 <span class="math inline">\(5.7\times\)</span> 更高的请求率，并且 <span class="math inline">\(1.4\times\)</span> 比vLLM更严格的SLO。与DeepSpeed-MII相比，DistServe能够维持 <span class="math inline">\(1.6\times\)</span> 更高的请求率和更严格的SLO <span class="math inline">\(1.4\times\)</span> 。作为实时编码助手，代码完成任务所需的TTFT低于聊天机器人，这导致两者最终都受限于TTFT的要求。然而，相比之下，通过消除解码作业的干扰，并通过搜索算法自动增加prefill实例的操作内并行性，DistServe降低了prefill任务的平均延迟，从而满足TTFT对更多请求的需求。</p>
+<p><strong>总结。</strong> 图<a data-reference="fig:other_apps" data-reference-type="ref" href="#fig:other_apps">9</a><span style="color: green!80!black">（b）</span> 展示了DistServe在提供OPT-66B时的总结任务表现。DistServe实现了 <span class="math inline">\(4.3\times\)</span> 更高的请求率和 <span class="math inline">\(12.6\times\)</span> 更严格的SLO标准。与DeepSpeed-MII相比，DistServe实现了 <span class="math inline">\(1.8\times\)</span> 更高的请求率和更严格的SLO <span class="math inline">\(2.6\times\)</span> 。从 LongBench 数据集中抽样的请求输入长度较长，这给prefill计算带来了显著压力。然而，由于总结任务对TTFT的要求较宽松，TPOT的服务质量变得尤为重要。由于vLLM将prefill和decode 阶段同源，因此在decode 阶段经历较大的减速，prefill工作较长，无法满足TPOT要求。</p>
+<p>上述结果均低于90%的SLO达成目标。我们观察到，DistServe在更严格的达成目标（比如99%）下表现更好，并将结果呈现于附录<a data-reference="appendix:end_to_end_p99" data-reference-type="ref" href="#appendix:end_to_end_p99">12</a>。</p>
+<figure class="figure" data-latex-placement="!t" id="fig:overhead">
+<img alt="左图： 在使用 DistServe 在 ShareGPT 数据集上提供 OPT-175B 时的延迟分布。 右： 三种OPT模型的KV cache传输时间的CDF函数。" loading="lazy" src="../assets/papers/distserve-full/figure-10.png"/>
+<figcaption class="caption"><em>左图：</em> 在使用 DistServe 在 ShareGPT 数据集上提供 OPT-175B 时的延迟分布。 <em>右：</em> 三种OPT模型的KV cache传输时间的CDF函数。</figcaption>
+</figure>
+<h3 id="exp:breakdown">6.3 延迟分解</h3>
+<p>为了详细理解 DistServe 的性能，我们对 DistServe 中的请求进行了延迟分解。我们将 DistServe 中请求的处理生命周期分为五个阶段： <em>prefill队列</em>、 <em>prefill执行</em>、 <em>传输</em>、 <em>解码队列</em>和 <em>解码执行</em>。然后将每个阶段所有请求所耗总时间相加，确定它们在系统总执行时间中的比例。</p>
+<p>图<a data-reference="fig:overhead" data-reference-type="ref" href="#fig:overhead">10</a><span style="color: green!80!black">（a）</span> 展示了ShareGPT数据集上OPT-175B模型的延迟分布。我们选择OPT-175B是因为KV cache传输对大型机型的要求更高。事实上，即使是OPT-175B，KV cache传输也仅占总延迟的不到0.1%。即使通过查看图<a data-reference="fig:overhead" data-reference-type="ref" href="#fig:overhead">10</a><span style="color: green!80!black">（b）</span>所示绝对传输时间的CDF，我们也发现超过95%的请求延迟低于30毫秒，尽管我们的测试平台跨节点带宽有限。这是由于§<a data-reference="subsec:practical_placement" data-reference-type="ref" href="#subsec:practical_placement">4.2</a>中描述的算法，我们要求prefill和decode 实例在同一台机器上保持同一阶段，从而允许使用节点内NVLINK带宽进行传输，从而显著降低传输延迟。</p>
+<div id="table:simulator_fidelity">
+<table>
+<caption>Comparison of the SLO attainment reported by the simulator and the real system under different rates.</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><div id="table:simulator_fidelity">
+<table>
+<caption>模拟器报告的SLO与真实系统在不同速率下的比较。</caption>
+<tbody>
+<tr>
+<td style="text-align: center;">速率</td>
+</tr>
+<tr>
+<td style="text-align: center;">（请求）</td>
+</tr>
+</tbody>
+</table>
+</div></th>
+<th colspan="2" style="text-align: center;">vLLM</th>
+<th colspan="2" style="text-align: center;">迪斯特塞尔夫-洛</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><span>2-3</span></td>
+<td style="text-align: center;">真实系统</td>
+<td style="text-align: center;">模拟器</td>
+<td style="text-align: center;">真实系统</td>
+<td style="text-align: center;">模拟器</td>
+</tr>
+<tr>
+<td style="text-align: center;">1.0</td>
+<td style="text-align: center;">97.0%</td>
+<td style="text-align: center;">96.8%</td>
+<td style="text-align: center;">100.0%</td>
+<td style="text-align: center;">100.0%</td>
+</tr>
+<tr>
+<td style="text-align: center;">1.5</td>
+<td style="text-align: center;">65.5%</td>
+<td style="text-align: center;">65.1%</td>
+<td style="text-align: center;">100.0%</td>
+<td style="text-align: center;">100.0%</td>
+</tr>
+<tr>
+<td style="text-align: center;">2.0</td>
+<td style="text-align: center;">52.8%</td>
+<td style="text-align: center;">51.0%</td>
+<td style="text-align: center;">99.3%</td>
+<td style="text-align: center;">99.3%</td>
+</tr>
+<tr>
+<td style="text-align: center;">2.5</td>
+<td style="text-align: center;">44.9%</td>
+<td style="text-align: center;">46.1%</td>
+<td style="text-align: center;">87.3%</td>
+<td style="text-align: center;">88.3%</td>
+</tr>
+<tr>
+<td style="text-align: center;">3.0</td>
+<td style="text-align: center;">36.7%</td>
+<td style="text-align: center;">38.3%</td>
+<td style="text-align: center;">83.0%</td>
+<td style="text-align: center;">84.1%</td>
+</tr>
+<tr>
+<td style="text-align: center;">3.5</td>
+<td style="text-align: center;">27.8%</td>
+<td style="text-align: center;">28.0%</td>
+<td style="text-align: center;">77.3%</td>
+<td style="text-align: center;">77.0%</td>
+</tr>
+<tr>
+<td style="text-align: center;">4.0</td>
+<td style="text-align: center;">23.6%</td>
+<td style="text-align: center;">24.1%</td>
+<td style="text-align: center;">70.0%</td>
+<td style="text-align: center;">68.9%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span data-label="table:simulator_fidelity" id="table:simulator_fidelity"></span></p>
+<figure class="figure" data-latex-placement="!t" id="fig:ablation">
+<img alt="消融实验。" loading="lazy" src="../assets/papers/distserve-full/figure-11.png"/>
+<figcaption class="caption">消融实验。</figcaption>
+</figure>
+<h3 id="exp:ablation">6.4 消融研究</h3>
+<p>我们研究了DistServe中两项关键创新：拆分和位置搜索算法的有效性。在§<a data-reference="exp:end_to_end" data-reference-type="ref" href="#exp:end_to_end">6.2</a>中，我们根据vLLM的原始论文选择默认的并行设置。因此我们实现了“vLLM++”，它枚举了不同的并行策略并选择了最佳方案。对于 DistServe，我们还比较了 Alg. <span>[alg：low-affinity-placement]</span> （DistServe-Low）所找到的布局与 Alg. <span>[alg：optimal-placement]</span> （DistServe-High）找到的，后者搜索约束较少且假设跨节点带宽较高。由于vLLM不支持操作间并行性，且我们的物理测试平台跨节点带宽不高，我们使用模拟进行实验。</p>
+<p><strong>模拟器精度。</strong> 注意到DNN模型的执行即使在并行设置下也具有高度可预测性。我们在第<a data-reference="table:simulator_fidelity" data-reference-type="ref" href="#table:simulator_fidelity">3</a>页研究模拟器的准确性。对于“vLLM”和“DistServe-Low”，我们比较了模拟器和测试平台实际运行在不同速率下的SLO达成。所有情况下误差均小于2%，验证了我们模拟器的准确性。</p>
+<p><strong>结果。</strong> 图<a data-reference="fig:ablation" data-reference-type="ref" href="#fig:ablation">11</a> 展示了这四个系统在ShareGPT数据集上提供OPT-66B时的性能。“vLLM++”的性能与“vLLM”相同，因为我们发现默认并行设置（intra-oper=4）在每个GPU的良好配置中是最好的。这进一步说明了拆分的重要性。prefill阶段与decode 阶段之间的干扰显著降低了通过调整并行性带来的性能提升。相比之下，“DistLLM-High”可以比“DistLLM-Low”实现更多改进，因为它不受部署限制，即同一节点上的prefill和decode 实例必须共享同一模型阶段。通过拆分，我们可以采用定制化的并行策略进行prefill和decode 实例，并在不产生耦合效应的情况下优化其目标。</p>
+<figure class="figure" data-latex-placement="!t" id="fig:runtime">
+<img alt="算法运行时间" loading="lazy" src="../assets/papers/distserve-full/figure-12.png"/>
+<figcaption class="caption">算法运行时间</figcaption>
+</figure>
+<h3 id="exp:run_time">6.5 算法运行时间</h3>
+<p>图<a data-reference="fig:runtime" data-reference-type="ref" href="#fig:runtime">12</a>显示了在拥有96核的AWS m5d.metal实例上，随着单个实例提供GPU数量（<span class="math inline">\(N \times M\)</span>）增加，算法[<span>算法：最优位置]</span>（DistServe-Low）和算法<span>[低亲和性配置]</span>（DistServe-High）的运行时间。结果显示，DistServe的扩展性随GPU数量增加而良好，且不受型号大小影响。这是因为模拟器只模拟离散事件，无论模型多大，运行时间都是相同的。另一方面，这两种算法高度可并行化，因为不同并行策略的搜索彼此独立，使得算法的执行时间随着CPU核心数量增加几乎线性加速。</p>
+<p>随着GPU数量的增加，“Dist-Low”的执行时间会比“Dist-High”更长。这是因为在“Dist-High”中，prefill和decode 实例的并行策略搜索是独立的，并且可以并行化。但对于“Dist-Low”，由于部署上的额外限制，我们需要枚举所有可能的节点内并行组合，用于prefill和decode 实例。即便如此，算法的执行时间以几分钟为单位，且每次重新部署前只需执行一次，这种开销是可以接受的。</p>
+<h2 id="sec:discussion">7 讨论</h2>
+<p>本文重点关注goodput优化的环境，并在大规模LLM服务场景下提出DistServe。由于大语言模型被广泛应用并部署在各种服务场景中，具有不同的优化目标和资源限制，几乎不可能找到一个适用于所有人、有效解决LLM服务各个方面的解决方案。在本节中，我们将讨论DistServe的优缺点以及其他场景下可能更好的解决方案。</p>
+<p>吞吐量<strong>优化的场景。</strong>在非延迟敏感的离线应用中，用户通常对响应时间的要求较低。这使得服务系统能够将重点从善产转向最大化整体吞吐量，从而降低DistServe的有效性。在这种情况下，可能更倾向于采用分块prefill和搭载，因为它可以将每批填充到计算限制阈值，从而在每次迭代中保持更高的GPU利用率。</p>
+<p><strong>资源有限的情景。</strong> 小型企业和个人研究人员往往缺乏资源在大型集群上部署大语言模型。在资源有限的场景中，比如只有几个甚至单个GPU的环境，DistServe的设计空间非常有限。它在调整并行策略和资源分配方面遇到困难，甚至失败，以有效提升服务表现。在这种情况下，更简单的架构选择如非拆分系统可能降低部署复杂性并优化运营效率。</p>
+<p><strong>长上下文场景。</strong> 如今，越来越多的GPT模型支持极长的上下文，如Claude-3、Gemini-1.5和大型世界模型（LWM），它们都拥有100万上下文窗口。在这种情况下，随着KV cache大小随prompt长度线性增长，传输开销会增加。然而，prefill计算呈平方增长，因此传输和prefill工作的相对持续时间会缩短。与此同时，更长的背景进一步加剧了prefill和解码作业之间计算需求的差异，导致它们之间的干扰增加。因此，DistServe提出的拆分方法在长上下文服务中依然具有前景。</p>
+<h2 id="sec:related">8 相关工作</h2>
+<p>推<strong>理服务。</strong>最近关于推理服务的研究非常多。它们涵盖了从通用生产级系统如TorchServe和NVIDIA Triton，到专门针对基于Transformer的大语言模型优化的系统。其中，Orca引入了continuous batching以提高吞吐量。vLLM 提出了PagedAttention（paged-attention）用于细粒度的 KV 缓存管理。SARATHI建议采用分块prefill方法，将prefill请求拆分为多个块，并搭载解码请求以提升硬件利用率。FastServe实现迭代级抢占式调度，以减轻长时间作业引起的排队延迟。然而，它们都采用共置方法进行prefill和解码处理，因此导致严重干扰。同时也有如Splitwise、TetriInfer和DéjàVu等研究采用类似的拆分理念来优化LLM推断，进一步验证了该方法的有效性。不同地，DistServe更强调goodput优化场景，并更深入地考察了网络带宽的方面。</p>
+<p><strong>Goodput优化系统。</strong> 优化善产是DL应用中的热门话题。Pollux通过动态调整作业资源，提升群组范围内的goodput，从而提升DL集群的调度性能。Sia引入了一种异构感知调度方法，能够高效地将集群资源匹配到弹性资源适应作业。Clockwork和Shepherd提供带延迟的调度和抢占功能以提升服务质量，但它们只针对传统的小型模型。AlpaServe专注于LLM，利用模型并行对GPU执行进行统计复用，从而提升资源利用率。然而，它只针对非自回归的一代。DistServe是首个优化自回归大语言模型推断的goodput的工作。</p>
+<p><strong>资源拆分。</strong> 资源拆分系统将硬件资源从传统的单体服务器基础设施中解耦，并将它们分离到资源池中，以便独立管理。它允许更灵活、高效且可扩展的部署，并提高资源利用率。许多应用受益于真正分散的数据中心，拥有高速网络带宽和异构硬件支持。DistServe通过拆分系统组件，实现独立的资源扩展和管理，共享这一概念。</p>
+<p>用于<strong>训练的并行模型。</strong>DistServe与大量关于训练中模型并行的研究是正交的。如第<a data-reference="subsec:practical_problems" data-reference-type="ref" href="#subsec:practical_problems">3.3</a>节所述，推理服务工作负载具有训练环境中不存在的独特特征。这些系统与DistServe的交叉点在于其实现模型并行的方法。DistServe可以将新的并行优化集成到其位置搜索算法中。</p>
+<h2 id="sec:conclusion">9 结论</h2>
+<p>我们介绍DistServe，一种新的大语言模型服务架构，能够拆解prefill和解码的计算。DistServe最大化每个GPU的goodput——即每个 GPU在遵守SLO达成目标下可提供的最大请求速率，从而实现每LLM查询成本降低多 <span class="math inline">\(7.4\times\)</span> ，同时保证SLO的满足。我们的研究结果表明，随着延迟成为LLM服务日益重要的指标，prefill和解码拆分是承诺提升性能和服务质量保证的重要策略。</p>
+<p>致<strong>谢。</strong>我们衷心感谢我们的牧师和匿名评审者的宝贵反馈。该工作得到了中国国家自然科学基金62172008、62325201和国家优秀青年科学家基金项目（海外）资助。陈俊达获得UCSD奖学金支持，张浩则由UCSD教师创业基金支持。欣晋是通讯作者。钟银敏、刘璇哲和欣晋也隶属于教育部北京大学高信心软件技术重点实验室。</p>
+<h2 id="appendix:latency_model">10 LLM 推理的延迟模型</h2>
+<p>为了准确模拟不同放置策略的goodput 损失，我们使用分析模型预测LLM推断中prefill和decode 阶段的执行时间。</p>
+<p>在现代LLM服务系统中，像Softmax和LayerNorm这样的内存受限操作通常与矩阵乘法核融合以提高效率。因此，GEMMs主导了整体延迟，我们的分析主要聚焦于它们。</p>
+<h3 id="symbol-definition">10.1 符号定义</h3>
+<p>以下是与模型架构相关的符号：</p>
+<ul>
+<li><p><span class="math inline">\(h\)</span>：隐藏尺寸</p></li>
+<li><p><span class="math inline">\(n\)</span>：正面数</p></li>
+<li><p><span class="math inline">\(s\)</span>：头部大小（<span class="math inline">\(h = n \cdot s\)</span>）</p></li>
+<li><p><span class="math inline">\(m\)</span>：FFN中等规模</p></li>
+</ul>
+<p>注意：如果使用张量平行度，应除以张量平行大小， <span class="math inline">\(h\)</span>、 <span class="math inline">\(n\)</span>和 <span class="math inline">\(m\)</span> 。</p>
+<p>以下是描述待执行batch的符号：</p>
+<ul>
+<li><p><span class="math inline">\(B\)</span>：batch规模</p></li>
+<li><p><span class="math inline">\(l_0, l_1, \dots, l_{B-1}\)</span>：batch中每个请求的输入长度</p></li>
+<li><p><span class="math inline">\(t\)</span>：batch中的token数量，（<span class="math inline">\(t = \sum_{i=0}^{B-1} l_i\)</span>）</p></li>
+<li><p><span class="math inline">\(t_2\)</span>：输入长度的平方和（<span class="math inline">\(t_2 = \sum_{i=0}^{B-1} l_i^2\)</span>）</p></li>
+<li><p><span class="math inline">\(b\)</span>：注意力内核中的块大小。该参数被用于FlashAttention，这是一种被当前大语言模型服务系统采用的常见内核优化技术。</p></li>
+</ul>
+<h3 id="prefill-phase-latency-modeling">10.2 prefill相延迟建模</h3>
+<p>由于注意操作使用了特别优化的核，我们首先讨论prefill阶段的另外四个矩阵乘法：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">GEMM 名称</th>
+<th style="text-align: center;"><span class="math inline">\(M\)</span>形状</th>
+<th style="text-align: center;"><span class="math inline">\(N\)</span>形状</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">QKV 线性</td>
+<td style="text-align: center;"><span class="math inline">\((t, h)\)</span></td>
+<td style="text-align: center;"><span class="math inline">\((h, 3h)\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">关注输出</td>
+<td style="text-align: center;"><span class="math inline">\((t, h)\)</span></td>
+<td style="text-align: center;"><span class="math inline">\((h, h)\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">FFN输入</td>
+<td style="text-align: center;"><span class="math inline">\((t, h)\)</span></td>
+<td style="text-align: center;"><span class="math inline">\((h, m)\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">FFN输出</td>
+<td style="text-align: center;"><span class="math inline">\((t, m)\)</span></td>
+<td style="text-align: center;"><span class="math inline">\((m, h)\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>这些操作的算术强度（AI）是 <span class="math inline">\(O(t)\)</span>的。在NVIDIA A100-80GB显卡上，当AI超过156GB时，它会被计算限制。由于 <span class="math inline">\(t\)</span> 在真实情况下通常可达数百个操作，所有这些操作都受计算限制。因此，我们可以根据总浮点数来建模这些操作的延迟：</p>
+<p><span class="math display">\[T_1 = C_1 \cdot (4th^2 + 2thm)\]</span></p>
+<p>接下来，我们讨论FlashAttention优化中的prefill注意力操作。由于注意力只在同一请求中的token之间工作，当前实现会为同一batch中的每个请求启动注意力内核。对于一个注意力头和一个<span class="math inline">\(l\)</span>token的请求，注意力内核需要执行总共<span class="math inline">\(2sl + 3sl\cdot(l/b) \approx 3sl\cdot(l/b)\)</span>次内存读写，同时进行<span class="math inline">\(2sl^2 + sl(l/b) \approx 2sl^2\)</span>次浮点操作。因此，AI在<span class="math inline">\(b=16\)</span>时是<span class="math inline">\(2b/3 = 10.677\)</span>时是<span class="math inline">\(21.333\)</span>，表明它是<span class="math inline">\(b=32\)</span>A100 GPU上的内存受限操作。因此，整个注意力层延迟（包括所有请求和所有头）可以建模为：</p>
+<p><span class="math display">\[T_2 = C_2 \cdot n \cdot \sum_{i=0}^{B-1} \frac{3sl_i^2}{b} = C_2 \cdot \frac{3nst_2}{b} = C_2 \cdot \frac{3ht_2}{b}\]</span></p>
+<p>总体而言，prefill阶段的延迟可建模为：</p>
+<p><span class="math display">\[T_{Prefill} = C_1 \cdot (4th^2 + 2thm) + C_2 \cdot \frac{3ht_2}{b} + C_3\]</span></p>
+<p>我们用 <span class="math inline">\(C_3\)</span> 来量化其他开销，比如Python运行时、系统噪声等。然后我们利用剖析和插值来计算 <span class="math inline">\(C_1\)</span>、 <span class="math inline">\(C_2\)</span>和 <span class="math inline">\(C_3\)</span>的数值。</p>
+<h3 id="decoding-phase-latency-modeling">10.3 相位延迟建模解码</h3>
+<p>同样，我们首先关注decode 阶段的以下GEMMs：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">GEMM 名称</th>
+<th style="text-align: center;"><span class="math inline">\(M\)</span>形状</th>
+<th style="text-align: center;"><span class="math inline">\(N\)</span>形状</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">QKV 线性</td>
+<td style="text-align: center;"><span class="math inline">\((B, h)\)</span></td>
+<td style="text-align: center;"><span class="math inline">\((h, 3h)\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">关注输出</td>
+<td style="text-align: center;"><span class="math inline">\((B, h)\)</span></td>
+<td style="text-align: center;"><span class="math inline">\((h, h)\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">FFN输入</td>
+<td style="text-align: center;"><span class="math inline">\((B, h)\)</span></td>
+<td style="text-align: center;"><span class="math inline">\((h, m)\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">FFN输出</td>
+<td style="text-align: center;"><span class="math inline">\((B, m)\)</span></td>
+<td style="text-align: center;"><span class="math inline">\((m, h)\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>这些行动的人工智能是 <span class="math inline">\(O(B)\)</span>的。 <span class="math inline">\(B\)</span> 受限于GPU内存容量和严格的延迟要求，因此在现有的服务场景中，这些操作是受内存限制的。总内存读写次数 <span class="math inline">\(8Bh + 4h^2 + 2hm + 2Bm\)</span>，由于 <span class="math inline">\(h\)</span> 和 <span class="math inline">\(m\)</span> 通常远大于 <span class="math inline">\(B\)</span>，我们可以将延迟建模为：</p>
+<p><span class="math display">\[T_3 = C_4 \cdot (4h^2 + 2hm)\]</span></p>
+<p>至于解码注意力操作，对于一个注意力头和一个生成 <span class="math inline">\(l\)</span> token的请求，需要执行 <span class="math inline">\(3sl\)</span> 的内存读写，同时进行 <span class="math inline">\(2sl\)</span> 次浮点操作。它是内存受限的，因此我们可以用以下方式来建模解码注意力的延迟：</p>
+<p><span class="math display">\[T_4 = C_5 \cdot n \cdot 3s \sum_{i=0}^{B-1} l_i = C_5 \cdot 3ht\]</span></p>
+<p>总结来说，解码相位的延迟为：</p>
+<p><span class="math display">\[T_{Decoding} = C_4 \cdot (4h^2 + 2hm) + C_5 \cdot 3ht\]</span></p>
+<p>这里我们不引入开销项（如剖析阶段的 <span class="math inline">\(C_3\)</span> ），因为 <span class="math inline">\(4h^2 + 2hm\)</span> 已经是常数，开销可以被计入 <span class="math inline">\(C_4\)</span>。同样，我们利用剖析和插值来确定 <span class="math inline">\(C_4\)</span> 和 <span class="math inline">\(C_5\)</span>的值。</p>
+<figure class="figure" data-latex-placement="!t" id="fig:chatbot_p99">
+<p><img alt="在ShareGPT数据集上使用OPT模型的聊天机器人应用。" loading="lazy" src="../assets/papers/distserve-full/figure-13.png"/><img alt="??????? 2" loading="lazy" src="../assets/papers/distserve-full/figure-802.png"/> （A） OPT13B （b） OPT66B （C） OPT-175B</p>
+<figcaption class="caption">在ShareGPT数据集上使用OPT模型的聊天机器人应用。</figcaption>
+</figure>
+<figure class="figure" data-latex-placement="!t" id="fig:other_apps_p99">
+<p><img alt="分别在HumanEval和LongBench数据集上完成代码完成和总结任务。" loading="lazy" src="../assets/papers/distserve-full/figure-14.png"/> （a） 代码补全 （b） 摘要</p>
+<figcaption class="caption">分别在HumanEval和LongBench数据集上完成代码完成和总结任务。</figcaption>
+</figure>
+<h2 id="appendix:placement_strategies">11 DistServe在端到端实验中的安置</h2>
+<p>表<a data-reference="tab:parallel_config" data-reference-type="ref" href="#tab:parallel_config">4</a> 展示了DistServe在端到端实验§<a data-reference="exp:end_to_end" data-reference-type="ref" href="#exp:end_to_end">6.2</a>中选择的prefill和decode 实例的张量并行（TP）和流水线并行（PP）配置。</p>
+<div id="tab:parallel_config">
+<table>
+<caption>The parallelism strategies chosen by DistServe in the end-to-end experiments.</caption>
+<thead>
+<tr>
+<th style="text-align: center;">模型</th>
+<th style="text-align: center;">数据集</th>
+<th colspan="2" style="text-align: center;">预补</th>
+<th colspan="2" style="text-align: center;">解码</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><span>3-6</span></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">TP</td>
+<td style="text-align: center;">PP</td>
+<td style="text-align: center;">TP</td>
+<td style="text-align: center;">PP</td>
+</tr>
+<tr>
+<td style="text-align: center;">OPT-13B</td>
+<td style="text-align: center;">ShareGPT</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">1</td>
+</tr>
+<tr>
+<td style="text-align: center;">OPT-66B</td>
+<td style="text-align: center;">ShareGPT</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">2</td>
+</tr>
+<tr>
+<td style="text-align: center;">OPT-66B</td>
+<td style="text-align: center;">长凳</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">2</td>
+</tr>
+<tr>
+<td style="text-align: center;">OPT-66B</td>
+<td style="text-align: center;">人类评估</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">2</td>
+</tr>
+<tr>
+<td style="text-align: center;">OPT-175B</td>
+<td style="text-align: center;">ShareGPT</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="appendix:end_to_end_p99">12 99%SLO 达成率下的端到端结果</h2>
+<p>图<a data-reference="fig:chatbot_p99" data-reference-type="ref" href="#fig:chatbot_p99">13</a>和<a data-reference="fig:other_apps_p99" data-reference-type="ref" href="#fig:other_apps_p99">图14</a>展示了DistServe与在相同设置下基线之间的端到端表现<a data-reference="exp:end_to_end" data-reference-type="ref" href="#exp:end_to_end">，仅</a>SLO达成目标改为99%。我们可以看到，在更严格的SLO达成目标下，相较于vLLM，DistServe仍能维持<span class="math inline">\(3\times\)</span>–<span class="math inline">\(8\times\)</span>更高的速率和<span class="math inline">\(1.24\times\)</span>–<span class="math inline">\(6.67\times\)</span>更严格的SLO。与DeepSpeed-MII相比，DistServe能够实现<span class="math inline">\(1.32\times\)</span><span class="math inline">\(8\times\)</span>更高的速率和<span class="math inline">\(1.20\times\)</span>–<span class="math inline">\(1.58\times\)</span>更严格的SLO。</p>
+<section class="footnotes footnotes-end-of-document" id="footnotes" role="doc-endnotes">
+<hr/>
+<ol>
+<li id="fn1"><p>整体请求延迟等于TTFT加上TPOT乘以decode 阶段生成的token数量。<a class="footnote-back" href="#fnref1" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"></li>
+<li id="fn3"><p>我们强调“执行时间”而非延迟，因为延迟既包括执行时间，也包括排队延迟。<a class="footnote-back" href="#fnref3" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>我们在LongBench中限制了输入长度，因为OPT的绝对位置嵌入只支持最大长度2048。<a class="footnote-back" href="#fnref4" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>DistServe选定的所有实习地点可见附录<a data-reference="appendix:placement_strategies" data-reference-type="ref" href="#appendix:placement_strategies">11</a>。<a class="footnote-back" href="#fnref5" role="doc-backlink">↩︎</a></p></li>
+</ol>
 </section>
-</main>
-</body>
-</html>
+<h2>参考文献</h2><div class="refs-note">
+<p>Introducing chatgpt. <a class="uri" href="https://openai.com/blog/chatgpt">https://openai.com/blog/chatgpt</a>, 2022.</p>
+<p>Bard, an experiment by google. <a class="uri" href="https://bard.google.com/">https://bard.google.com/</a>, 2023.</p>
+<p>Deepspeed model implementations for inference (mii), 2023.</p>
+<p>Inflection tech memo. <a class="uri" href="https://inflection.ai/assets/Inflection-1.pdf">https://inflection.ai/assets/Inflection-1.pdf</a>, 2023.</p>
+<p>Lanchain usecase: Summarization, 2023.</p>
+<p>Nvidia collective communications library (nccl), 2023.</p>
+<p>Serve, optimize and scale pytorch models in production, 2023.</p>
+<p>Sharegpt teams. <a class="uri" href="https://sharegpt.com/">https://sharegpt.com/</a>, 2023.</p>
+<p>Amey Agrawal, Ashish Panwar, Jayashree Mohan, Nipun Kwatra, Bhargav S Gulavani, and Ramachandran Ramjee. Sarathi: Efficient llm inference by piggybacking decodes with chunked prefills. , 2023.</p>
+<p>Joshua Ainslie, James Lee-Thorp, Michiel de Jong, Yury Zemlyanskiy, Federico Lebrón, and Sumit Sanghai. Gqa: Training generalized multi-query transformer models from multi-head checkpoints, 2023.</p>
+<p>Anthropic. Introducing the next generation of claude. <a class="uri" href="https://www.anthropic.com/news/claude-3-family">https://www.anthropic.com/news/claude-3-family</a>, 2024.</p>
+<p>Andrew Audibert, Yang Chen, Dan Graur, Ana Klimovic, Jiri Simsa, and Chandramohan A. Thekkath. A case for disaggregation of ml data processing, 2022.</p>
+<p>Yushi Bai, Xin Lv, Jiajie Zhang, Hongchang Lyu, Jiankai Tang, Zhidian Huang, Zhengxiao Du, Xiao Liu, Aohan Zeng, Lei Hou, Yuxiao Dong, Jie Tang, and Juanzi Li. Longbench: A bilingual, multitask benchmark for long context understanding, 2023.</p>
+<p>Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Ponde de Oliveira Pinto, Jared Kaplan, Harri Edwards, Yuri Burda, Nicholas Joseph, Greg Brockman, Alex Ray, Raul Puri, Gretchen Krueger, Michael Petrov, Heidy Khlaaf, Girish Sastry, Pamela Mishkin, Brooke Chan, Scott Gray, Nick Ryder, Mikhail Pavlov, Alethea Power, Lukasz Kaiser, Mohammad Bavarian, Clemens Winter, Philippe Tillet, Felipe Petroski Such, Dave Cummings, Matthias Plappert, Fotios Chantzis, Elizabeth Barnes, Ariel Herbert-Voss, William Hebgen Guss, Alex Nichol, Alex Paino, Nikolas Tezak, Jie Tang, Igor Babuschkin, Suchir Balaji, Shantanu Jain, William Saunders, Christopher Hesse, Andrew N. Carr, Jan Leike, Josh Achiam, Vedant Misra, Evan Morikawa, Alec Radford, Matthew Knight, Miles Brundage, Mira Murati, Katie Mayer, Peter Welinder, Bob McGrew, Dario Amodei, Sam McCandlish, Ilya Sutskever, and Wojciech Zaremba. Evaluating large language models trained on code. .</p>
+<p>Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Ponde de Oliveira Pinto, Jared Kaplan, Harri Edwards, Yuri Burda, Nicholas Joseph, Greg Brockman, et al. Evaluating large language models trained on code. , 2021.</p>
+<p>Wei-Lin Chiang, Zhuohan Li, Zi Lin, Ying Sheng, Zhanghao Wu, Hao Zhang, Lianmin Zheng, Siyuan Zhuang, Yonghao Zhuang, Joseph E. Gonzalez, Ion Stoica, and Eric P. Xing. Vicuna: An open-source chatbot impressing gpt-4 with 90<span>%</span>* chatgpt quality, 2023.</p>
+<p><span>Compute Express Link Consortium</span>. Compute express link, 2023. Accessed: 2023-12-07.</p>
+<p>NVIDIA Corporation. Fastertransformer, 2019.</p>
+<p>NVIDIA Corporation. Triton inference server: An optimized cloud and edge inferencing solution., 2019.</p>
+<p>Tri Dao, Daniel Y. Fu, Stefano Ermon, Atri Rudra, and Christopher Ré. Flashattention: Fast and memory-efficient exact attention with io-awareness, 2022.</p>
+<p>Jiarui Fang, Yang Yu, Chengduo Zhao, and Jie Zhou. Turbotransformers: an efficient gpu serving system for transformer models. In <span><em>ACM PPoPP</em></span>, 2021.</p>
+<p>Google. Our next-generation model: Gemini 1.5. <a class="uri" href="https://deepmind.google/technologies/gemini/">https://deepmind.google/technologies/gemini/</a>, 2024.</p>
+<p>Arpan Gujarati, Reza Karimi, Safya Alzayat, Wei Hao, Antoine Kaufmann, Ymir Vigfusson, and Jonathan Mace. Serving <span>DNNs</span> like clockwork: Performance predictability from the bottom up. In <span><em>14th USENIX Symposium on Operating Systems Design and Implementation (OSDI 20)</em></span>, pages 443–462. USENIX Association, November 2020.</p>
+<p>Arpan Gujarati, Reza Karimi, Safya Alzayat, Wei Hao, Antoine Kaufmann, Ymir Vigfusson, and Jonathan Mace. Serving <span>DNNs</span> like clockwork: Performance predictability from the bottom up. In <span><em>USENIX OSDI</em></span>, 2020.</p>
+<p>Zhiyuan Guo, Zijian He, and Yiying Zhang. Mira: A program-behavior-guided far memory system. In <span><em>Proceedings of the 29th Symposium on Operating Systems Principles</em></span>, SOSP ’23, page 692–708, New York, NY, USA, 2023. Association for Computing Machinery.</p>
+<p>Mingcong Han, Hanze Zhang, Rong Chen, and Haibo Chen. Microsecond-scale preemption for concurrent <span>GPU-accelerated</span> <span>DNN</span> inferences. In <span><em>16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)</em></span>, pages 539–558, Carlsbad, CA, July 2022. USENIX Association.</p>
+<p>Cunchen Hu, Heyang Huang, Liangliang Xu, Xusheng Chen, Jiang Xu, Shuang Chen, Hao Feng, Chenxi Wang, Sa Wang, Yungang Bao, Ninghui Sun, and Yizhou Shan. Inference without interference: Disaggregate llm inference for mixed downstream workloads, 2024.</p>
+<p>Yanping Huang, Youlong Cheng, Ankur Bapna, Orhan Firat, Mia Xu Chen, Dehao Chen, HyoukJoong Lee, Jiquan Ngiam, Quoc V. Le, Yonghui Wu, and Zhifeng Chen. Gpipe: Efficient training of giant neural networks using pipeline parallelism, 2019.</p>
+<p>Suhas Jayaram Subramanya, Daiyaan Arfeen, Shouxu Lin, Aurick Qiao, Zhihao Jia, and Gregory R Ganger. Sia: Heterogeneity-aware, goodput-optimized ml-cluster scheduling. In <span><em>Proceedings of the 29th Symposium on Operating Systems Principles</em></span>, pages 642–657, 2023.</p>
+<p>Xin Jin, Zhihao Bai, Zhen Zhang, Yibo Zhu, Yinmin Zhong, and Xuanzhe Liu. Distmind: Efficient resource disaggregation for deep learning workloads. , pages 1–16, 2024.</p>
+<p>Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph E. Gonzalez, Hao Zhang, and Ion Stoica. Efficient memory management for large language model serving with pagedattention. In <span><em>Proceedings of the ACM SIGOPS 29th Symposium on Operating Systems Principles</em></span>, 2023.</p>
+<p>Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph E. Gonzalez, Hao Zhang, and Ion Stoica. Efficient memory management for large language model serving with pagedattention, 2023.</p>
+<p>Zhuohan Li, Lianmin Zheng, Yinmin Zhong, Vincent Liu, Ying Sheng, Xin Jin, Yanping Huang, Zhifeng Chen, Hao Zhang, Joseph E Gonzalez, et al. Alpaserve: Statistical multiplexing with model parallelism for deep learning serving. , 2023.</p>
+<p>Hao Liu, Wilson Yan, Matei Zaharia, and Pieter Abbeel. World model on million-length video and language with ringattention. , 2024.</p>
+<p>Philipp Moritz, Robert Nishihara, Stephanie Wang, Alexey Tumanov, Richard Liaw, Eric Liang, Melih Elibol, Zongheng Yang, William Paul, Michael I. Jordan, and Ion Stoica. Ray: A distributed framework for emerging <span>AI</span> applications. In <span><em>USENIX OSDI</em></span>, 2018.</p>
+<p>Deepak Narayanan, Aaron Harlap, Amar Phanishayee, Vivek Seshadri, Nikhil R. Devanur, Gregory R. Ganger, Phillip B. Gibbons, and Matei Zaharia. Pipedream: Generalized pipeline parallelism for dnn training. In <span><em>ACM SOSP</em></span>, 2019.</p>
+<p>OpenAI. Gpt-4 technical report, 2023.</p>
+<p>Pratyush Patel, Esha Choukse, Chaojie Zhang, Íñigo Goiri, Aashaka Shah, Saeed Maleki, and Ricardo Bianchini. Splitwise: Efficient generative llm inference using phase splitting, 2023.</p>
+<p>Aurick Qiao, Sang Keun Choe, Suhas Jayaram Subramanya, Willie Neiswanger, Qirong Ho, Hao Zhang, Gregory R. Ganger, and Eric P. Xing. Pollux: Co-adaptive cluster scheduling for goodput-optimized deep learning. In <span><em>15th <span>USENIX</span> Symposium on Operating Systems Design and Implementation (<span>OSDI</span> 21)</em></span>, pages 1–18. <span>USENIX</span> Association, July 2021.</p>
+<p>Samyam Rajbhandari, Jeff Rasley, Olatunji Ruwase, and Yuxiong He. Zero: Memory optimizations toward training trillion parameter models, 2020.</p>
+<p>Reuters, 2023.</p>
+<p>Baptiste Roziere, Jonas Gehring, Fabian Gloeckle, Sten Sootla, Itai Gat, Xiaoqing Ellen Tan, Yossi Adi, Jingyu Liu, Tal Remez, J<span>é</span>r<span>é</span>my Rapin, et al. Code llama: Open foundation models for code. , 2023.</p>
+<p>Yizhou Shan, Yutong Huang, Yilun Chen, and Yiying Zhang. <span class="math inline">\(\{\)</span>LegoOS<span class="math inline">\(\}\)</span>: A disseminated, distributed <span class="math inline">\(\{\)</span>OS<span class="math inline">\(\}\)</span> for hardware resource disaggregation. In <span><em>13th USENIX Symposium on Operating Systems Design and Implementation (OSDI 18)</em></span>, pages 69–87, 2018.</p>
+<p>Noam Shazeer. Fast transformer decoding: One write-head is all you need, 2019.</p>
+<p>Ying Sheng, Lianmin Zheng, Binhang Yuan, Zhuohan Li, Max Ryabinin, Daniel Y. Fu, Zhiqiang Xie, Beidi Chen, Clark Barrett, Joseph E. Gonzalez, Percy Liang, Christopher Ré, Ion Stoica, and Ce Zhang. Flexgen: High-throughput generative inference of large language models with a single gpu, 2023.</p>
+<p>Mohammad Shoeybi, Mostofa Patwary, Raul Puri, Patrick LeGresley, Jared Casper, and Bryan Catanzaro. Megatron-lm: Training multi-billion parameter language models using model parallelism, 2020.</p>
+<p>John F Shortle, James M Thompson, Donald Gross, and Carl M Harris. , volume 399. John Wiley &amp; Sons, 2018.</p>
+<p>Yixin Song, Zeyu Mi, Haotong Xie, and Haibo Chen. Powerinfer: Fast large language model serving with a consumer-grade gpu, 2023.</p>
+<p>Foteini Strati, Sara Mcallister, Amar Phanishayee, Jakub Tarnawski, and Ana Klimovic. Déjàvu: Kv-cache streaming for fast, fault-tolerant generative llm serving, 2024.</p>
+<p>Yiming Su, Chengcheng Wan, Utsav Sethi, Shan Lu, Madan Musuvathi, and Suman Nath. Hotgpt: How to make software documentation more useful with a large language model? In <span><em>Proceedings of the 19th Workshop on Hot Topics in Operating Systems</em></span>, pages 87–93, 2023.</p>
+<p>Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timothée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, Aurelien Rodriguez, Armand Joulin, Edouard Grave, and Guillaume Lample. Llama: Open and efficient foundation language models, 2023.</p>
+<p>Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, <span>Ł</span>ukasz Kaiser, and Illia Polosukhin. Attention is all you need. , 2017.</p>
+<p>Bingyang Wu, Yinmin Zhong, Zili Zhang, Gang Huang, Xuanzhe Liu, and Xin Jin. Fast distributed inference serving for large language models. , 2023.</p>
+<p>Gyeong-In Yu, Joo Seong Jeong, Geon-Woo Kim, Soojeong Kim, and Byung-Gon Chun. Orca: A distributed serving system for <span class="math inline">\(\{\)</span>Transformer-Based<span class="math inline">\(\}\)</span> generative models. In <span><em>USENIX OSDI</em></span>, 2022.</p>
+<p>Hong Zhang, Yupeng Tang, Anurag Khandelwal, and Ion Stoica. Shepherd: Serving dnns in the wild. .</p>
+<p>Susan Zhang, Stephen Roller, Naman Goyal, Mikel Artetxe, Moya Chen, Shuohui Chen, Christopher Dewan, Mona Diab, Xian Li, Xi Victoria Lin, Todor Mihaylov, Myle Ott, Sam Shleifer, Kurt Shuster, Daniel Simig, Punit Singh Koura, Anjali Sridhar, Tianlu Wang, and Luke Zettlemoyer. Opt: Open pre-trained transformer language models, 2022.</p>
+<p>Yiying Zhang. Make it real: An end-to-end implementation of a physically disaggregated data center. , 57(1):1–9, jun 2023.</p>
+<p>Kai Zhao, Sheng Di, Sihuan Li, Xin Liang, Yujia Zhai, Jieyang Chen, Kaiming Ouyang, Franck Cappello, and Zizhong Chen. Ft-cnn: Algorithm-based fault tolerance for convolutional neural networks. , 32(7):1677–1689, 2021.</p>
+<p>Lianmin Zheng, Zhuohan Li, Hao Zhang, Yonghao Zhuang, Zhifeng Chen, Yanping Huang, Yida Wang, Yuanzhong Xu, Danyang Zhuo, Eric P. Xing, Joseph E. Gonzalez, and Ion Stoica. Alpa: Automating inter- and <span>Intra-Operator</span> parallelism for distributed deep learning. In <span><em>USENIX OSDI</em></span>, 2022.</p>
+<p>Zhe Zhou, Xuechao Wei, Jiejing Zhang, and Guangyu Sun. <span class="math inline">\(\{\)</span>PetS<span class="math inline">\(\}\)</span>: A unified framework for <span class="math inline">\(\{\)</span>Parameter-Efficient<span class="math inline">\(\}\)</span> transformers serving. In <span><em>USENIX ATC</em></span>, 2022.</p>
+</div><div class="qa-link"><a href="paper-qa/distserve-2401.09670-qa.html">继续阅读 Q1-Q7 详细问答</a></div></section></main></body></html>

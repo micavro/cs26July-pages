@@ -1,80 +1,592 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Splitwise：基于阶段拆分的高效生成式 LLM 推理：中文精读与校订</title>
-<style>
-:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
-*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
-h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
-h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
-.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
-.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
-@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+<!DOCTYPE html>
 
-.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-34px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a{color:var(--accent);text-decoration:none}.paper-nav a:hover{text-decoration:underline}
-.overview{margin:0 0 28px;padding:20px 22px;border:1px solid #cddbe6;border-radius:8px;background:linear-gradient(135deg,#f7fbfd,#fff)}.overview h2{margin:0 0 10px;padding:0;font-size:21px}.overview ul{margin-bottom:0}.doing{font-size:18px;line-height:1.75}.equation{margin:24px 0;padding:18px 20px;border-left:4px solid var(--accent);background:var(--soft);overflow-x:auto}.equation .math{margin:6px 0 10px;text-align:center;font-size:1.05em}.source-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}.source-actions a{display:inline-block;padding:8px 12px;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:14px}.source-actions a.primary{background:var(--accent);color:#fff}.figure img{width:auto;max-height:760px}.revision-note{color:var(--muted);font-size:13px}.qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.qa-links a{padding:5px 9px;border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:13px}
-@media(max-width:820px){.paper-nav{margin:-8px 0 24px}.overview{padding:16px}.doing{font-size:16px}}
-
-</style>
-<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-</head>
-<body>
-<main class="paper">
-<nav class="paper-nav" data-six-paper-revision><a href="../index.html">← 论文目录</a><a href="paper-qa/splitwise-2311.18677-qa.html">Q1–Q7 详细问答 →</a></nav>
-<h1>Splitwise：基于阶段拆分的高效生成式 LLM 推理：中文精读与校订</h1>
-<div class="authors">Pratyush Patel, Esha Choukse, Chaojie Zhang, Aashaka Shah, Inigo Goiri, Saeed Maleki, Ricardo Bianchini</div>
-<div class="meta">源文件：arXiv 2311.18677 | ISCA 2024 | 15 页 | 保留术语：phase splitting、prompt computation、token generation、KV cache、SLO、heterogeneous cluster、InfiniBand</div>
-<section class="columns">
-<section class="overview"><h2>这篇论文做什么？</h2><p class="doing">依据 prompt 阶段计算密集、token generation 阶段带宽密集的差异，把两阶段放到专属机器，并允许用不同代际 GPU 独立配置，以优化吞吐、成本或功耗。</p><ul><li>观察：decode 常低算力利用率，昂贵的新 GPU 的计算能力被浪费。</li><li>方法：prompt/token 两池、KV 状态传输和三种集群配置目标。</li><li>结果：同构配置可达 1.4× 吞吐且成本低 20%；等成本功耗下最高 2.35× 吞吐。</li></ul><p class="revision-note">校订说明：本页按原论文的论证顺序重写术语与因果关系；图均裁自论文原图，数据结论保留论文适用条件，不把峰值结果泛化为固定加速。</p></section>
-<section class="abstract"><p><strong>摘要。</strong>生成式大语言模型（LLM）应用的快速增长导致大规模部署昂贵且高功耗的 GPU。论文对 LLM 推理的特征化分析表明，每个推理请求经历两个阶段：计算密集的 prompt 处理阶段和内存密集的 token 生成阶段，各自具有截然不同的延迟、吞吐量、内存和功耗特征。尽管有最先进的批处理和调度，token 生成阶段仍严重浪费计算资源。与 prompt 处理不同，token 生成不需要最新 GPU 的计算能力，可以在更低功耗和成本下运行。基于这些观察，论文提出 Splitwise——一种将 LLM 推理请求的两阶段拆分到不同机器上的模型部署和调度技术。Splitwise 支持使用适合各阶段的硬件进行阶段特定资源管理，并通过集群后端互连高效传输请求状态。相比现有设计，Splitwise 集群在成本降低 20% 的同时实现 1.4 倍吞吐量，或在相同功耗和成本预算下实现 2.35 倍吞吐量。</p></section>
-
-<h2>1 引言</h2>
-<p>生成式 LLM 推理包含两个截然不同的计算阶段。<span class="term">Prompt 处理阶段</span>将全部输入 prompt token 并行通过前向传播生成首个输出 token，计算密集，需要最新 GPU 的高 FLOPS。<span class="term">Token 生成阶段</span>基于前向传播逐步生成后续 token，由于缺乏计算并行性，内存带宽和容量受限，尽管有最先进的批处理仍严重浪费计算资源。</p>
-<p>在相同机器上运行两阶段常因 prompt 和 token 阶段的任意批处理导致端到端延迟不一致。服务方不得不过度配置昂贵 GPU 来满足交互式应用的严格 SLO。同时，云服务商面临 GPU 需求激增和功耗墙问题。</p>
-
-<h3>1.1 GPU 代际间的计算与内存失衡</h3>
-<p>从 A100 到 H100，TFLOPS 增加 3.43 倍，功耗增加 1.75 倍，但 HBM 带宽仅增长 1.64 倍，内存容量不变（80GB）。计算能力增长远快于内存带宽和容量。这意味着 token 生成阶段的内存瓶颈在新一代 GPU 上更加突出，而 prompt 处理阶段才能充分利用新 GPU 的算力。</p>
-
-<h2>2 Splitwise 设计</h2>
-<p>Splitwise 将推理请求的两阶段拆分到不同机器上运行。Prompt 处理在计算密集型机器上执行，token 生成在内存优化型机器上执行。两阶段之间通过优化的网络库在后端 InfiniBand 互连上传输 KV cache。</p>
-
-<h3>2.1 阶段特定资源管理</h3>
-<p>由于两阶段的资源需求不同，Splitwise 允许为各阶段配置不同硬件。Prompt 机器使用最新高算力 GPU（如 H100），token 机器可使用旧一代 GPU（如 A100）或设置功耗上限。这种异构配置提高了性能/美元（Perf/$）和性能/瓦特（Perf/W）。</p>
-
-<h3>2.2 状态传输</h3>
-<p>Prompt 处理完成后，生成的 KV cache 需从 prompt 机器传输到 token 机器。Splitwise 使用优化的 RDMA 传输在 InfiniBand 上完成这一操作。对于 13B 模型、512 token 的 prompt，KV cache 约 864 MB，在 400 Gbps 带宽下传输仅需约 17 ms，相对于 prompt 处理的数百毫秒可以接受。通过流水线化传输与计算，实际开销进一步降低。</p>
-
-<h2>3 集群设计</h2>
-<p>Splitwise 探索了同构和异构集群部署。同构集群中所有机器使用相同 GPU，但分别承担 prompt 或 token 角色；异构集群中 prompt 机器和 token 机器使用不同 GPU 型号或功耗配置。</p>
-
-<h3>3.1 吞吐量优化</h3>
-<p>通过生产环境 trace 分析，论文发现 prompt 和 token 阶段的利用率差异显著。Splitwise 根据工作负载特征调整两阶段的机器比例和硬件配置，在满足 SLO 的前提下最大化总吞吐量。</p>
-
-<h3>3.2 功耗与成本优化</h3>
-<p>异构 Splitwise 集群可以使用低功耗 GPU 承担 token 生成，降低总体功耗。在相同功耗和成本预算下，Splitwise 集群实现 2.35 倍吞吐量；在相同 SLO 下，实现 1.4 倍吞吐量并降低 20% 成本。</p>
-
-<h2>4 实验评估</h2>
-<p>评估使用生产环境 LLM 推理 trace，覆盖 OPT-66B、LLaMA-7B 等模型。对比基线为传统共置部署（所有请求在同一机器上完成两阶段）。Splitwise 在各种配置下均优于基线，改善幅度随 prompt 长度和生成长度增加而增大——因为长 prompt 的 prefill 计算密集特征更突出，长生成的 decoding 内存密集特征更突出，拆分的收益更明显。</p>
-
-<h2>5 与 DistServe 的关系</h2>
-<p>Splitwise 与 DistServe 都采用 prefill-decoding 解耦思路，但侧重点不同。DistServe 侧重在相同硬件上通过 GPU 级解耦消除干扰并优化 goodput；Splitwise 侧重在集群级利用异构硬件为各阶段配置不同资源，优化成本、功耗和吞吐量的三维目标。两者互补：DistServe 的调度算法可以结合 Splitwise 的异构硬件配置。</p>
-
-<h2>6 局限与选题启发</h2>
-<p>Splitwise 的阶段拆分是机器级的，在 prompt 和 token 机器之间引入网络传输依赖。虽然单次传输开销小，但在高并发下网络可能成为瓶颈。此外，异构硬件配置增加了集群管理复杂度。对于 agentic workflow 场景，一个 agent 的输出可能是下一个 agent 的输入，跨机器的状态传输延迟会累积。</p>
-<div class="callout"><p><strong>对本仓库方向的意义。</strong>Splitwise 将 prefill-decoding 解耦从 GPU 级扩展到集群级，引入了异构硬件配置的维度。在多 LLM agent 工作流中，不同 agent 可能使用不同模型，各阶段的资源需求各异。Splitwise 的异构部署思想可以指导工作流调度器在异构云 GPU 上做成本最优的模型分配——这正是 Coral（异构云 GPU 多 LLM 服务）的核心理念。</p></div>
-
-<h2>公式与目标函数</h2><div class="equation"><div class="math">\[T_{\mathrm{request}}=T_{\mathrm{prompt}}+T_{\mathrm{KV\ transfer}}+\sum_{t=1}^{N_o}T_{\mathrm{token},t}\]</div><p>拆分只有在阶段专属批处理和硬件匹配带来的收益大于 KV 传输与额外排队时才成立；因此高速 backplane 是设计前提。</p></div><h2>原论文图解</h2><figure class="figure wide"><img src="../assets/papers/splitwise/fig-01-characterization.png" alt="图 1：LLM 请求由 prompt 计算和逐 token 生成组成，用户关心 E2E、TTFT 与 TBT。" loading="lazy"><figcaption class="caption">图 1：LLM 请求由 prompt 计算和逐 token 生成组成，用户关心 E2E、TTFT 与 TBT。</figcaption></figure>
-<figure class="figure wide"><img src="../assets/papers/splitwise/fig-02-03-design.png" alt="图 2–3：请求级、混合式与阶段拆分 batch，以及不同 GPU 的功耗/生成特性。" loading="lazy"><figcaption class="caption">图 2–3：请求级、混合式与阶段拆分 batch，以及不同 GPU 的功耗/生成特性。</figcaption></figure>
-<figure class="figure wide"><img src="../assets/papers/splitwise/fig-04-08-evaluation.png" alt="图 4–8：真实 prompt/output 分布、阶段延迟、batch 与内存需求的实测。" loading="lazy"><figcaption class="caption">图 4–8：真实 prompt/output 分布、阶段延迟、batch 与内存需求的实测。</figcaption></figure><h2>证据边界与校订结论</h2><p>Splitwise 的主要论证来自硬件 characterization 与容量规划：prefill 能吃满算力，decode 更依赖显存带宽和 batch。论文给出的最佳配置依赖流量长度分布、机器代际、互连和目标函数；它不是宣称旧 GPU 在任何 decode 场景都更快，而是说明旧/低功耗 GPU 可能具有更好的成本效率。</p>
-<h2>参考说明</h2>
-<pre class="note">参考文献保留在原 PDF 中。本文译稿覆盖摘要、两阶段特征化分析、Splitwise 设计、集群优化和实验结果。</pre>
-
-<div class="source-actions"><a class="primary" href="paper-qa/splitwise-2311.18677-qa.html">阅读 Q1–Q7 详细问答</a><a href="https://arxiv.org/abs/2311.18677">查看原论文</a><a href="../index.html">返回目录</a></div>
-</section>
-</main>
-</body>
-</html>
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Splitwise：利用阶段拆分实现高效生成式 LLM 推理：中文全文翻译</title><style>
+:root{--ink:#161616;--muted:#5f6368;--rule:#d9dde3;--paper:#fff;--bg:#f4f6f8;--accent:#184c7f;--soft:#f8fafc}
+html{font-size:16px;scroll-behavior:smooth}*,*::before,*::after{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.76;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:70px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}h1{margin:0 auto 22px;max-width:900px;text-align:center;font-size:32px;line-height:1.28;font-weight:700;overflow-wrap:anywhere;text-wrap:balance}.authors{margin:0 auto 18px;max-width:900px;text-align:center;font-size:14px;line-height:1.6}.meta{margin:0 0 28px;color:var(--muted);text-align:center;font-size:13px}.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-35px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a,.qa-link a{color:var(--accent);text-decoration:none}.paper-nav a:hover,.qa-link a:hover{text-decoration:underline}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 13px;padding-top:4px;font-size:24px}h3{margin:27px 0 10px;font-size:20px}h4{margin:21px 0 8px;font-size:17px}p{margin:0 0 14px;overflow-wrap:anywhere}ul,ol{margin:0 0 17px 1.5em;padding:0}li{margin:0 0 9px;padding-left:.1em}.abstract,.keywords{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}.keywords{padding-top:11px;padding-bottom:11px}.qa-link{margin:0 0 26px;padding:13px 16px;border:1px solid #cbd8e4;border-radius:5px;background:#fbfdff;font-family:"Microsoft YaHei",sans-serif;text-align:center}.figure{break-inside:avoid;max-width:820px;margin:28px auto 34px;text-align:center}.figure img{display:block;max-width:100%;height:auto;max-height:780px;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:800px;margin:0 auto;font-size:14px;font-weight:700;line-height:1.55;text-align:left;color:#202124}table{width:100%;margin:22px auto 30px;border-collapse:collapse;font-size:14px;line-height:1.55;display:block;overflow-x:auto}th,td{padding:7px 9px;border:1px solid #d8dde3;vertical-align:top}th{background:#f4f7fa}.math.display{display:block;margin:20px auto;padding:12px 8px;overflow-x:auto;text-align:center}.math.inline{white-space:nowrap}.footnotes{margin-top:32px;padding-top:16px;border-top:1px solid var(--rule);font-size:13px;color:#424850}.refs-note{white-space:pre-wrap;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-size:13.5px;line-height:1.55}.translation-note{margin:20px 0;padding:14px 16px;border-left:4px solid #8a6d3b;background:#fffaf0;font-size:14px}.citation:empty{display:none}code{font-family:Consolas,"Courier New",monospace;font-size:.9em}.algorithm{margin:22px 0;padding:15px 17px;border:1px solid #d9e0e7;background:#fbfcfd;border-radius:4px;overflow-x:auto}.algorithm p{margin-bottom:7px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 26px 52px;border:0;box-shadow:none}.paper-nav{margin:-8px 0 24px}h1{font-size:24px}.columns{font-size:16px;line-height:1.84}.figure{max-width:100%}table{font-size:12.5px}}
+</style><script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script><script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head><body><main class="paper"><nav class="paper-nav"><a href="../index.html">← 论文目录</a><a href="paper-qa/splitwise-2311.18677-qa.html">Q1-Q7 详细问答 →</a></nav><h1>Splitwise：利用阶段拆分实现高效生成式 LLM 推理<br/>中文全文翻译</h1><div class="authors">Pratyush Patel · Esha Choukse · Chaojie Zhang · Aashaka Shah · Íñigo Goiri · Saeed Maleki · Ricardo Bianchini</div><div class="meta">ISCA 2024 · arXiv 2311.18677 · 公式统一使用 LaTeX/MathJax</div><section class="columns"><section class="abstract"><h2>摘要</h2><p>生成式 LLM 推理包含计算密集的 prompt 阶段和内存密集的 token generation 阶段，两者的延迟、吞吐、内存与功耗特征显著不同。Splitwise 将两阶段放到不同机器，独立配置资源，并通过集群高速互连传输 KV 状态。作者围绕吞吐、成本与功耗设计同构及异构集群，展示了更高吞吐、更低成本或等预算下更强容量。</p></section><section class="keywords"><p><strong>关键词：</strong>生成式推理；阶段拆分；异构 GPU；KV 传输；成本；功耗</p></section><div class="qa-link"><a href="paper-qa/splitwise-2311.18677-qa.html">阅读比正文更聚焦的 Q1-Q7 详细论文问答</a></div><div class="translation-note"><strong>翻译说明：</strong>本页以论文公开 LaTeX 源码为底稿，按原章节顺序逐段翻译；保留英文系统名、指标名和必要术语。所有数学表达式保留原始 LaTeX，由 MathJax 渲染。图表来自原论文素材。</div><h2 id="sec:intro">1 简介</h2>
+<p>生成式大语言模型（LLMs）的最新进展显著提升了其响应质量和准确性。这些趋势促使LLM在各个领域的广泛应用。大多数现代LLM采用Transformer架构构建，并表现出类似的特性。Transformer模型规模稳步增长，从早期拥有3.4亿参数的BERT模型，到拥有惊人的1750亿参数的GPT-3，以及据传还可能更多参数的GPT-4。</p>
+<p>LLM通常运行在昂贵且耗电的GPU上。大语言模型的突然大规模部署导致全球GPU容量紧张。由于大量应用利用LLM的应用，LLM推断的计算需求远远超过训练。此外，由于训练大语言模型需要昂贵且专用的超级计算机，需要大量推断来摊销高昂的训练成本。虽然LLM推理作业比训练小好几个数量级，但考虑到涉及的计算量，成本仍然很高。</p>
+<div id="tab:a100_vs_h100_specs">
+<table>
+<caption>NVIDIA A100 vs. H100 specifications. </caption>
+<thead>
+<tr>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"><strong>A100</strong></th>
+<th style="text-align: center;"><strong>H100</strong></th>
+<th style="text-align: center;"><strong>比率</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>TFLOPs</strong></td>
+<td style="text-align: center;">19.5</td>
+<td style="text-align: center;">66.9</td>
+<td style="text-align: center;">3.43<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>重压机容量</strong></td>
+<td style="text-align: center;">80GB</td>
+<td style="text-align: center;">80GB</td>
+<td style="text-align: center;">1.00<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>HBM带宽</strong></td>
+<td style="text-align: center;">2039GBps</td>
+<td style="text-align: center;">3352GBps</td>
+<td style="text-align: center;">1.64<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>动力</strong></td>
+<td style="text-align: center;">400W</td>
+<td style="text-align: center;">700W</td>
+<td style="text-align: center;">1.75<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>NVLink</strong></td>
+<td style="text-align: center;">50Gbps</td>
+<td style="text-align: center;">100Gbps</td>
+<td style="text-align: center;">2：00<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>无限</strong></td>
+<td style="text-align: center;">200GBps</td>
+<td style="text-align: center;">400GBps</td>
+<td style="text-align: center;">2：00<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>每台机器的成本</strong></td>
+<td style="text-align: center;">17.6美元/小时</td>
+<td style="text-align: center;">38美元/小时</td>
+<td style="text-align: center;">2.16<span class="math inline">\(\times\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>针对单个请求的生成LLM推断包含多次前向传递，因为输出token是逐个生成的。这本质上有两个对比的计算阶段。首先是 <em>prompt计算阶段</em>，所有输入prompttoken并行通过模型的前向传递以生成第一个输出token。这一阶段通常计算量大，需要如今最新GPU的高浮点运算（FLOPs）。其次是 <em>token生成阶段</em>，后续输出token会依序生成，基于上一个token的前向传递和序列中之前token的所有缓存上下文。鉴于缺乏计算并行性，尽管采用了最先进的batch技术，这一阶段往往对内存带宽和容量更为依赖。在同一台机器上运行这两个阶段，由于prompt和token阶段的任意batch 处理，常导致端到端延迟不一致。由于这些挑战，服务需要对昂贵的GPU进行过度配置，以满足交互应用的严格推理服务水平目标（SLO）。与此同时，云服务提供商（CSP）不得不建设大量新的数据中心以满足GPU需求，并且正面临电力墙的阻碍。</p>
+<p>行业持续推出新的计算能力强大的GPU，每一款GPU都比上一款更耗电、更昂贵。然而，如 <a data-reference="tab:a100_vs_h100_specs" data-reference-type="ref+Label" href="#tab:a100_vs_h100_specs">1</a>所示，这些GPU的高带宽内存（HBM）容量和带宽最近并未以同样的速度扩展。最新的NVIDIA H100 GPU相比前代A100显卡拥有 <span class="math inline">\(3.43\times\)</span> 更多的计算能力和 <span class="math inline">\(1.75\times\)</span> 更强的功耗。然而，它们的内存带宽仅增加了 <span class="math inline">\(1.6\times\)</span>，内存容量并未增加。</p>
+<p><strong>我们的工作。</strong> 鉴于prompt计算阶段和token生成阶段的独特性质，我们建议将推理请求拆分，分别运行在不同的机器上。这样我们就能分别管理各阶段的硬件资源，从而提高GPU利用率和系统整体效率。它还允许为每个阶段使用不同且更合适的硬件。为了实现这种设置，prompt计算的缓存上下文需要以低延迟从prompt处理机传递到token生成机。我们以优化的方式实现这些传输，基于目前数据中心可用的后端Infiniband互连，从而在不显得性能损失的情况下提升效率。</p>
+<p>通过Splitwise，我们设计了针对成本、吞吐量和功耗优化的集群，利用LLM推理请求的生产痕迹。鉴于各代GPU内存和计算扩展率的差异，我们还评估了不同推理阶段的不同GPU和功耗上限。这使我们能够为用户实现更高的每美元性能（Perf/$），以及为CSP实现更高的每瓦性能（Perf/W）。此外，用户还可以针对更易获得的较旧GPU。</p>
+<p>我们证明，基于分流的LLM推理集群能够以比现有集群低20%的成本，实现1.4<span class="math inline">\(\times\)</span> 高吞吐量。或者，它们可以在相同的成本和功耗预算下，提供2.35<span class="math inline">\(\times\)</span> 更高的吞吐量。</p>
+<p><strong>摘要。</strong> 我们做出以下贡献：</p>
+<ol>
+<li><p>对使用生产跟踪在NVIDIA A100和H100 GPU上，LLM推断中prompt和token生成阶段执行和利用模式差异进行了详细描述。</p></li>
+<li><p>分拆方面，我们采用了优化现有硬件利用的技术，将prompt计算和token生成阶段分拆到不同的机器上。</p></li>
+<li><p>通过Splitwise设计探索同质和异构集群部署，以优化整体成本、请求吞吐量和配置功率。</p></li>
+<li><p>对使用Splitwise设计的系统进行生产线路的评估。</p></li>
+</ol>
+<h2 id="sec:background">2 背景</h2>
+<h3 id="large-language-models">2.1 大语言模型</h3>
+<p>现代大语言模型基于Transformer。Transformer模型分别使用注意力层和多层感知器层来理解输入并生成输出。基于Transformer的LLM包括仅编码器、仅解码器和编码器-解码器模型。本文关注的生成式大语言模型通常是仅解码器或编码-解码器模型。</p>
+<h3 id="sec:kvcachebg">2.2 生成式大语言模型推理阶段</h3>
+<p><a data-reference="fig:LLM_example" data-reference-type="ref+Label" href="#fig:LLM_example">1</a> 展示了生成式大语言模型推理的一个例子。一旦收到prompt查询，所有输入token都会在单次迭代内并行计算，生成第一个token。我们称之为即时处理阶段。在prompt计算过程中，注意力层生成的上下文会保存在键值（KV）缓存中，因为未来所有token生成迭代都需要它。在生成第一个token后，后续的token只使用最后一个生成的token和KV cache作为模型前传的输入。这使得后续的token生成比计算量大的prompt阶段更占用内存带宽和容量。</p>
+<figure class="figure" data-latex-placement="t" id="fig:LLM_example">
+<img alt="一个大语言模型推理示例。" loading="lazy" src="../assets/papers/splitwise-full/figure-01.png"/>
+<figcaption class="caption">一个大语言模型推理示例。</figcaption>
+</figure>
+<h3 id="performance-metrics-for-llms">2.3 大语言模型的性能指标</h3>
+<p>此前的研究提出了三大主要的LLM推断指标：端到端（E2E）延迟、首次token时间（TTFT）和吞吐量。我们还增加了另一个延迟指标：token间隔时间（TBT），用以跟踪token串行生成时的在线流传输吞吐量。 <a data-reference="tab:perf_metrics" data-reference-type="ref+Label" href="#tab:perf_metrics">2</a> 总结了本工作中考虑的关键绩效指标。</p>
+<div id="tab:perf_metrics">
+<table>
+<caption>Performance metrics for LLMs.</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><strong>度规</strong></th>
+<th style="text-align: center;"><strong>对用户的重要性</strong></th>
+<th style="text-align: center;"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">端到端（E2E）延迟</td>
+<td style="text-align: center;">用户看到的总查询时间</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td style="text-align: center;">首个token时间（TTFT）</td>
+<td style="text-align: center;">用户看到初始反应的速度</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td style="text-align: center;">token间隔时间（TBT）</td>
+<td style="text-align: center;">平均token流延迟</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td style="text-align: center;">吞吐量</td>
+<td style="text-align: center;">每秒请求数</td>
+<td style="text-align: center;"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>生成式LLM可用于多种任务，采用不同类型的SLO。对于batch任务（<em>如</em>汇总），TTFT或TBT延迟指标不如吞吐量重要。另一方面，对于延迟敏感的任务（<em>例如</em>对话式API），TTFT和TBT是更重要的指标，SLO更严格。</p>
+<figure class="figure" data-latex-placement="t" id="fig:batching-gantt-chart">
+<img alt="batch机制及其延迟对prompt和token阶段的影响。" loading="lazy" src="../assets/papers/splitwise-full/figure-02.png"/>
+<figcaption class="caption">batch机制及其延迟对prompt和token阶段的影响。 </figcaption>
+</figure>
+<h3 id="batching-of-requests">2.4 请求batch</h3>
+<p>推理请求可以batch 处理以提升吞吐量。此前已有多项研究探讨了batch。<a data-reference="fig:batching-gantt-chart" data-reference-type="ref+Label" href="#fig:batching-gantt-chart">2</a> 显示了三种常见batch机制的推理时间线。默认机制只在<em>请求层</em>（<a data-reference="fig:batching-gantt-chart" data-reference-type="ref+Label" href="#fig:batching-gantt-chart">2</a>（a））进行batch 处理。在这种情况下，准备请求会被batch 处理，但所有这些请求的转发通行都会在其他请求运行前完成。由于请求可能有较长的token生成阶段，这可能导致请求在中间到达时等待时间较长，导致高TTFT和高端对端延迟。优化是<em>continuous batching</em>（<a data-reference="fig:batching-gantt-chart" data-reference-type="ref+Label" href="#fig:batching-gantt-chart">2</a>（b））。在这种情况下，调度决策是在模型每次前向传递之前做出的。然而，任何batch要么只包含prompt阶段的请求，要么仅包含token阶段的请求。prompt阶段被认为更重要，因为它影响TTFT。因此，等待prompt可以抢占token阶段。虽然这导致TTFT更短，但会显著增加TBT的尾部，从而提高端对端延迟。最后，还有<em>混合batch（</em><a data-reference="fig:batching-gantt-chart" data-reference-type="ref+Label" href="#fig:batching-gantt-chart">2</a>（c））。通过这种batch，调度决策在每次前向传递时做出，prompt和token阶段可以同时运行。这减少了对 TBT 的影响，但并未消除，因为与prompt阶段一起安排的token阶段运行时间会更长。论文其余部分除非另有说明，我们使用混合batch。</p>
+<h3 id="sec:modelparallel">2.5 模型并行</h3>
+<p>模型并行可用于将模型划分为多个GPU，甚至多台机器，以提高效率和内存容量。LLM推理通常使用流水线和张量并行。流水线并行（PP）将模型的层级划分到GPU之间，同时将所有算符和张量保持在同一GPU的同一层内。张量并行（TP）将张量划分到各个GPU之间，同时复制每个GPU上的所有层。流水线并行需要较低的参与GPU间通信，而张量并行则需要每层高带宽通信。一般来说，张量并行在同一机器内通过高带宽互连 <em>（如</em> NVLink）连接的GPU表现更好。在论文的其余部分，我们使用8块GPU之间的张量并行以获得最佳延迟。</p>
+<h3 id="sec:gpu-interconnect">2.6 GPU集群与互联</h3>
+<p>随着LLM应用场景的兴起，多家云服务提供商扩展了基于GPU的产品，导致大规模GPU集群部署。这些AI集群中的每台机器通常由8台旗舰级NVIDIA显卡（A100或H100）组成。每块GPU通过高带宽的Mellanox InfiniBand互连连接到集群中的所有其他GPU，形成高带宽的数据平面网络。目前云端提供的InfiniBand带宽在每对GPU之间为25GBps到50GBps。</p>
+<h2 id="sec:motivation">3 角色塑造</h2>
+<p>本节将探讨LLM推断的性能和利用特性，并提取关键见解指导Splitwise的设计。</p>
+<p><strong>生产痕迹。</strong> 我们使用了2023年11月11日两个Azure LLM推理服务<span class="math inline">\(^{th}\)</span> 生产线追踪。我们的痕迹代表了当今大语言模型推理中最常见的场景： <em>编码</em> 和 <em>对话</em>。我们已在 <a class="uri" href="https://github.com/Azure/AzurePublicDataset">https://github.com/Azure/AzurePublicDataset</a> 释放了部分痕迹。我们用于特征描述的痕迹长达20分钟，包括到达时间、输入大小（prompt数量）和输出大小（输出词数）。由于客户隐私要求（<em>例如</em>GDPR），我们无法查看prompt内容。我们使用生产痕迹来指导输入和输出大小，发送包含所需数量的token的输入prompt，并强制模型为每个请求生成相应数量的输出token。请注意，输入prompt的文本不会影响我们基准测试的性能指标，因为它们仅依赖于输入和输出大小。为此，我们不会在请求之间重复使用KV cache来模拟具有安全保障的云服务。</p>
+<p><strong>模特。</strong><a data-reference="tab:models" data-reference-type="ref+Label" href="#tab:models">3</a> 显示我们评估的模型。BLOOM 和 Llama2 都是最先进的开源大语言模型。这两款型号均为仅解码的Transformer型。我们使用参数最多的模型版本，因为这些版本最能代表生产级的准确性。除非另有说明，我们在一台配备8块H100 GPU的机器上运行BLOOM-176B和Llama-70B，运行于vLLM上。</p>
+<div id="tab:models">
+<table>
+<caption>Models we evaluate and their parameters.</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><strong>模型</strong></th>
+<th style="text-align: center;"><strong>#Layers</strong></th>
+<th style="text-align: center;"><strong>隐藏尺寸</strong></th>
+<th style="text-align: center;"><strong>#Heads</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>Llama2-70B</strong></td>
+<td style="text-align: center;">80</td>
+<td style="text-align: center;">8192</td>
+<td style="text-align: center;">32</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>布鲁姆-176B</strong></td>
+<td style="text-align: center;">70</td>
+<td style="text-align: center;">14336</td>
+<td style="text-align: center;">112</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="number-of-prompt-and-generated-tokens">3.1 prompt数量和生成token数</h3>
+<p>为了更好地理解我们的痕迹，我们考察 <em>了prompt输入</em> 和 <em>生成输出</em> token数量的分布。 <a data-reference="fig:prompt_sizes" data-reference-type="ref+Label" href="#fig:prompt_sizes">[图：prompt_sizes]</a> 显示prompttoken数量的分布。由于LLM推理服务通常用于用户编写代码时生成补全，其输入prompt可以包含迄今为止编写的大量代码。因此，prompt的中位数大小为1500个token。另一方面，对话服务的输入prompttoken种类更广，因为它依赖用户。该追踪的prompttoken中位数为1020个。</p>
+<p><span>[图：token_sizes]</span> 显示了生成token数量的分布。由于编码服务通常只在用户输入时生成程序中的接下来几个词，输出token的中位数为13个token。另一方面，对话服务几乎呈双峰分布，生成的中位数为129个token。</p>
+<p><strong><em>见解：</em></strong> 不同的推理服务可能有截然不同的prompt和token分布方式。</p>
+<h3 id="batch-utilization">3.2 批量利用</h3>
+<figure class="figure" id="fig:pvt-distribution">
+<img alt="与各种活跃batchtoken共度时间的累计分布。" loading="lazy" src="../assets/papers/splitwise-full/figure-03.png"/>
+<figcaption class="caption">与各种活跃batchtoken共度时间的累计分布。</figcaption>
+</figure>
+<p>为了了解这些请求可以batch 处理多少，我们测量机器在给定batch规模下运行的频率。我们采用了如 <a data-reference="fig:batching-gantt-chart" data-reference-type="ref+Label" href="#fig:batching-gantt-chart">2</a>所示的混合continuous batching。为了适应一台机器，我们运行简化版的编码和对话追踪，每秒请求两次。</p>
+<p><a data-reference="fig:pvt-distribution" data-reference-type="ref+Label" href="#fig:pvt-distribution">4</a> 表示机器在批量中运行不同数量活跃token所花费的时间分布。注意，如果prompt阶段运行着100个token的prompt，我们将激活token计为100个。然而，一旦请求进入token阶段，我们就将其计为一个活跃token，因为这些token是逐个生成的（假设束搜索大小为1）。我们发现大多数时间（60–70%）的对话时间都在运行20个或更少的token。由于编码服务输出token极少，token阶段的batch更差，且运行单一token的时间超过20%。这两种大语言模型的趋势非常相似。</p>
+<p><strong><em>见解：</em></strong> 混合continuous batching大部分时间里，激活的token很少被batch。</p>
+<h3 id="latency">3.3 延迟</h3>
+<p><strong>TTFT。</strong><a data-reference="fig:characterization_TTFT" data-reference-type="ref+Label" href="#fig:characterization_TTFT">[图：characterization_TTFT]</a> 显示了prompttoken数量对TTFT的影响。尺寸范围是根据编码和对话痕迹选择的。我们发现，随着prompt大小的增加，两种模型的TTFT几乎呈线性增长。这种行为是因为prompt阶段的GPU使用率高且计算受限。</p>
+<p><strong>TBT。</strong><span>[图：characterization_TBT]</span> 展示了强制批量batch不同请求输出token在 TBT 上的影响。随着batch规模增加，我们观察到对TBT的影响非常小。batch规模为64，对TBT影响<span class="math inline">\(2\times\)</span>。</p>
+<p><strong>E2E。</strong><span>[图：characterization_E2E]</span> 显示了两种型号的端对端延迟不同百分位数，且无batch。请求输入和输出大小之间的差异显而易见。此外，我们看到大部分端对端时间都花在token阶段运行上。即使在编码轨迹中，prompt大小较大且生成的token较少，这一点也同样适用。事实上，我们发现对于BLOOM-176B，1500个输入token的prompt阶段与只有6个输出token的token阶段所需时间相同。</p>
+<p><strong><em>见解：</em></strong> 对于大多数请求，端对端（E2E）大部分时间都花在token生成阶段。</p>
+<h3 id="throughput">3.4 吞吐量</h3>
+<p><span>6</span> 显示了batch对吞吐量（以每秒token数衡量）的影响。对于prompt阶段，我们定义吞吐量为每秒处理的prompt输入token数量。我们看到吞吐量在2048个prompttoken后下降，这对应于跟踪中位prompt大小小于2的batch大小。另一方面， <span>[图：char_tput_token]</span> 显示，token阶段的吞吐量随着batch不断增加，直到64batch大小，此时机器内存耗尽。</p>
+<p><strong><em>见解：</em></strong> prompt阶段的batch大小应当受到限制，以确保良好的性能。相比之下，batchtoken生成阶段则能带来高吞吐量且没有任何缺点。</p>
+<figure class="figure" id="fig:char_memory">
+<img alt="需要的内存，batch时分prompt/token阶段。" loading="lazy" src="../assets/papers/splitwise-full/figure-04.png"/>
+<figcaption class="caption">需要的内存，batch时分prompt/token阶段。</figcaption>
+</figure>
+<h3 id="memory-utilization">3.5 内存利用</h3>
+<p>在LLM推理过程中，GPU内存用于承载模型权重和激活，以及KV cache（<a data-reference="sec:kvcachebg" data-reference-type="ref+Label" href="#sec:kvcachebg">2.2</a>）。随着batch中token数量的增加，KV cache所需的内存容量也会增加。 <a data-reference="fig:char_memory" data-reference-type="ref+Label" href="#fig:char_memory">7</a> 显示了随着batch中token数量增加，每个阶段内存容量的利用情况。在prompt阶段，输入prompttoken生成 KV 缓存。在输出token阶段， <em>每个</em> 正在处理的活跃生成token访问 <em>其迄今为止整个上下文</em> 的KV cache。</p>
+<p><strong><em>见解：</em></strong> prompt阶段的batch受计算限制，而token阶段受限于内存容量。</p>
+<h3 id="power-utilization">3.6 电力利用</h3>
+<p>在托管机器时，云服务提供商需要考虑峰值功耗，这直接影响数据中心成本。这在构建GPU集群时尤为重要，因为GPU的功耗远高于普通计算机。 <span>8</span> 显示了在运行prompt和token生成阶段时，GPU 的功耗归一化为热设计功耗（TDP）。由于prompt阶段计算密集型，其功耗随batch大小增加而增加。另一方面，token相位是受内存限制的，随着处理token数量增加，其功耗不会变化。</p>
+<p>供应商可以限制机器的用电量，以降低峰值功率。 <span>9</span> 展示了在prompt和token阶段提高功率上限时对延迟的影响。prompt阶段对功率上限高度敏感，延迟大幅增加。另一方面，当功率限制超过50%（<em>即</em>700至350W）时，token生成阶段几乎不会产生延迟影响。</p>
+<p><strong><em>见解：</em></strong> prompt阶段有效利用GPU的功耗预算，而token阶段则不然。</p>
+<div id="tab:a100h100results">
+<table>
+<caption>P50 request metrics on A100 vs. H100 without batching on Llama-70B.</caption>
+<tbody>
+<tr>
+<td style="text-align: center;"></td>
+<td colspan="3" style="text-align: center;"><strong>编码</strong></td>
+<td colspan="3" style="text-align: center;"><strong>对话</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"><strong>A100</strong></td>
+<td style="text-align: center;"><strong>H100</strong></td>
+<td style="text-align: center;"><strong>比率</strong></td>
+<td style="text-align: center;"><strong>A100</strong></td>
+<td style="text-align: center;"><strong>H100</strong></td>
+<td style="text-align: center;"><strong>比率</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>TTFT</strong></td>
+<td style="text-align: center;">185毫秒</td>
+<td style="text-align: center;">95毫秒</td>
+<td style="text-align: center;">0.51<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">155毫秒</td>
+<td style="text-align: center;">84毫秒</td>
+<td style="text-align: center;">0.54<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>TBT</strong></td>
+<td style="text-align: center;">52毫秒</td>
+<td style="text-align: center;">31毫秒</td>
+<td style="text-align: center;">0.70<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">40毫秒</td>
+<td style="text-align: center;">28毫秒</td>
+<td style="text-align: center;">0.70<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>E2E</strong></td>
+<td style="text-align: center;">856毫秒</td>
+<td style="text-align: center;">493毫秒</td>
+<td style="text-align: center;">0.58<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">4957毫秒</td>
+<td style="text-align: center;">3387毫秒</td>
+<td style="text-align: center;">0.68<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>费用</strong></td>
+<td style="text-align: center;">$0.42</td>
+<td style="text-align: center;">$0.52</td>
+<td style="text-align: center;">1.24<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">$2.4</td>
+<td style="text-align: center;">$3.6</td>
+<td style="text-align: center;">1.5<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>能源</strong></td>
+<td style="text-align: center;">1.37 哇</td>
+<td style="text-align: center;">1.37 哇</td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">7.9 WHR</td>
+<td style="text-align: center;">9.4 哇</td>
+<td style="text-align: center;">1.2<span class="math inline">\(\times\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="gpu-hardware-variations">3.7 GPU硬件变体</h3>
+<p>鉴于prompt生成阶段和token生成阶段的不同特性，我们衡量了在不同硬件上运行时对两者性能的影响。 <a data-reference="tab:a100_vs_h100_specs" data-reference-type="ref+Label" href="#tab:a100_vs_h100_specs">1</a> 显示了 DGX-A100 和 DGX-H100 的规格。内存与计算的比例更倾向于A100而非H100。表<a data-reference="tab:a100h100results" data-reference-type="ref" href="#tab:a100h100results">4</a> 展示了我们的发现。我们认为，token生成阶段（TBT）的性能影响低于prompt阶段（TTFT）。由于编码请求主要受prompt阶段主导，生成的token极少，A100对编码的延迟影响比对话更严重。此外，我们看到A100的推断成本和整体能量相若于H100。</p>
+<p><strong><em>见解：</em></strong> token生成可以在计算能力较低的硬件上运行，以提升性能/效率和效率/美元效率。</p>
+<h2 id="splitwise">4 分开</h2>
+<p>基于我们的特征分析见解，我们提出了分拆技术，这是一种将LLM推理中的prompt和生成阶段拆分到不同机器的技术。</p>
+<p><a data-reference="fig:systemdiag" data-reference-type="ref+Label" href="#fig:systemdiag">10</a> 显示了 Splitwise 的概览。我们维护两个独立的机器池，分别用于prompt处理和token处理。第三个机池，即混合机池，根据工作量需求进行扩展和收缩。所有机器都预装了所选型号。当新的推理请求到达时，调度器将其分配给一对机器（<em>即</em>prompt和token）。prompt机器负责生成输入查询的第一个token，通过在prompt阶段处理所有输入prompttoken并生成KV cache。prompt机器还会将KV cache发送给token机，token机会继续生成token直到响应完成。我们在token机上采用持续batch，以最大化其利用率。混合池中的机器采用混合continuous batching。</p>
+<p>在较低的请求率下，我们目标是通过Splitwise实现更好的延迟;而在更高的请求率下，我们力求避免因prompt与token机池之间的分段而导致的性能或吞吐量下降。</p>
+<figure class="figure" id="fig:systemdiag">
+<img alt="Splitwise的高级系统图" loading="lazy" src="../assets/papers/splitwise-full/figure-05.png"/>
+<figcaption class="caption">Splitwise的高级系统图  </figcaption>
+</figure>
+<p>Splitwise 采用了如 <a data-reference="fig:systemdiag" data-reference-type="ref+Label" href="#fig:systemdiag">10</a> 所示的层级两级调度。集群级调度器（CLS）负责机器池管理和路由输入推理请求。机器级调度器（MLS）维护待处理队列并管理每台机器的请求batch。</p>
+<h3 id="sec:scheduler">4.1 集群级调度</h3>
+<p><strong>机器池管理。</strong> CLS维护prompt、token和混合机池。Splitwise 最初根据预期的请求负载和输入/输出token分布，将机器分配到prompt或token池。prompt池或token池中的机器可以动态地进出混合池，以减少碎片化并在高负载时满足SLO。混合池中的机器保持其prompt器或token机的身份，并在待处理队列中没有相反类型的任务时返回原池。切换池不会产生明显延迟。如果负载分布与初始假设有较大偏差，Splitwise 会采用粗粒度 <em>的机器再利用</em> 方法，并在prompt池和token池之间移动机器。机器的再利用很少进行，通常只有在机器在混合池中停留较长时间时才会进行。</p>
+<p><strong>请求路由。</strong> CLS 使用加入最短队列（JSQ）调度，为每个请求分配一个prompt和一个token机。队列长度由待处理token数量定义。每台机器定期向CLS通信其内存容量或待处理队列的变更。注意，这并非在每次迭代边界都会发生。在调度请求时，我们同时分配prompt机和token机，因为这样可以将KV cache传输与prompt计算重叠，以减少传输开销（<a data-reference="sec:designkv" data-reference-type="ref+Label" href="#sec:designkv">4.3</a>）。</p>
+<p>在路由请求时，如果待处理队列大于某个阈值，CLS会在混合池中寻找目标机器。如果混合池也满了，它会继续查找对面池（<em>即</em>用来运行prompt的token机，反之亦然），并将机器移入混合池。混合池中的机器运行方式与非分流机器相同，采用混合batch。一旦混合请求队列被排空，CLS会将机器切换回原始池。例如，当队列过长时，我们可以将prompt机器移到混合池中运行token;机器运行完token后，我们会将机器切换回prompt池。</p>
+<h3 id="machine-level-scheduling">4.2 机器级调度</h3>
+<p>MLS在每台机器上运行，负责跟踪GPU内存使用情况，维护待处理队列，决定每次迭代的batch，并将相关状态报告给CLS。</p>
+<p><strong>prompt机器。</strong> MLS则采用先到先发（FCFS）来安排prompt。[ <a data-reference="fig:char_tput_prompt" data-reference-type="ref+Label" href="#fig:char_tput_prompt">图：char_tput_prompt]</a> 的结果显示，在2048个prompttoken后，吞吐量会下降。因此，MLS限制多个prompt的batch 处理总数为2048个token。这是一个可配置的数值，可以根据不同型号或硬件而变化。</p>
+<p><strong>token机。</strong> MLS尽可能使用FCFS来安排token和batch。 <span>[图：char_tput_token]</span> 显示，token生成吞吐量会随着batch大小不断增长，直到机器内存耗尽。因此，MLS会跟踪内存，并在机器快用完内存时开始排队token。</p>
+<p><strong>混合机器。</strong> 为了满足TTFT SLO要求，MLS必须优先排序正在运行的prompt，并立即安排待处理队列中的新prompt。如果机器运行token阶段且没有额外容量运行prompt阶段，MLS会 <em>抢占</em> token。为了避免因抢占导致token <em>阶段饥饿</em> ，我们会随着时间推移提高token的优先级，并限制每个请求可保留的优先次数。</p>
+<h3 id="sec:designkv">4.3 KV cache传输</h3>
+<p>如 <a data-reference="sec:background" data-reference-type="ref+Label" href="#sec:background">2</a>中所述，KV cache在请求的prompt阶段生成，并在token生成阶段持续增长。在 Splitwise 中，我们需要将 KV 缓存从prompt机器转移到token机（见 <a data-reference="fig:systemdiag" data-reference-type="ref+Label" href="#fig:systemdiag">10</a> 中），以完成推理。这种传输延迟是Splitwise的主要开销。本节讨论KV cache传输的影响及其优化方法。</p>
+<p><a data-reference="fig:naivekv" data-reference-type="ref+Label" href="#fig:naivekv">相应图</a> 显示了prompt阶段、KV cache传输以及单批请求的甘特图，这些过程在以序列化方式简单传输KV cache时。KV cache传输只有在prompt阶段结束并生成第一个token后才开始。此外，在token生成阶段，下一个输出token才能生成，才能完成。这直接影响了最大TBT和推断的端到端延迟。</p>
+<p>传输所需时间取决于KV cache的大小（与prompttoken数量成正比）以及prompt与token机器之间互联的带宽。即使使用快速的InfiniBand链路，大prompt大小的传输开销也可能成为TBT的显著部分。</p>
+<p>在 Splitwise 中，我们通过与prompt阶段的计算重叠来优化 KV 缓存传输。随着prompt机器计算LLM中的每一层，对应的KV cache也会被生成。在每一层结束时，我们会触发该层的KV cache异步传输，同时prompt计算继续到下一层。 <span>[图：gantt_overlap]</span> 显示了这种异步传输，以减少传输开销。分层传输还支持其他优化，比如token机更早开始token阶段，以及prompt器机更早释放KV cache。</p>
+<p>层级KV cache传输与下一层的prompt计算并行进行。这需要每层进行细粒度同步以确保正确性。因此，可能会产生性能干扰，增加TTFT，尤其是针对较小prompt。然而，对于较小的prompt，KV cache总容量较小，无需层级传输来隐藏延迟。由于批量中token数量在计算开始时已知，Splitwise选择了KV cache传输的最佳技术。它使用串行化的KV cache传输来处理较小的prompt，采用分层传输以及较大的prompt。我们显示<a data-reference="sec:expresults" data-reference-type="ref+Label" href="#sec:expresults">6.1</a>的整体传输和干扰开销相对较小。</p>
+<div class="table*">
+<table>
+<tbody>
+<tr>
+<td style="text-align: center;"></td>
+<td colspan="3" style="text-align: center;"><strong>prompt机</strong></td>
+<td colspan="3" style="text-align: center;"><strong>token机</strong></td>
+<td style="text-align: center;"><strong>prompttoken</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"><strong>类型</strong></td>
+<td style="text-align: center;"><strong>费用</strong></td>
+<td style="text-align: center;"><strong>动力</strong></td>
+<td style="text-align: center;"><strong>类型</strong></td>
+<td style="text-align: center;"><strong>费用</strong></td>
+<td style="text-align: center;"><strong>动力</strong></td>
+<td style="text-align: center;"><strong>互连带宽</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>分叉式AA</strong></td>
+<td style="text-align: center;">DGX-A100</td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">DGX-A100</td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>分割-HH</strong></td>
+<td style="text-align: center;">DGX-H100</td>
+<td style="text-align: center;">2.35<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1.75<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">DGX-H100</td>
+<td style="text-align: center;">2.5<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1.75<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">2<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>分割-HHcap</strong></td>
+<td style="text-align: center;">DGX-H100</td>
+<td style="text-align: center;">2.35<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1.75<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">DGX-H100</td>
+<td style="text-align: center;">2.5<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1.23<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">2<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>分开-HA</strong></td>
+<td style="text-align: center;">DGX-H100</td>
+<td style="text-align: center;">2.35<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1.75<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">DGX-A100</td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1<span class="math inline">\(\times\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="sec:provision">4.4 与 Splitwise 进行配置</h3>
+<p>我们利用Splitwise优化LLM推理集群的部署，兼顾功耗、成本和吞吐量。</p>
+<p>机器<strong>类型。</strong>我们提出了四个主要的分拆系统变体：<em>分开AA、</em>分<em>开HH、</em>分<em>开HA</em>和分<em>开HHcap</em>。命名法仅取自代表prompt机类型的第一个字母和代表token机类型的第二个字母。“A”代表DGX-A100机器，“H”代表DGX-H100机器，“Hcap”代表功率限制的DGX-H100机器。<span>[标签：systems_evaluated]</span> 显示了我们评估系统中的成本、功耗和硬件概况。</p>
+<p>Splitwise-AA同时使用DGX-A100作为prompt池和token池，而Splitwise-HH则使用DGX-H100作为两者。这两种变体代表了供应商中常见的设备同质且可互换的配置。</p>
+<p>Splitwise-HA使用DGX-H100作为prompt池，DGX-A100作为token池。我们基于 <a data-reference="tab:a100h100results" data-reference-type="ref+Label" href="#tab:a100h100results">4</a>和Insight（<em>即</em>A100在token阶段的成本效益和功耗）选择了这种配置。</p>
+<p>Splitwise-HHcap 使用 DGX-H100 机器作为prompt池和token池。不过，我们会将token机器的功率限制在额定功率的70%，每块GPU的功率上限为50%。我们基于 <span>9</span> 和Insight提出这一设计（<em>即</em>prompt阶段受电量限制影响，而token无性能影响，且每显卡功耗降低50%）。</p>
+<p>机器<strong>数量。</strong>LLM推理集群的部署必须根据prompt和token机器数量进行规模调整。我们的方法论是使用事件驱动集群模拟器在设计空间中搜索，详见<a data-reference="sec:method" data-reference-type="ref+Label" href="#sec:method">第五</a>部分。我们需要提供以下输入：（1）目标集群设计（<em>例如</em>，分开-HA或分分-HHcap），（2）一个面向LLM的性能模型，能够估算不同输入、输出和batch大小下的TTFT和TBT，（3）从服务的目标prompt和token大小分布中推导出的短跟踪（<em>例如</em>，<span>3</span>），（4）SLOs（<em>例如</em>， <a data-reference="tab:eval-slo" data-reference-type="ref+Label" href="#tab:eval-slo">5</a>）、（5）约束条件（<em>例如</em>吞吐量），以及（6）优化目标（<em>例如</em>，最小化成本）。利用这些信息，我们的配置框架会在空间中搜索所需的最优点。例如，使用吞吐量约束和成本最小化目标进行搜索，可以获得跨不同设计的等吞吐量成本优化簇。</p>
+<figure class="figure" id="fig:provisioning">
+<img alt="用于配置分流-HH集群的设计空间。集群配置的目标峰值吞吐量为70 RPS。成本效益最高的分流 HH 配置标注为 \(\star\) （27 台prompt器机和 3 台token机）。" loading="lazy" src="../assets/papers/splitwise-full/figure-06.png"/>
+<figcaption class="caption">用于配置分流-HH集群的设计空间。集群配置的目标峰值吞吐量为70 RPS。成本效益最高的分流 HH 配置标注为 <span class="math inline">\(\star\)</span> （27 台prompt器机和 3 台token机）。 </figcaption>
+</figure>
+<p><strong>搜索空间。</strong><a data-reference="fig:provisioning" data-reference-type="ref+Label" href="#fig:provisioning">12</a> 展示了在 Splitwise-HH 下，用于编码工作负载的prompt和token机器数量的二维搜索空间示例（使用2分钟跟踪）。模拟器输出TTFT、TBT和端对端延迟的各种百分位数。然后，我们选择符合这些指标SLO要求的集群，并优化目标功能。例如，<a data-reference="fig:provisioning" data-reference-type="ref+Label" href="#fig:provisioning">12</a>显示了27个prompt器和3个token机的设置<span class="math inline">\(\star\)</span>，成本最低，达到70 RPS。我们称这种设置为<em>等吞吐量成本优化</em>。</p>
+<p><strong>优化。</strong> 我们可以使用三个优化目标： <em>吞吐量</em>、 <em>成本</em>和 <em>功耗</em>。吞吐量优化对云服务提供商（CSP）和用户都很重要。成本优化对CSP和用户的重要性层级不同。对于CSP，如果集群的功耗和空间需求有所提升，为了相同的吞吐量，更高的成本可能也可以接受。然而，对于终端用户来说，在相同吞吐量下更高的成本通常是不可接受的。最后，功耗优化对CSP来说很有吸引力，因为它允许在同一数据中心部署更多GPU，但对用户来说可能并不那么重要。我们的研究只考虑已配置的电力，而非动态电力利用率。</p>
+<h3 id="sec:splitwise_considerations">4.5 实际考量</h3>
+<p><strong>准确性影响。</strong> 分拆不会影响准确性，因为它使用无损的KV cache传输，且不添加任何随机化。它执行推理时的参数和状态与单台机器相同。</p>
+<p>可<strong>扩展性。</strong>由于LLM请求比典型机器学习请求更长，因此在相似集群规模下，它们产生的调度开销更低。然而，CLS可能成为大型集群的可扩展瓶颈。以往关于分区或复制调度的工作见解有助于提升可扩展性，且与Splitwise正交。</p>
+<p><strong>可靠性和容错性。</strong> 如果prompt或token机故障，Splitwise 会从头重启请求，类似于当今的大语言模型服务系统。或者，Splitwise 也可以将prompt计算后生成的 KV 缓存检查点到内存数据库中。为了恢复，Splitwise 可以利用该缓存跳过prompt重新计算，直接开始token阶段。KV cache还可以在token阶段定期检查。设计安全高效的故障恢复超出了我们论文的范围。</p>
+<h2 id="sec:method">5 方法论</h2>
+<h3 id="sec:expt_setup">5.1 实验装置</h3>
+<p>为了在真实硬件上评估我们的提案，我们在vLLM之上实现了Splitwise的KV cache传输机制。我们的实现是开源的。我们在两个DGX-A100和两个DGX-H10虚拟机（虚拟机）上运行这个修改过的vLLM，运行在Microsoft Azure上的，规格为 <a data-reference="tab:a100_vs_h100_specs" data-reference-type="ref+Label" href="#tab:a100_vs_h100_specs">1</a>。这些虚拟机用于收集 <a data-reference="sec:motivation" data-reference-type="ref+Label" href="#sec:motivation">3中的特性</a>数据。这些机器通过InfiniBand连接，DGX-H100的带宽是其两倍（<em>即</em>400 Gbps）。</p>
+<p>由于原版 vLLM 仅支持带token抢占的continuous batching，可能导致更高的 TBT，我们实现了 <a data-reference="fig:batching-gantt-chart" data-reference-type="ref+Label" href="#fig:batching-gantt-chart">2</a>（c） 中讨论的先进混合continuous batching。</p>
+<p>我们对分拆技术的实现会给机器分配prompt角色或token角色。当prompt机生成第一个token时，它会用 <a data-reference="sec:designkv" data-reference-type="ref+Label" href="#sec:designkv">4.3</a>中描述的技术将KV cache传输到token机。我们使用 MSCCL++，一个优化的 GPU 驱动通信库，实现了简单且分层的 KV 缓存传输。</p>
+<p>在我们的实现中，prompt机器使用MSCCL++的零拷贝单面 <code>put</code> 原语，在数据准备好后立即通过InfiniBand发送KV cache，无需token机发出任何接收指令。一旦我们对所有层都发出了a <code>put</code> ，prompt机器会发出信号，token机会等待它。通过信号量实现的同步使用与发送KV cache数据相同的InfiniBand连接。处理一批prompt时，每个请求会被分配不同的信号量，因为它可能被路由到不同的token机。我们用vLLM逐块发布KV cache。为了最小化传输次数，我们也考虑了只要KV块使用相同信号量的连续性。</p>
+<h3 id="sec:simulator">5.2 模拟器设置</h3>
+<p>我们构建一个模拟器，用于探索集群设计并大规模评估Splitwise。模拟器代码是开源的。</p>
+<figure class="figure" data-latex-placement="t" id="fig:simulator">
+<img alt="分叉模拟器的设计概述。" loading="lazy" src="../assets/papers/splitwise-full/figure-07.png"/>
+<figcaption class="caption">分叉模拟器的设计概述。</figcaption>
+</figure>
+<p><a data-reference="fig:simulator" data-reference-type="ref+Label" href="#fig:simulator">13</a> 展示了我们模拟器的设计。该模拟器基于事件驱动，忠实模拟了分流式机器池、调度器、机器级内存和队列以及KV cache传输。我们首先在目标硬件上对LLM进行不同输入/输出大小的分析。基于特征分析曲线，我们构建性能模型。模拟器输入请求跟踪、SLO、性能模型以及集群和调度器的配置。在评估中，我们使用了 <a data-reference="sec:motivation" data-reference-type="ref+Label" href="#sec:motivation">3中生产</a>痕迹中的prompt和token大小分布。我们会调整泊松到达率，以增加或减少集群大小所需的负载（每秒请求数）。模拟器提供每个请求的实现指标（TTFT、TBT、端对端）以及机器利用率。我们通过硬件实验交叉验证性能模型以确保准确性;我们还用生产负载进行了端到端验证，迭代次数超过5万次，以确保模拟器的保真度。</p>
+<p><strong>性能模型。</strong> 我们在 A100 和 H100 机器上，基于 <a data-reference="sec:motivation" data-reference-type="ref+Label" href="#sec:motivation">3</a> 台机器在所需的并行配置下，使用不同batch大小、输入大小、输出大小的性能配置文件，构建了一个分段线性性能模型。我们验证我们的绩效模型具有很高的准确性;在80：20的训练：测试数据集分配下评估时，其平均绝对百分比误差（MAPE）低于3%。</p>
+<p><strong>沟通模型。</strong> 在我们的评估中，KV cache传输会导致机器间通信，而张量并行仅导致机器内通信。我们通过对 <a data-reference="sec:expresults" data-reference-type="ref+Label" href="#sec:expresults">Infiniband 6.1</a> 版本上的 KV 缓存传输实现进行基准测试，来模拟机器间通信开销。</p>
+<p><strong>SLO。</strong> 为了确定特定集群设计可支持的最大吞吐量，我们使用P50、P90和P99的SLO来衡量TTFT、TBT和端对端E延迟指标。 <a data-reference="tab:eval-slo" data-reference-type="ref+Label" href="#tab:eval-slo">5</a> 展示了我们以DGX-A100为参考的SLO定义。我们要求满足所有九项SLO要求。TTFT上的SLO稍微宽松一些，因为它对端对端加密延迟的影响小得多。</p>
+<div id="tab:eval-slo">
+<table>
+<caption>SLO expressed as slowdown compared to a request running on DGX-A100 under no contention.</caption>
+<thead>
+<tr>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"><strong>P50</strong></th>
+<th style="text-align: center;"><strong>P90</strong></th>
+<th style="text-align: center;"><strong>P99</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>TTFT</strong></td>
+<td style="text-align: center;">2<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">3<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">6<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>TBT</strong></td>
+<td style="text-align: center;">1.25<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1.5<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">5<span class="math inline">\(\times\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>E2E</strong></td>
+<td style="text-align: center;">1.25<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">1.5<span class="math inline">\(\times\)</span></td>
+<td style="text-align: center;">5<span class="math inline">\(\times\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>基线。</strong> 我们将分拆设计与Baseline-A100和Baseline-H100进行比较。这些基线中的聚类分别仅由DGX-A100和DGX-H100组成。两个基线都使用与Splitwise用于混合池机相同的混合continuous batching（见 <a data-reference="sec:scheduler" data-reference-type="ref+Label" href="#sec:scheduler">4.1</a>）。</p>
+<h2 id="sec:eval">6 实验评估</h2>
+<h3 id="sec:expresults">6.1 实验结果</h3>
+<p><strong>KV cache传输延迟。</strong> 我们首先测量随着prompt大小增加传输KV cache的延迟。 <a data-reference="fig:kvcacheperf" data-reference-type="ref+Label" href="#fig:kvcacheperf">14</a> 展示了 A100 和 H100 设置下，采用了如 <span>11</span> 中讨论的简单且优化的传输设计下的可见传输延迟。与prompt计算时间相比，开销非常低（<span class="math inline">\(&lt;7\%\)</span>）。串行传输的时间随着prompt大小的增加线性增加，因为KV cache的大小也随之增加。而优化的每层传输则隐藏了大量延迟。对于这些传输，我们看到A100的非重叠传输时间约为8毫秒，H100配置约为5毫秒。H100 的带宽是 A100 的两倍（<em>即</em> 200 对 400 Gbps），这在 H100 的传输速度大约是 A100 的两倍上表现得很明显。</p>
+<p>如 <a data-reference="sec:designkv" data-reference-type="ref+Label" href="#sec:designkv">4.3</a>中所述，对于较小的prompt（<span class="math inline">\(&lt;512\)</span> 在H100中），Splitwise使用序列化的KV cache传输，而对于较大的prompt，则采用每层传输。</p>
+<figure class="figure" data-latex-placement="t" id="fig:kvcacheperf">
+<img alt="随着prompt大小在A100和H100上增加，KV cache传输的开销也会增加。" loading="lazy" src="../assets/papers/splitwise-full/figure-08.png"/>
+<figcaption class="caption">随着prompt大小在A100和H100上增加，KV cache传输的开销也会增加。</figcaption>
+</figure>
+<p><strong>端到端的冲击。</strong> 接下来，我们在无batch的情况下对两台机器的分开设置运行编码跟踪，并将观察到的延迟指标与无batch的单台基线设置进行比较。 <a data-reference="fig:kvcacheperfe2e" data-reference-type="ref+Label" href="#fig:kvcacheperfe2e">15</a> 是我们的结果。串行传输KV cache的延迟影响会增加到端对端E的3%，且prompt较大。然而，Splitwise仅获得0.8%的E2E。在面向用户的推理中，KV cache传输开销唯一可见的影响是第二个token的延迟。分拆为第二个token增加了16.5%的延迟，而序列化传输的开销为64%。总体而言，即使在面向用户的推理中，Splitwise 的传输影响几乎难以察觉。</p>
+<figure class="figure" data-latex-placement="t" id="fig:kvcacheperfe2e">
+<img alt="TTFT上的KV cache传输开销，A100和H100编码跟踪的端对端延迟。" loading="lazy" src="../assets/papers/splitwise-full/figure-09.png"/>
+<figcaption class="caption">TTFT上的KV cache传输开销，A100和H100编码跟踪的端对端延迟。</figcaption>
+</figure>
+<h3 id="iso-power-throughput-optimized-clusters">6.2 等功率吞吐量优化的集群</h3>
+<p><strong>集群配置。</strong> 我们使用 <a data-reference="sec:provision" data-reference-type="ref+Label" href="#sec:provision">4.4</a>中描述的方法来配置集群。我们针对特定工作负载（<em>例如</em>对话），在峰值负载下以相同的功率（<em>即</em>等功率）针对每个集群设计。基线时，我们以40台DGX-H100机器的功率为目标峰值功率。对于A100基础，我们可以在相同的功耗预算下容纳70台DGX-A100机器。我们分别将这两种设计token为40P/T和70P/T，因为它们在所有机器中都采用混合batch处理。</p>
+<p>对于编码追踪下的分流集群设计，分叉-AA提供了55台prompt机和15台token池，记为（55P， 15P）。注意，与Baseline-A100类似，Splitwise-AA也提供比Baseline-H100多75%的机器。 <span>16</span> 中的图例显示了编码和对话工作负载下不同的配置选项。请求大小分布反映在机器池的大小中。例如，我们在Splitwise-HH下为编码追踪配置了更多prompt机器（35P，5T），而为会话追踪配置了更多token机（25P，15T）。</p>
+<p><strong>延迟和吞吐量。</strong><span>16</span> 详细解析了每种集群设计在相同功率下，不同输入负载下的所有延迟指标（<em>即</em>等功率）。对于编码追踪（<a data-reference="fig:isopowerfullcode" data-reference-type="ref+Label" href="#fig:isopowerfullcode">[图：isopowerfullcode]），</a>Splitwise-HH、Splitwise-HHcap 和 Splitwise-AA 都比 Baseline-H100 表现更好。随着负载增加，Baseline-H100 由于混合batch和大prompt大小，导致 TBT 较高。虽然分叉式AA可以支持更高的吞吐量，但其TTFT始终高于大多数设计。分流式高居（Splitwise-HA）通过提供低TTFT和高吞吐量的端对端（E2E）来弥合这一差距。Splitwise 中的混合机器池在高负载时变得有用，可以利用所有可用硬件而不出现碎片化。这一优势在Splitwise-HA的P50 TBT图表中表现得尤为明显，达到90 RPS后，H100机器会跳入混合机器池，帮助降低TBT。</p>
+<p>对于对话跟踪（<span>[图：isopowerfullconv]），</span>Splitwise-HHcap 在各方面表现明显更好，包括延迟。这是因为其token生成阶段通常比编码轨迹中持续时间更长，这对token机器来说是有利的。</p>
+<p><strong>对批量token的影响。</strong><span>17</span> 显示了在等功率吞吐量优化的集群中处理不同数量批量激活token所花费时间的累计分布。分布通过在低负载（70 RPS）和高负载（130 RPS）下运行会话跟踪收集。</p>
+<p>在低负载下，所有40台Baseline-H100机器有70%的时间运行 <span class="math inline">\(\leq\)</span>15个token，其余则以混合batch运行并带有大prompt，这会影响TBT和端对端。35台分开-HHprompt机器大多处于闲置状态，激活时会运行更多batch的token。15台分开式HHtoken机在batch 处理方面表现也更好。总体来说，Splitwise机器在70 RPS下有更好的batch和延迟。在高负载下，由于混合池被更多利用，prompt和token机之间的batch大小开始趋于相似。</p>
+<p><strong>剧情简介。</strong><a data-reference="fig:isopowertput" data-reference-type="ref+Label" href="#fig:isopowertput">[图：IsoPowerTPPUT]</a> 总结了所有集群指标中对会话追踪的ISO功率吞吐量优化设计结果。我们以Baseline-A100为基准。与Baseline-A100相比，Splitwise-AA在相同的功耗和成本下，吞吐量提升了2.15<span class="math inline">\(\times\)</span>。分流式高出1.18<span class="math inline">\(\times\)</span>吞吐量，成本降低10%，功耗相同。</p>
+<h3 id="other-cluster-optimizations">6.3 其他簇优化</h3>
+<p>我们已经详细描述了 <em>等功率吞吐量优化的集群</em> 。在群集优化的其余部分，我们只讨论摘要图 </p>
+<p><strong>等成本吞吐量优化。</strong><span>相应图</span> 展示了等价集群的摘要图，包括其空间、吞吐量和功耗。我们发现分叉式AA在相同成本下提供了最佳吞吐量，即比Baseline-H100多1.4<span class="math inline">\(\times\)</span>吞吐量，运行功耗提升25%，空间<span class="math inline">\(\times\)</span> 2%。对于大多数可能不在意功耗和空间，更偏好使用更老旧且易得GPU实现40%高吞吐量的客户来说，这是一个有趣的操作点。相比之下，CSP的优选选择则不那么明确。</p>
+<p><strong>ISO吞吐量的功耗优化。</strong><a data-reference="fig:isotputpower" data-reference-type="ref+Label" href="#fig:isotputpower">[图：isotputpower]</a> 展示了在最小功耗下实现相同吞吐量的集群设计。分流HHcap可以在相同成本和空间下，以25%的功耗实现与Baseline-H100相同的吞吐量。这对CSP来说可能是明显的胜利。</p>
+<p><strong>ISO吞吐量成本优化。</strong><span>[图：isotputcost]</span> 展示了 iso-throughput 设计的成本优化版本。注意，[<span>图：等值功率，图：等值成本]</span>之间的任何齐次设计均未发生变化。这是因为prompt机和token机的成本和功率相同。然而，分流高中和分开高功率控制在成本和功耗优化上得出的效果略有不同。<span>[图：isotputcost]</span> 显示，通过分开式 AA，客户可以以 25% 的成本实现与 Baseline-H100 相同的吞吐量。</p>
+<h3 id="subsec:exp-workload-changes">6.4 工作量变化的影响</h3>
+<p>到目前为止，我们已经在针对特定工作负载模式和模型优化的集群上测试了追踪和模型。为了测试Splitwise的鲁棒性，我们现在在一个用于编码服务的集群上运行会话跟踪，在为BLOOM-176B准备的集群上运行Llama-70B。 <span>20</span> 展示了等功率吞吐量优化簇的这些结果。</p>
+<p><strong>更改工作负载追踪。</strong> 与 <span>相应图</span> 相比，我们发现 <a data-reference="fig:convoncode" data-reference-type="ref+Label" href="#fig:convoncode">相应图</a> 中基线集群大小相近，且不会产生吞吐量或延迟影响。Splitwise-AA和Splitwise-HH配合混合池，能够很好地满足新工作负载的需求，且不会对吞吐量或延迟产生影响。由于Splitwise-HA和Splitwise-HHcap在prompt池和token池中使用不同类型的机器，它们相比各自集群优化的会话跟踪设计，吞吐量下降了7%。请注意，所有Splitwise设计的性能仍然远优于任何Baseline设计。</p>
+<p><strong>更换模型。</strong><span>相应图</span> 表明，由于参数更少，Llama-70B 在同一集群设计中能支持远高于 BLOOM-176B 的吞吐量（<a data-reference="tab:models" data-reference-type="ref+Label" href="#tab:models">3</a>）。所有Splitwise设计在高负载下的性能均优于基线设计。此外，分流HH和分流HHcap始终能实现最佳延迟，即使负载增加。</p>
+<p><strong>摘要。</strong> 基于这两个实验，我们得出结论：Splitwise 可以根据工作负载需求通过智能调度进行变形，并且对大语言模型（LLM）、请求负载和token分布的变化具有鲁棒性。</p>
+<h3 id="cluster-design-for-batch-job">6.5 batch作业的集群设计</h3>
+<p>我们在严格延迟SLO下设计各种集群，即使我们在优化吞吐量时也是如此。对于batch作业来说，这并不需要，因为batch作业可以承受高负载以实现高token生成吞吐量。我们发现，在对等功率吞吐量优化的集群进行压力后，Baseline-A100和Splitwise-AA的每成本吞吐量最高，达到0.89 RPS/$。在高负载时，Splitwise 会退化为 iso-count 基线，因为它开始对混合池中的所有机器进行混合batch。分流-HH和基线-H100同样适用，它们的收益为0.75 RPS/$。</p>
+<h2 id="sec:discussion">7 讨论</h2>
+<p>扩展<strong>到新型号。</strong>尽管模型大小从2B参数到176B甚至更多，所有现代基于Transformer的生成式LLM都具有独特的prompt处理和token生成阶段。同样，即使是像专家混合（MoE）这样的改良和口味也有这些阶段。由于Splitwise完全通过利用这些阶段构建，因此只要工作负载的自回归性质需要这两个阶段，它就适用于所有当前和即将推出的LLM。注意，如<a data-reference="subsec:exp-workload-changes" data-reference-type="ref+Label" href="#subsec:exp-workload-changes">6.4</a>所示，为一个模型配置的Splitwise集群也能高效地服务其他模型。</p>
+<p><strong>替代计算硬件。</strong> 在本研究中，我们使用NVIDIA H100和A100 GPU，因为它们如今在数据中心的LLM推断中被广泛使用。像NVIDIA T4这样的小型数据中心GPU缺乏足够的内存，无法高效运行现代大语言模型。总体而言，我们的方法论适用于任何符合prompt和token阶段计算需求的硬件（包括CPU、FPGA、ASIC）。我们的特征表明，prompt阶段需要高计算能力和内存带宽但内存容量较低，而token阶段则需要中等计算能力，同时内存容量和带宽也高。因此，像AMD MI-250这样的GPU和带HBM的Intel Sapphire-Rapids等CPU可以成为有效的token机。由于我们无法获得此类硬件和/或优化的大语言模型实现，因此将此留待未来的研究。</p>
+<p><strong>prompt机与token机之间的互联。</strong> 在本研究中，我们假设所有设计中prompt机与token机之间存在Infiniband连接（尽管涉及A100时带宽较低）。虽然这在所有同质机器中都很常见，但 Splitwise-HA 在 H100 和 A100 之间通过 Infiniband 连接并不容易获得，尽管技术上是可行的。另一种选择是HPC云，通过CPU或以太网连接，使用RoCE。鉴于我们优化的KV cache传输技术，有助于降低关键延迟，带宽较低 <span class="math inline">\(10\times\)</span> 互连仍可能有益。为了进一步降低带宽利用，我们还可以在传输前压缩KV cache。</p>
+<p><strong>异构prompt/token机。</strong> 尽管Splitwise对多种模型和输入路径具有鲁棒性，但我们认识到，使用不同类型GPU（<em>例如</em>Splitwise-HA）分段数据中心可能会给CSP带来挑战。</p>
+<p><strong>来回交谈。</strong> 如今的大语言模型聊天API要求用户发送迄今为止对话的完整上下文。然而，未来服务可能拥有足够的GPU容量来缓存上下文，避免重新计算。这可能会影响prompt阶段的记忆利用模式，偏离我们的刻画。此外，可能需要将KV cache传回prompt机器，以便为下一次对话请求做好准备。</p>
+<h2 id="sec:related">8 相关工作</h2>
+<p>异<strong>构调度和数据流系统。</strong>此前的研究涉及多种交互服务的异构调度。这些作品利用硬件异构性，在成本、能源和性能等不同目标之间取得平衡。不过，它们是在同一台机器上运行所有工作负载的。关于异构多处理器CPU调度的研究尝试将工作负载异质性与硬件异构性匹配。这些工作利用剖析或在线监控，利用请求长度或硬件性能计数器等指标识别工作负载阶段，并在异构处理器上适当分配。然而，他们并未考虑batch的复杂性。分布式数据流系统协调大规模计算图，旨在提供通用可编程性。Splitwise 下的 LLM 推断可以看作一个有两阶段的静态计算图，因此可以通过分布式框架实现，这些框架能提供高效的 GPU 抽象。Splitwise 与这些作品不同之处在于它采用了专门的两阶段生成式大语言模型推理设计，并利用了相位感知资源管理和高效的batch。</p>
+<p><strong>模拟服务系统。</strong> LLM推理服务是一个快速发展的领域，近期已有多项工作优化batch、调度和内存使用。此前的研究也提出使用CPU和计算能力较低的设备来进行LLM服务。这些方法在prompt和token阶段都使用同一台机器。通过分流，他们可以通过拆相来提升吞吐量和延迟。</p>
+<p>此前在视频和机器学习服务方面的工作主要集中在延迟约束下调度模型链与数据依赖。这些调度器依赖模型剖析来做出高效的分配决策并跨机器管理请求。推荐系统推断在模型内部及模型间表现出计算/内存异质性。以往的工作利用这种异构性，选择性地调度CPU与加速器之间的请求，与互补的内存使用共址模型，并在异构硬件资源上划分计算/内存。同样，Splitwise 利用了 LLM 推理请求中的异构性。然而，由于LLM工作负载特性和需求的差异，它采用了不同的优化方法。</p>
+<h2 id="sec:conclusion">9 结论</h2>
+<p>我们对LLM推断的prompt计算和token生成阶段进行了广泛表征，以揭示它们在系统利用模式上的差异。基于我们的洞察，我们设计了Splitwise，将这些阶段分离到不同的机器上，并实现阶段特定的资源管理。利用Splitwise，我们探索了针对吞吐量、成本和功耗优化的集群设计，并证明即使工作负载变化，它们依然表现出色。在性能SLO下，分组集群在相同成本下以15%的功耗实现 <span class="math inline">\(1.76\times\)</span> 更高的吞吐量，或者在相同成本和功耗下 <span class="math inline">\(2.35\times\)</span> 更高的吞吐量。</p>
+<h2 class="unnumbered" id="acknowledgements">致谢</h2>
+<p>感谢评审者们的宝贵反馈。感谢切坦·班萨尔、斯里坎特·巴尔德瓦杰、苏里亚·卡利瓦尔丹、安库尔·马利克、迪帕克·纳拉亚南和阿玛尔·帕尼沙伊带来的深刻讨论。Pratyush Patel 部分获得了美国国家科学基金会（NSF）CNS-2104548 和 VMware 的研究资助。</p>
+<h2 id="sec:artifact">文物附录</h2>
+<h3 id="abstract">9.1 摘要</h3>
+<p>我们开源了评估Splitwise所需的关键组件;这些工具也可以被重新利用，用于评估未来的大语言模型推理服务系统。我们的文物包括：</p>
+<ul>
+<li><p>生产线追踪来自 Microsoft Azure 的两个 LLM 推理服务。</p></li>
+<li><p>Splitwise KV 缓存传输机制的原型实现，在 vLLM 中。</p></li>
+<li><p>SplitwiseSim，一款用于评估模型在LLM推理集群中的服务的离散事件模拟器。</p></li>
+</ul>
+<p>由于硬件供应有限，仅对trace和SplitwiseSim进行了伪影功能测试。</p>
+<h3 id="artifact-check-list-meta-information">9.2 文物检查表（元信息）</h3>
+<ul>
+<li><p><span><strong>数据集：</strong> </span> 生产痕迹作为文物的一部分可用。</p></li>
+<li><p><span><strong>运行时环境：</strong> </span> Linux / Ubuntu。</p></li>
+<li><p><span><strong>硬件：</strong> </span> 两台机器通过GPU连接，Infiniband用于vLLM原型（<em>例如</em> NVIDIA DGX-A100、NVIDIA DGX-H100）。x86-64 CPU 机器用于 SplitwiseSim。</p></li>
+<li><p><span><strong>公开可得吗？</strong> </span> 是的。</p></li>
+<li><p>代码<span><strong>许可（如果公开的话）？</strong> </span>麻省理工。</p></li>
+<li><p><span><strong>数据许可（如果公开的话）？</strong></span> 抄送。</p></li>
+<li><p><span><strong>存档（提供DOI）？：</strong></span> 10.5281/zenodo.11003049。</p></li>
+</ul>
+<h3 id="description">9.3 描述</h3>
+<p><strong>如何访问。</strong> 整件文物作为档案可在Zenodo： <a class="uri" href="https://doi.org/10.5281/zenodo.11003049">https://doi.org/10.5281/zenodo.11003049</a> 上查阅。各组件也可在网上购买，具体如下：</p>
+<ul>
+<li><p>生产跟踪可以从 Azure 公共数据集的 GitHub 仓库下载。</p></li>
+<li><p>KV cache传输原型可从vLLM的GitHub仓库下载，目前可通过拉取请求访问。</p></li>
+<li><p>SplitwiseSim 及其相关的实验和绘图脚本，可以从另一个 GitHub 仓库下载。</p></li>
+</ul>
+<p>硬件<strong>依赖。</strong>KV cache传输原型需要两台GPU机器通过Infiniband连接，如NVIDIA DGX-A100或NVIDIA DGX-H100。SplitwiseSim需要一台标准x86-64 CPU机器;多台机器可以用于并行化仿真运行。</p>
+<p><strong>软件依赖。</strong> KV cache传输原型基于vLLM和MSCCL++构建。SplitwiseSim依赖于一小部分公开可用的Python包，这些包可以通过附带 <code>requirements.txt</code>的安装。</p>
+<p><strong>数据集。</strong> Microsoft Azure 的编码和对话追踪作为工件发布的一部分可在线获取。</p>
+<h3 id="installation-and-experiment-workflow">9.4 安装与实验工作流程</h3>
+<p>请参阅工件中的 README 文件以获取安装和使用说明。</p>
+<h3 id="methodology">9.5 方法论</h3>
+<p>提交、审核和徽章获取方法：</p>
+<ul>
+<li><p><a class="uri" href="https://www.acm.org/publications/policies/artifact-review-and-badging-current">https://www.acm.org/publications/policies/artifact-review-and-badging-current</a></p></li>
+<li><p><a class="uri" href="http://cTuning.org/ae/submission-20201122.html">http://cTuning.org/ae/submission-20201122.html</a></p></li>
+<li><p><a class="uri" href="http://cTuning.org/ae/reviewing-20201122.html">http://cTuning.org/ae/reviewing-20201122.html</a></p></li>
+</ul>
+<h2>完整图表补充</h2><p>以下图表在原 LaTeX 中由自定义宏或多子图环境生成，正文转换时未能自动嵌入，现按源文件顺序补全。</p><figure class="figure" id="fig:prompt_sizes"><img alt="即时和生成token的分发。" loading="lazy" src="../assets/papers/splitwise-full/figure-931.png"/><img alt="即时和生成token的分发。" loading="lazy" src="../assets/papers/splitwise-full/figure-932.png"/><figcaption class="caption">即时和生成token的分发。</figcaption></figure><figure class="figure" id="fig:characterization_TTFT"><img alt="BLOOM-176B和Llama-70B在DGX-H100上的TTFT、TBT和E2E。" loading="lazy" src="../assets/papers/splitwise-full/figure-951.png"/><img alt="BLOOM-176B和Llama-70B在DGX-H100上的TTFT、TBT和E2E。" loading="lazy" src="../assets/papers/splitwise-full/figure-952.png"/><img alt="BLOOM-176B和Llama-70B在DGX-H100上的TTFT、TBT和E2E。" loading="lazy" src="../assets/papers/splitwise-full/figure-953.png"/><figcaption class="caption">BLOOM-176B和Llama-70B在DGX-H100上的TTFT、TBT和E2E。</figcaption></figure><figure class="figure" id="fig:char_tput_prompt"><img alt="batch对两个LLM吞吐量的影响。" loading="lazy" src="../assets/papers/splitwise-full/figure-961.png"/><img alt="batch对两个LLM吞吐量的影响。" loading="lazy" src="../assets/papers/splitwise-full/figure-962.png"/><figcaption class="caption">batch对两个LLM吞吐量的影响。</figcaption></figure><figure class="figure" id="fig:char_power_prompt"><img alt="最大和平均功耗利用率，batch size的变化。" loading="lazy" src="../assets/papers/splitwise-full/figure-981.png"/><img alt="最大和平均功耗利用率，batch size的变化。" loading="lazy" src="../assets/papers/splitwise-full/figure-982.png"/><figcaption class="caption">最大和平均功耗利用率，batch size的变化。</figcaption></figure><figure class="figure" id="fig:char_power_cap_prompt"><img alt="功率上限对prompt和token生成延迟的影响，以及在最大batch大小下。" loading="lazy" src="../assets/papers/splitwise-full/figure-991.png"/><img alt="功率上限对prompt和token生成延迟的影响，以及在最大batch大小下。" loading="lazy" src="../assets/papers/splitwise-full/figure-992.png"/><figcaption class="caption">功率上限对prompt和token生成延迟的影响，以及在最大batch大小下。</figcaption></figure><figure class="figure" id="fig:naivekv"><img alt="优化Splitwise中的KV cache传输。" loading="lazy" src="../assets/papers/splitwise-full/figure-1011.png"/><img alt="优化Splitwise中的KV cache传输。" loading="lazy" src="../assets/papers/splitwise-full/figure-1012.png"/><figcaption class="caption">优化Splitwise中的KV cache传输。</figcaption></figure><figure class="figure" id="fig:isopowerfullcode"><img alt="跨输入负载的延迟指标，适用于等功率吞吐量优化集群。虚线红线表示SLO。" loading="lazy" src="../assets/papers/splitwise-full/figure-1061.png"/><img alt="跨输入负载的延迟指标，适用于等功率吞吐量优化集群。虚线红线表示SLO。" loading="lazy" src="../assets/papers/splitwise-full/figure-1062.png"/><figcaption class="caption">跨输入负载的延迟指标，适用于等功率吞吐量优化集群。虚线红线表示SLO。</figcaption></figure><figure class="figure" id="fig:batchlowtput"><img alt="在不同batchtoken大小下累积时间分布，实现等功率吞吐量优化设计。" loading="lazy" src="../assets/papers/splitwise-full/figure-1071.png"/><img alt="在不同batchtoken大小下累积时间分布，实现等功率吞吐量优化设计。" loading="lazy" src="../assets/papers/splitwise-full/figure-1072.png"/><figcaption class="caption">在不同batchtoken大小下累积时间分布，实现等功率吞吐量优化设计。</figcaption></figure><figure class="figure" id="fig:isopowertput"><img alt="吞吐量优化集群设计总结。" loading="lazy" src="../assets/papers/splitwise-full/figure-1081.png"/><img alt="吞吐量优化集群设计总结。" loading="lazy" src="../assets/papers/splitwise-full/figure-1082.png"/><figcaption class="caption">吞吐量优化集群设计总结。</figcaption></figure><figure class="figure" id="fig:isotputpower"><img alt="等吞吐量集群设计总结。" loading="lazy" src="../assets/papers/splitwise-full/figure-1091.png"/><img alt="等吞吐量集群设计总结。" loading="lazy" src="../assets/papers/splitwise-full/figure-1092.png"/><figcaption class="caption">等吞吐量集群设计总结。</figcaption></figure><figure class="figure" id="fig:convoncode"><img alt="在为另一个工作负载设计的集群上运行工作负载时的延迟影响。虚线红线表示SLO。" loading="lazy" src="../assets/papers/splitwise-full/figure-1101.png"/><img alt="在为另一个工作负载设计的集群上运行工作负载时的延迟影响。虚线红线表示SLO。" loading="lazy" src="../assets/papers/splitwise-full/figure-1102.png"/><figcaption class="caption">在为另一个工作负载设计的集群上运行工作负载时的延迟影响。虚线红线表示SLO。</figcaption></figure><h2>参考文献</h2><div class="refs-note">
+<p><span>10</span> url@samestyle</p>
+<p>=plus 4minus <span>Add Splitwise Implementation to vLLM</span>. <span>GitHub</span>. [Online]. Available: https://github.com/vllm-project/vllm/pull/2809</p>
+<p>=plus 4minus <span>AMD Instinct™ MI250 Accelerator</span>. [Online]. Available: https://www.amd.com/en/products/server-accelerators/instinct-mi250</p>
+<p>=plus 4minus <span>Azure InfiniBand HPC VMs</span>. [Online]. Available: https://learn.microsoft.com/en-us/azure/virtual-machines/overview-hb-hc</p>
+<p>=plus 4minus <span>Azure Public Dataset: Azure LLM Inference Trace 2023</span>. <span>GitHub</span>. [Online]. Available: https://github.com/Azure/AzurePublicDataset/blob/master/AzureLLMInferenceDataset2023.md</p>
+<p>=plus 4minus <span>CoreWeave - Specialized Cloud Provider</span>. [Online]. Available: https://www.coreweave.com</p>
+<p>=plus 4minus <span>Google Assistant with Bard</span>. [Online]. Available: https://blog.google/products/assistant/google-assistant-bard-generative-ai/</p>
+<p>=plus 4minus <span>HPC Interconnect on CoreWeave Cloud</span>. [Online]. Available: https://docs.coreweave.com/networking/hpc-interconnect</p>
+<p>=plus 4minus <span>Intel BigDL-LLM</span>. [Online]. Available: https://github.com/intel-analytics/BigDL</p>
+<p>=plus 4minus <span>Intel Sapphire Rapids with HBM</span>. [Online]. Available: https://www.anandtech.com/show/17422/intel-showcases-sapphire-rapids-plus-hbm-xeon-performance-isc-2022</p>
+<p>=plus 4minus <span>Microsoft Azure ND A100 v4-series </span>. [Online]. Available: https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series</p>
+<p>=plus 4minus <span>MSCCL++: A GPU-driven communication stack for scalable AI applications</span>. [Online]. Available: https://github.com/microsoft/mscclpp</p>
+<p>=plus 4minus <span>Numenta Inference on CPUs</span>. [Online]. Available: https://www.servethehome.com/numenta-has-the-secret-to-ai-inference-on-cpus-like-the-intel-xeon-max/</p>
+<p>=plus 4minus <span>NVIDIA Accelerated InfiniBand Solutions</span>. [Online]. Available: https://www.nvidia.com/en-us/networking/products/infiniband/</p>
+<p>=plus 4minus <span>NVIDIA Chip Shortage</span>. [Online]. Available: https://www.wired.com/story/nvidia-chip-shortages-leave-ai-startups-scrambling-for-computing-power/</p>
+<p>=plus 4minus <span>NVIDIA DGX A100: Universal System for AI Infrastructure</span>. [Online]. Available: https://resources.nvidia.com/en-us-dgx-systems/dgx-ai</p>
+<p>=plus 4minus <span>NVIDIA DGX H100</span>. [Online]. Available: https://www.nvidia.com/en-us/data-center/dgx-h100/</p>
+<p>=plus 4minus <span>NVIDIA Hopper GPUs Expand Reach as Demand for AI Grows</span>. [Online]. Available: https://nvidianews.nvidia.com/news/nvidia-hopper-gpus-expand-reach-as-demand-for-ai-grows</p>
+<p>=plus 4minus <span>OpenAI ChatGPT APIs</span>. [Online]. Available: https://openai.com/blog/introducing-chatgpt-and-whisper-apis</p>
+<p>=plus 4minus <span>Power Availability Stymies Datacenter Growth</span>. [Online]. Available: https://www.networkworld.com/article/972483/power-availability-stymies-data-center-growth.</p>
+<p>=plus 4minus <span>SplitwiseSim: LLM Serving Cluster Simulator</span>. <span>GitHub</span>. [Online]. Available: https://github.com/Mutinifni/splitwise-sim</p>
+<p>=plus 4minus <span>The New Bing</span>. [Online]. Available: https://www.microsoft.com/en-us/edge/features/the-new-bing?form=MT00D8</p>
+<p>=plus 4minus <span>TurboMind Inference Server</span>. [Online]. Available: https://github.com/InternLM/lmdeploy</p>
+<p>A. Agrawal, A. Panwar, J. Mohan, N. Kwatra, B. S. Gulavani, and R. Ramjee, “<span>SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills</span>,” <em>arXiv preprint arXiv:2308.16369</em>, 2023.</p>
+<p>H. Albahar, S. Dongare, Y. Du, N. Zhao, A. K. Paul, and A. R. Butt, “<span>SchedTune: A heterogeneity-aware GPU Scheduler for Deep Learning</span>,” in <em>CCGrid</em>, 2022.</p>
+<p>R. Y. Aminabadi, S. Rajbhandari, A. A. Awan, C. Li, D. Li, E. Zheng, O. Ruwase, S. Smith, M. Zhang, J. Rasley, and Y. He, “<span>DeepSpeed-Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale</span>,” in <em>SC</em>, 2022.</p>
+<p>L. A. Barroso, U. Hölzle, and P. Ranganathan, “<span>The Datacenter as a Computer: Designing Warehouse-Scale Machines</span>,” <em>Synthesis Lectures on Computer Architecture</em>, 2018.</p>
+<p>E. Boutin, J. Ekanayake, W. Lin, B. Shi, J. Zhou, Z. Qian, M. Wu, and L. Zhou, “<span>Apollo: Scalable and Coordinated Scheduling for Cloud-scale Computing</span>,” in <em>OSDI</em>, 2014.</p>
+<p>T. B. Brown, B. Mann, N. Ryder, M. Subbiah, J. Kaplan, P. Dhariwal, A. Neelakantan, P. Shyam, G. Sastry, A. Askell, S. Agarwal, A. Herbert-Voss, G. Krueger, T. Henighan, R. Child, A. Ramesh, D. M. Ziegler, J. Wu, C. Winter, C. Hesse, M. Chen, E. Sigler, M. Litwin, S. Gray, B. Chess, J. Clark, C. Berner, S. McCandlish, A. Radford, I. Sutskever, and D. Amodei, “<span>Language Models are Few-Shot Learners</span>,” <em>arXiv preprint arXiv:2005.14165</em>, 2020.</p>
+<p>J. Chen and L. K. John, “<span>Efficient Program Scheduling for Heterogeneous Multi-core Processors</span>,” in <em>DAC</em>, 2009.</p>
+<p>Y. Choi, J. Kim, and M. Rhu, “<span>Hera: A Heterogeneity-Aware Multi-Tenant Inference Server for Personalized Recommendations</span>,” <em>arXiv preprint arXiv:2302.11750</em>, 2023.</p>
+<p>D. Crankshaw, G.-E. Sela, X. Mo, C. Zumar, I. Stoica, J. Gonzalez, and A. Tumanov, “<span>InferLine: Latency-aware Provisioning and Scaling for Prediction Serving Pipelines</span>,” in <em>SoCC</em>, 2020.</p>
+<p>T. Dao, D. Fu, S. Ermon, A. Rudra, and C. R<span>é</span>, “<span>FlashAttention: Fast and Memory-efficient Exact Attention with IO-Awareness</span>,” in <em>NeurIPS</em>, 2022.</p>
+<p>=plus 4minus <span>David Patterson</span>. <span>Domain Specific Architectures for Deep Neural Networks: Three Generations of Tensor Processing Units (TPUs)</span>. <span>Allen School Distinguished Lecture</span>. [Online]. Available: https://www.youtube.com/watch?v=VCScWh966u4</p>
+<p>J. Dean and S. Ghemawat, “<span>MapReduce: Simplified Data Processing on Large Clusters</span>,” <em>Communications of the ACM</em>, 2008.</p>
+<p>T. Dettmers, M. Lewis, Y. Belkada, and L. Zettlemoyer, “<span>LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale</span>,” <em>arXiv preprint arXiv:2208.07339</em>, 2022.</p>
+<p>J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “<span>BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding</span>,” in <em>NAACL</em>, 2019.</p>
+<p>A. Gujarati, R. Karimi, S. Alzayat, W. Hao, A. Kaufmann, Y. Vigfusson, and J. Mace, “<span>Serving DNNs like Clockwork: Performance Predictability from the Bottom Up</span>,” in <em>OSDI</em>, 2020.</p>
+<p>U. Gupta, S. Hsia, V. Saraph, X. Wang, B. Reagen, G.-Y. Wei, H.-H. S. Lee, D. Brooks, and C.-J. Wu, “<span>DeepRecSys: A System for Optimizing End-to-end At-scale Neural Recommendation Inference</span>,” in <em>ISCA</em>, 2020.</p>
+<p>V. Gupta, M. <span>Harchol Balter</span>, K. Sigman, and W. Whitt, “<span>Analysis of Join-the-Shortest-Queue Routing for Web Server Farms</span>,” <em>Performance Evaluation</em>, 2007.</p>
+<p>M. E. Haque, Y. H. Eom, Y. He, S. Elnikety, R. Bianchini, and K. S. McKinley, “<span>Few-to-Many: Incremental Parallelism for Reducing Tail Latency in Interactive Services</span>,” <em>ACM SIGPLAN Notices</em>, 2015.</p>
+<p>M. E. Haque, Y. He, S. Elnikety, T. D. Nguyen, R. Bianchini, and K. S. McKinley, “<span>Exploiting Heterogeneity for Tail Latency and Energy Efficiency</span>,” in <em>MICRO</em>, 2017.</p>
+<p>K. Hong, G. Dai, J. Xu, Q. Mao, X. Li, J. Liu, K. Chen, H. Dong, and Y. Wang, “<span>FlashDecoding++: Faster Large Language Model Inference on GPUs</span>,” <em>arXiv preprint arXiv:2311.01282</em>, 2023.</p>
+<p>Y. Hu, R. Ghosh, and R. Govindan, “<span>Scrooge: A Cost-effective Deep Learning Inference System</span>,” in <em>SoCC</em>, 2021.</p>
+<p>=plus 4minus Huggingface. <span>Text Generation Inference (TGI)</span>. [Online]. Available: https://github.com/huggingface/text-generation-inference</p>
+<p>R. Hwang, T. Kim, Y. Kwon, and M. Rhu, “<span>Centaur: A Chiplet-based, Hybrid Sparse-Dense Accelerator for Personalized Recommendations</span>,” in <em>ISCA</em>, 2020.</p>
+<p>M. Isard, M. Budiu, Y. Yu, A. Birrell, and D. Fetterly, “<span>Dryad: Distributed Data-Parallel Programs from Sequential Building Blocks</span>,” in <em>EuroSys</em>, 2007.</p>
+<p>M. Javaheripi and S. Bubeck, “<span>Phi-2: The Surprising Power of Small Language Models</span>,” <em>Microsoft Research Blog</em>, 2023.</p>
+<p>W. Jiang, Z. He, S. Zhang, K. Zeng, L. Feng, J. Zhang, T. Liu, Y. Li, J. Zhou, C. Zhang <em>et al.</em>, “<span>FleetRec: Large-scale Recommendation Inference on Hybrid GPU-FPGA Clusters</span>,” in <em>KDD</em>, 2021.</p>
+<p>R. S. Kannan, L. Subramanian, A. Raju, J. Ahn, J. Mars, and L. Tang, “<span>GrandSLAm: Guaranteeing SLAs for Jobs in Microservices Execution Frameworks</span>,” in <em>EuroSys</em>, 2019.</p>
+<p>R. Kumar, K. I. Farkas, N. P. Jouppi, P. Ranganathan, and D. M. Tullsen, “<span>Single-ISA Heterogeneous Multi-core Architectures: The Potential for Processor Power Reduction</span>,” in <em>MICRO</em>, 2003.</p>
+<p>W. Kwon, Z. Li, S. Zhuang, Y. Sheng, L. Zheng, C. H. Yu, J. E. Gonzalez, H. Zhang, and I. Stoica, “<span>Efficient Memory Management for Large Language Model Serving with PagedAttention</span>,” in <em>SOSP</em>, 2023.</p>
+<p>Y. Kwon, Y. Lee, and M. Rhu, “<span>TensorDIMM: A Practical Near-Memory Processing Architecture for Embeddings and Tensor Operations in Deep Learning</span>,” in <em>MICRO</em>, 2019.</p>
+<p>Z. Li, L. Zheng, Y. Zhong, V. Liu, Y. Sheng, X. Jin, Y. Huang, Z. Chen, H. Zhang, J. E. Gonzalez, and I. Stoica, “<span>AlpaServe: Statistical Multiplexing with Model Parallelism for Deep Learning Serving</span>,” in <em>OSDI</em>, 2023.</p>
+<p>Y. Liu, M. Ott, N. Goyal, J. Du, M. Joshi, D. Chen, O. Levy, M. Lewis, L. Zettlemoyer, and V. Stoyanov, “<span>RoBERTa: A Robustly Optimized BERT Pretraining Approach</span>,” <em>arXiv preprint arXiv:1907.11692</em>, 2019.</p>
+<p>Z. Liu, J. Wang, T. Dao, T. Zhou, B. Yuan, Z. Song, A. Shrivastava, C. Zhang, Y. Tian, C. Re, and B. Chen, “<span>Deja Vu: Contextual Sparsity for Efficient LLMs at Inference Time</span>,” in <em>ICML</em>, 2023.</p>
+<p>=plus 4minus Meta. <span>Introducing the AI Research SuperCluster — Meta’s Cutting-Edge AI Supercomputer for AI Research</span>. [Online]. Available: https://ai.facebook.com/blog/ai-rsc/</p>
+<p>=plus 4minus “<span>Azure OpenAI Service</span>,” Microsoft Azure, 2022. [Online]. Available: https://azure.microsoft.com/en-us/products/ai-services/openai-service</p>
+<p>R. Mittal, A. Shpiner, A. Panda, E. Zahavi, A. Krishnamurthy, S. Ratnasamy, and S. Shenker, “<span>Revisiting Network Support for RDMA</span>,” <em>arXiv preprint arXiv:1806.08159</em>, 2018.</p>
+<p>P. Moritz, R. Nishihara, S. Wang, A. Tumanov, R. Liaw, E. Liang, M. Elibol, Z. Yang, W. Paul, M. I. Jordan <em>et al.</em>, “<span>Ray: A Distributed Framework for Emerging AI Applications</span>,” in <em>OSDI</em>, 2018.</p>
+<p>=plus 4minus OpenAI. <span>Scaling Kubernetes to 7,500 Nodes</span>. [Online]. Available: https://openai.com/research/scaling-kubernetes-to-7500-nodes</p>
+<p>K. Ousterhout, P. Wendell, M. Zaharia, and I. Stoica, “<span>Sparrow: Distributed, Low Latency Scheduling</span>,” in <em>SOSP</em>, 2013.</p>
+<p>P. Patel, E. Choukse, C. Zhang, <span>Í</span>. Goiri, B. Warrier, N. Mahalingam, and R. Bianchini, “<span>POLCA: Power Oversubscription in LLM Cloud Providers</span>,” <em>arXiv preprint arXiv:2308.12908</em>, 2023.</p>
+<p>P. Patel, E. Choukse, C. Zhang, <span>Í</span>. Goiri, B. Warrier, N. Mahalingam, and R. Bianchini, “<span>Characterizing Power Management Opportunities for LLMs in the Cloud</span>,” in <em>ASPLOS</em>, 2024.</p>
+<p>P. Patel, Z. Gong, S. Rizvi, E. Choukse, P. Misra, T. Anderson, and A. Sriraman, “<span>Towards Improved Power Management in Cloud GPUs</span>,” in <em>IEEE CAL</em>, 2023.</p>
+<p>P. Patel, K. Lim, K. Jhunjhunwalla, A. Martinez, M. Demoulin, J. Nelson, I. Zhang, and T. Anderson, “<span>Hybrid Computing for Interactive Datacenter Applications</span>,” <em>arXiv preprint arXiv:2304.04488</em>, 2023.</p>
+<p>R. Pope, S. Douglas, A. Chowdhery, J. Devlin, J. Bradbury, J. Heek, K. Xiao, S. Agrawal, and J. Dean, “<span>Efficiently Scaling Transformer Inference</span>,” in <em>MLSys</em>, 2023.</p>
+<p>A. Radford, J. Wu, R. Child, D. Luan, D. Amodei, and I. Sutskever, “<span>Language Models are Unsupervised Multitask Learners</span>,” <em>OpenAI blog</em>, 2019.</p>
+<p>F. Romero, Q. Li, N. J. Yadwadkar, and C. Kozyrakis, “<span>INFaaS: Automated Model-less Inference Serving</span>,” in <em>USENIX ATC</em>, 2021.</p>
+<p>T. L. Scao, A. Fan, C. Akiki, E. Pavlick, S. Ilić, D. Hesslow, R. Castagné, A. S. Luccioni, F. Yvon, M. Gallé, J. Tow, A. M. Rush, S. Biderman, A. Webson, P. S. Ammanamanchi, T. Wang, B. Sagot, N. Muennighoff, A. V. del Moral, O. Ruwase, R. Bawden, S. Bekman, A. McMillan-Major, I. Beltagy, H. Nguyen, L. Saulnier, S. Tan, P. O. Suarez, V. Sanh, H. Laurençon, Y. Jernite, J. Launay, M. Mitchell, and C. Raffel, “<span>BLOOM: A 176B-Parameter Open-access Multilingual Language Model</span>,” <em>arXiv preprint arXiv:2211.05100</em>, 2022.</p>
+<p>=plus 4minus P. Schmid. <span>Fine-tune FLAN-T5 XL/XXL using DeepSpeed &amp; Hugging Face Transformers</span>. [Online]. Available: https://www.philschmid.de/fine-tune-flan-t5-deepspeed</p>
+<p>=plus 4minus P. Schmid, O. Sanseviero, P. Cuenca, and L. Tunstall. <span>Llama 2 is here - Get it on Hugging Face</span>. [Online]. Available: https://huggingface.co/blog/llama2</p>
+<p>M. Schwarzkopf, A. Konwinski, M. Abd-El-Malek, and J. Wilkes, “<span>Omega: Flexible, Scalable Schedulers for Large Compute Clusters</span>,” in <em>EuroSys</em>, 2013.</p>
+<p>Y. Sheng, S. Cao, D. Li, B. Zhu, Z. Li, D. Zhuo, J. E. Gonzalez, and I. Stoica, “<span>Fairness in Serving Large Language Models</span>,” <em>arXiv preprint arXiv:2401.00588</em>, 2023.</p>
+<p>Y. Sheng, L. Zheng, B. Yuan, Z. Li, M. Ryabinin, B. Chen, P. Liang, C. R<span>é</span>, I. Stoica, and C. Zhang, “<span>FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU</span>,” in <em>ICML</em>, 2023.</p>
+<p>K. Shvachko, H. Kuang, S. Radia, and R. Chansler, “<span>The Hadoop Distributed File System</span>,” in <em>MSST</em>, 2010.</p>
+<p>K. Van Craeynest, A. Jaleel, L. Eeckhout, P. Narvaez, and J. Emer, “<span>Scheduling Heterogeneous Multi-cores Through Performance Impact Estimation (PIE)</span>,” <em>ACM SIGARCH Computer Architecture News</em>, 2012.</p>
+<p>A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, <span>Ł</span>. Kaiser, and I. Polosukhin, “<span>Attention is All You Need</span>,” in <em>NeurIPS</em>, 2017.</p>
+<p>T. Wolf, L. Debut, V. Sanh, J. Chaumond, C. Delangue, A. Moi, P. Cistac, T. Rault, R. Louf, M. Funtowicz, J. Davison, S. Shleifer, P. v. Platen, C. Ma, Y. Jernite, J. Plu, C. Xu, T. L. Scao, S. Gugger, M. Drame, Q. Lhoest, and A. M. Rush, “<span>Transformers: State-of-the-art Natural Language Processing</span>,” in <em>EMNLP</em>, 2020.</p>
+<p>B. Wu, Y. Zhong, Z. Zhang, G. Huang, X. Liu, and X. Jin, “<span>Fast Distributed Inference Serving for Large Language Models</span>,” <em>arXiv preprint arXiv:2305.05920</em>, 2023.</p>
+<p>H. Yang, Q. Chen, M. Riaz, Z. Luan, L. Tang, and J. Mars, “<span>PowerChief: Intelligent Power Allocation for Multi-stage Applications to Improve Responsiveness on Power Constrained CMP</span>,” in <em>ISCA</em>, 2017.</p>
+<p>G.-I. Yu, J. S. Jeong, G.-W. Kim, S. Kim, and B.-G. Chun, “<span>Orca: A Distributed Serving System for Transformer-Based Generative Models</span>,” in <em>OSDI</em>, 2022.</p>
+<p>M. Zaharia, M. Chowdhury, T. Das, A. Dave, J. Ma, M. McCauly, M. J. Franklin, S. Shenker, and I. Stoica, “<span>Resilient Distributed Datasets: A Fault-Tolerant Abstraction for In-Memory Cluster Computing</span>,” in <em>NSDI</em>, 2012.</p>
+<p>C. Zhang, M. Yu, W. Wang, and F. Yan, “<span>MArk: Exploiting Cloud Services for Cost-Effective, SLO-Aware Machine Learning Inference Serving</span>,” in <em>USENIX ATC</em>, 2019.</p>
+<p>S. Zhang, S. Roller, N. Goyal, M. Artetxe, M. Chen, S. Chen, C. Dewan, M. Diab, X. Li, X. V. Lin <em>et al.</em>, “<span>OPT: Open Pre-trained Transformer Language Models</span>,” <em>arXiv preprint arXiv:2205.01068</em>, 2022.</p>
+<p>W. Zhu, “<span>Analysis of JSQ Policy on Soft Real-time Scheduling in Cluster</span>,” in <em>HPCAsia</em>, 2000.</p>
+</div><div class="qa-link"><a href="paper-qa/splitwise-2311.18677-qa.html">继续阅读 Q1-Q7 详细问答</a></div></section></main></body></html>

@@ -1,79 +1,1717 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FlexGen：单 GPU 上的高吞吐大语言模型生成式推理：中文精读与校订</title>
-<style>
-:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
-*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
-h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
-h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
-.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
-.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
-@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+<!DOCTYPE html>
 
-.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-34px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a{color:var(--accent);text-decoration:none}.paper-nav a:hover{text-decoration:underline}
-.overview{margin:0 0 28px;padding:20px 22px;border:1px solid #cddbe6;border-radius:8px;background:linear-gradient(135deg,#f7fbfd,#fff)}.overview h2{margin:0 0 10px;padding:0;font-size:21px}.overview ul{margin-bottom:0}.doing{font-size:18px;line-height:1.75}.equation{margin:24px 0;padding:18px 20px;border-left:4px solid var(--accent);background:var(--soft);overflow-x:auto}.equation .math{margin:6px 0 10px;text-align:center;font-size:1.05em}.source-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}.source-actions a{display:inline-block;padding:8px 12px;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:14px}.source-actions a.primary{background:var(--accent);color:#fff}.figure img{width:auto;max-height:760px}.revision-note{color:var(--muted);font-size:13px}.qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.qa-links a{padding:5px 9px;border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:13px}
-@media(max-width:820px){.paper-nav{margin:-8px 0 24px}.overview{padding:16px}.doing{font-size:16px}}
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>FlexGen：单 GPU 上的大语言模型高吞吐生成式推理：中文全文翻译</title><style>
+:root{--ink:#161616;--muted:#5f6368;--rule:#d9dde3;--paper:#fff;--bg:#f4f6f8;--accent:#184c7f;--soft:#f8fafc}
+html{font-size:16px;scroll-behavior:smooth}*,*::before,*::after{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.76;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:70px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}h1{margin:0 auto 22px;max-width:900px;text-align:center;font-size:32px;line-height:1.28;font-weight:700;overflow-wrap:anywhere;text-wrap:balance}.authors{margin:0 auto 18px;max-width:900px;text-align:center;font-size:14px;line-height:1.6}.meta{margin:0 0 28px;color:var(--muted);text-align:center;font-size:13px}.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-35px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a,.qa-link a{color:var(--accent);text-decoration:none}.paper-nav a:hover,.qa-link a:hover{text-decoration:underline}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 13px;padding-top:4px;font-size:24px}h3{margin:27px 0 10px;font-size:20px}h4{margin:21px 0 8px;font-size:17px}p{margin:0 0 14px;overflow-wrap:anywhere}ul,ol{margin:0 0 17px 1.5em;padding:0}li{margin:0 0 9px;padding-left:.1em}.abstract,.keywords{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}.keywords{padding-top:11px;padding-bottom:11px}.qa-link{margin:0 0 26px;padding:13px 16px;border:1px solid #cbd8e4;border-radius:5px;background:#fbfdff;font-family:"Microsoft YaHei",sans-serif;text-align:center}.figure{break-inside:avoid;max-width:820px;margin:28px auto 34px;text-align:center}.figure img{display:block;max-width:100%;height:auto;max-height:780px;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:800px;margin:0 auto;font-size:14px;font-weight:700;line-height:1.55;text-align:left;color:#202124}table{width:100%;margin:22px auto 30px;border-collapse:collapse;font-size:14px;line-height:1.55;display:block;overflow-x:auto}th,td{padding:7px 9px;border:1px solid #d8dde3;vertical-align:top}th{background:#f4f7fa}.math.display{display:block;margin:20px auto;padding:12px 8px;overflow-x:auto;text-align:center}.math.inline{white-space:nowrap}.footnotes{margin-top:32px;padding-top:16px;border-top:1px solid var(--rule);font-size:13px;color:#424850}.refs-note{white-space:pre-wrap;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-size:13.5px;line-height:1.55}.translation-note{margin:20px 0;padding:14px 16px;border-left:4px solid #8a6d3b;background:#fffaf0;font-size:14px}.citation:empty{display:none}code{font-family:Consolas,"Courier New",monospace;font-size:.9em}.algorithm{margin:22px 0;padding:15px 17px;border:1px solid #d9e0e7;background:#fbfcfd;border-radius:4px;overflow-x:auto}.algorithm p{margin-bottom:7px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 26px 52px;border:0;box-shadow:none}.paper-nav{margin:-8px 0 24px}h1{font-size:24px}.columns{font-size:16px;line-height:1.84}.figure{max-width:100%}table{font-size:12.5px}}
+</style><script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script><script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script></head><body><main class="paper"><nav class="paper-nav"><a href="../index.html">← 论文目录</a><a href="paper-qa/flexgen-2303.06865-qa.html">Q1-Q7 详细问答 →</a></nav><h1>FlexGen：单 GPU 上的大语言模型高吞吐生成式推理<br/>中文全文翻译</h1><div class="authors">Ying Sheng · Lianmin Zheng · Binhang Yuan · Zhuohan Li · Max Ryabinin · Daniel Y. Fu · Zhiqiang Xie · Beidi Chen · Clark Barrett · Joseph E. Gonzalez · Percy Liang · Christopher Ré · Ion Stoica · Ce Zhang</div><div class="meta">ICML 2023 · arXiv 2303.06865 · 公式统一使用 LaTeX/MathJax</div><section class="columns"><section class="abstract"><h2>摘要</h2><p>FlexGen 面向延迟不敏感的批量任务，在有限 GPU 内存下实现高吞吐 LLM 生成。它聚合 GPU、CPU 与磁盘的容量和计算能力，用线性规划搜索权重、激活和 KV cache 的存储与访问方案，并把权重和 attention cache 压缩到 4 bit。由此扩大可选 batch size，使 OPT-175B 能在单张 16GB GPU 上以有效 batch 144 达到约 1 token/s。</p></section><section class="keywords"><p><strong>关键词：</strong>LLM inference；offloading；GPU-CPU-disk；线性规划；4-bit 压缩；离线吞吐</p></section><div class="qa-link"><a href="paper-qa/flexgen-2303.06865-qa.html">阅读比正文更聚焦的 Q1-Q7 详细论文问答</a></div><div class="translation-note"><strong>翻译说明：</strong>本页以论文公开 LaTeX 源码为底稿，按原章节顺序逐段翻译；保留英文系统名、指标名和必要术语。所有数学表达式保留原始 LaTeX，由 MathJax 渲染。图表来自原论文素材。</div><h2 id="introduction">1 简介</h2>
+<p>近年来，大语言模型（LLMs）在广泛的任务中展现出强劲的性能。除了这些前所未有的能力外，生成式LLM推理也面临独特的挑战。这些模型可能有数十亿甚至数万亿个参数，导致运行时计算和内存需求极高。例如，GPT-175B 仅加载模型权重就需要 <span class="math inline">\(325\)</span>GB 的 GPU 内存。将该模型安装到GPU上需要至少五块A100（80GB）GPU和复杂的并行处理策略。因此，降低大语言模型的推理资源需求最近引起了强烈关注。</p>
+<figure class="figure" data-latex-placement="t" id="fig:throughput_vs_latency">
+<img alt="在单个NVIDIA T4（16 GB）GPU上，配备208GB CPU、DRRAM和1.5TB SSD，分别使用基于OPT-175B（左）和OPT-30B（右）的三套基于卸载系统的总延迟和吞吐量权衡。FlexGen 实现了新的帕累托最优前沿 \(100\times\) 为 OPT-175B 实现了更高的最大吞吐量。其他系统因内存不足无法进一步提升吞吐量。“（c）”表示压缩。" loading="lazy" src="../assets/papers/flexgen-full/figure-01.png"/>
+<figcaption class="caption">在单个NVIDIA T4（16 GB）GPU上，配备208GB CPU、DRRAM和1.5TB SSD，分别使用基于OPT-175B（左）和OPT-30B（右）的三套基于卸载系统的总延迟和吞吐量权衡。FlexGen 实现了新的帕累托最优前沿 <span class="math inline">\(100\times\)</span> 为 OPT-175B 实现了更高的最大吞吐量。其他系统因内存不足无法进一步提升吞吐量。“（c）”表示压缩。</figcaption>
+</figure>
+<p>本文重点介绍一个称为 <em>通量导向生成推断</em>的环境。除了聊天机器人等交互式用例外，LLM还应用于许多“后台”任务，如基准测试、信息提取、数据整理和表单处理。这些任务的一个关键特征是，它们通常需要批量运行LLM推理，覆盖大量token（例如公司语料库中的所有文档），且对延迟的敏感度较低。因此，在这些工作负载中，可以以更高的吞吐量来交换延迟，从而有机会减少资源需求。</p>
+<p>此前降低LLM推理资源需求的努力有三个方向：（1）模型 <em>压缩</em> 以减少总内存占用;（2）通过去中心化摊销推断成本的 <em>协作推断</em> ;以及（3） <em>卸载</em> 以利用CPU和磁盘的内存。这些技术显著降低了使用LLMs所需的资源，但存在明显的局限性。前两种研究通常假设模型能嵌入GPU内存，因此难以用单一普通GPU运行175B比例模型。另一方面，第三类基于卸载的先进系统由于输入输出调度和张量布置效率低下，单一GPU的吞吐量无法达到可接受的水平。例如，这些系统可能因batch规模较小而成为瓶颈（例如，OPT-175B在某些情况下仅有一到两个batch）。</p>
+<div class="wrapfigure">
+<p><span>r</span><span>0.17</span> <figure class="figure"><img alt="原论文图 2" loading="lazy" src="../assets/papers/flexgen-full/figure-02.png"/></figure></p>
+</div>
+<p>我们的重点是设计高效的 <em>高</em> 通量生成推理卸载策略， <em>并基于单一商品GPU</em>实现。为了运行有限GPU内存的LLM，我们可以将其卸载到二级存储，并通过部分加载来分段完成计算。在典型的机器上，内存层级有三层，如右图所示。高等级较快但稀少，低等级较慢但数量丰富。在以吞吐量为导向的场景中，我们可以通过使用大批量的batch来牺牲延迟，并将昂贵的I/O操作摊销到不同内存层级之间，覆盖大量输入，这些输入与计算重叠。 <a data-reference="fig:throughput_vs_latency" data-reference-type="ref+label" href="#fig:throughput_vs_latency">1</a> 展示了三个推理系统在单个NVIDIA T4（16 GB）GPU上卸载时的延迟-吞吐量权衡。注意，在有限资源下，延迟和吞吐量的性能明显逊于资源充足的案例。</p>
+<p>即使可以牺牲延迟，在有限的GPU内存下实现高吞吐量生成推理也充满挑战。第一个挑战是设计 <em>高效的卸载策略</em>。在生成推断过程中，有三种张量：权重、激活和键值（KV）缓存。该策略应明确要卸载哪些张量，在三级内存层级中的位置，以及推理时何时卸载。批量、token和层层的计算结构形成了一个复杂的依赖图，其中有多种计算方式。这些选择共同构成了一个复杂的设计空间。现有基于卸载的推理系统继承了训练中的一些策略，这些策略往往是推理的次优点，导致大量输入输出（I/O）过量，吞吐量远低于理论硬件极限。</p>
+<p>第二个挑战是制定 <em>有效的压缩策略</em>。以往的研究已证明在压缩LLMs权重和激活方面取得了有前景的成果。然而，当压缩与卸载结合进行高吞吐量推断时，权重和KV cache的I/O成本和内存减少变得更为重要，这促使了替代的压缩方案。</p>
+<p>为应对这些挑战，我们提出了FlexGen，一个用于高吞吐LLM推理的卸载框架。FlexGen 聚合了 GPU、CPU 和磁盘的内存，并高效调度 I/O 操作，同时还包括可能的压缩方法和分布式流水线并行处理。</p>
+<p><span><strong><u>（贡献1）</u></strong></span> 我们通过考虑计算计划、张量位置和计算委托，正式定义了一个可能卸载策略的搜索空间。我们证明了我们的搜索空间捕捉了I/O复杂度在最优 <span class="math inline">\(2\times\)</span> 范围内的计算序。随后，我们开发了一种基于线性规划的搜索算法，以优化搜索空间内的吞吐量。该算法可针对不同硬件规格进行配置，并可轻松扩展以纳入延迟和吞吐量约束，从而帮助在权衡空间中顺畅导航。与现有策略相比，我们的解决方案统一了权重、激活和KV cache的布局，实现了显著更高的batch大小上限，这对实现高吞吐量至关重要。</p>
+<p><span><strong><u>（贡献2）</u></strong></span> 我们证明，对于像OPT-175B这样的大语言模型，权重和KV cache可以压缩为4位，无需重新训练或校准，且准确率损失极小。这通过细粒度的分组量化实现，适用于降低卸载时的输入输出成本和内存使用。</p>
+<p><span><strong><u>（贡献3）</u></strong></span> 我们通过在NVIDIA T4（16GB）GPU上运行OPT-175B，展示了FlexGen的高效性能。与DeepSpeed Zero-Inference和Hugging Face Accelerate这两个最先进的基于卸载的推理系统相比，FlexGen通常允许的batch规模大好几个数量级。因此，FlexGen 能够实现更高的吞吐量。在一块配备208GB CPU DRAM和1.5 TB SSD的T4 GPU上，输入序列长度为512，输出序列长度为32：</p>
+<ul>
+<li><p>在相同的 <span class="math inline">\(5000\)</span> 秒延迟下，FlexGen（有效batch大小64，或总计2048token）的吞吐量比DeepSpeed Zero-Inference（batch大小1，或共32token）高 <span class="math inline">\(40\times\)</span> 以上，而Hugging Face Accelerate无法完成任何batch。</p></li>
+<li><p>通过允许更高的延迟 <span class="math inline">\(12000\)</span> 秒，FlexGen 相比基线 <span class="math inline">\(69\times\)</span> 实现了更高的最大吞吐量，因为它可以将有效batch规模扩大到 <span class="math inline">\(256\)</span> （共生成 8192 个token），而 DeepSpeed Zero-Inference 和 Hugging Face Accelerate 由于内存不足问题，无法使用大于 2 的batch大小。</p></li>
+<li><p>如果允许4位压缩，FlexGen可以通过将所有权重放在CPU中并取消磁盘卸载，达到有效batch规模144（共生成4608个token）， <span class="math inline">\(100\times\)</span> 延迟为4000秒，达到更高的最大吞吐量。</p></li>
+</ul>
+<p>我们还比较了基于FlexGen和Petals的卸载和去中心化集体推理作为两种代表性系统。我们从去中心化网络的延迟和带宽方面以及输出序列长度进行比较。结果显示，FlexGen在每GPU吞吐量方面优于去中心化Petals集群，在某些情况下甚至能实现更低的延迟。</p>
+<h2 id="sec:related_work">2 相关工作</h2>
+<p>鉴于LLMs的最新进展，LLM推理已成为一项重要的工作负载，鼓励<strong>系统和</strong><strong>算法</strong>双方的积极研究。</p>
+<p>近年来，专门用于大语言模型推理的系统不断出现，如FasterTransformer、Orca、LightSeq、PaLM推理、TurboTransformers、DeepSpeed Inference和Hugging Face Accelerate。遗憾的是，这些系统大多专注于以延迟为导向的场景，配备高端加速器，限制了其在易于访问的硬件上进行吞吐量导向推断的部署。为了在此类通用硬件上实现LLM推理，卸载是一项必不可少的技术——据我们所知，目前系统中只有DeepSpeed零推理和Hugging Face Accelerate支持卸载。这些推理系统通常继承了训练系统的卸载技术，但忽略了生成推理的特殊计算特性。它们未能利用以吞吐量为导向的大语言模型推理计算结构，错失了高效调度I/O流量的绝佳机会。Petals 提出的协作计算是另一种在可访问硬件上实现大语言模型推理的尝试。</p>
+<p>还有许多面向算法的研究，通过放宽LLM推理中的某些计算方面，以加速计算或减少内存占用。稀疏化和量化都已被广泛应用于大语言模型（LLM）推断。在量化方面，先前的研究显示权重可以压缩到3位而不压缩激活，或者权重和激活都可以压缩为8位。在FlexGen中，我们将权重和KV cache压缩为4位，并展示了如何将压缩与卸载结合以进一步改进。</p>
+<p>在更广泛的领域中，内存优化和卸载已被研究用于训练和线性代数。</p>
+<h2 id="sec:background">3 背景：LLM 推理</h2>
+<p>本节介绍LLM推理工作流程及其内存占用。</p>
+<p><strong>生成推理。</strong> 典型的LLM生成推理任务包括两个阶段：i） <em>prefill</em> 阶段，通过prompt序列生成LLM每个Transformer层的KV cache（KV cache）;ii）解 <em>码</em> 阶段，利用并更新KV cache逐步生成token，当前token生成依赖于先前生成的token。</p>
+<p>对于特定的推理计算，分别表示batch大小为 <span class="math inline">\(b\)</span>，输入序列长度为 <span class="math inline">\(s\)</span>，输出序列长度为 <span class="math inline">\(n\)</span>，Transformer的隐藏维数为 <span class="math inline">\(h_1\)</span>，第二MLP层的隐藏维为 <span class="math inline">\(h_2\)</span>，Transformer层总数为 <span class="math inline">\(l\)</span>。给定Transformer层的权重矩阵，由 <span class="math inline">\(\mathbf{w}_K^i\)</span>、 <span class="math inline">\(\mathbf{w}_Q^i\)</span>、 <span class="math inline">\(\mathbf{w}_V^i\)</span>、 <span class="math inline">\(\mathbf{w}_O^i\)</span>、 <span class="math inline">\(\mathbf{w}_1^i\)</span>、 <span class="math inline">\(\mathbf{w}_2^i\)</span>，其中 <span class="math inline">\(\mathbf{w}_K^i, \mathbf{w}_Q^i, \mathbf{w}_V^i, \mathbf{w}_O^i \in \mathcal{R}^{h_1 \times h_1}\)</span>、 <span class="math inline">\(\mathbf{w}_1\in \mathcal{R}^{h_1 \times h_2}\)</span>和 <span class="math inline">\(\mathbf{w}_2\in \mathcal{R}^{h_2 \times h_1}\)</span>。</p>
+<p>在<em><strong>prefill阶段</strong></em>，<span class="math inline">\(i\)</span>层的输入由<span class="math inline">\(\mathbf{x}^i\)</span><code>key</code>、、<code>value</code>、<code>query</code><code>output</code>、，注意层的输入由<span class="math inline">\(\mathbf{x}_K^i\)</span>、<span class="math inline">\(\mathbf{x}_V^i\)</span>、<span class="math inline">\(\mathbf{x}_Q^i\)</span>、<span class="math inline">\(\mathbf{x}_{\textsf{Out}}^i\)</span>表示，其中<span class="math inline">\(\mathbf{x}^i, \mathbf{x}_K^i, \mathbf{x}_V^i, \mathbf{x}_Q^i, \mathbf{x}_{\textsf{Out}}^i \in \mathcal{R}^{b \times s \times h_1}\)</span>。然后，缓存<code>key</code>的 可以通过<code>value</code>以下方式计算：<span class="math display">\[
+\begin{array}{cc}
+     &amp; \mathbf{x}_K^i = \mathbf{x}^i \cdot \mathbf{w}_K^i; \quad  \mathbf{x}_V^i = \mathbf{x}^i \cdot \mathbf{w}_V^i
+\end{array}
+\]</span> <span class="math inline">\(i\)</span>层的其余计算为：<span class="math display">\[
+\begin{array}{cc}
+&amp; \mathbf{x}_Q^i = \mathbf{x}^i \cdot \mathbf{w}_Q^i \\
+&amp; \mathbf{x}_{\textsf{Out}}^i = f_{\textsf{Softmax}}\left( \frac{\mathbf{x}_Q^i {\mathbf{x}_K^i}^T}{\sqrt{h}}\right )\cdot \mathbf{x}_V^i \cdot \mathbf{w}_O^i + \mathbf{x}^i \\
+&amp; \mathbf{x}^{i+1} = f_{\textsf{relu}}\left(\mathbf{x}_{\textsf{Out}}^i \cdot \mathbf{w}_1\right) \cdot \mathbf{w}_2+ \mathbf{x}_{\textsf{Out}}^i
+\end{array}
+\]</span> 在<em><strong>decode 阶段</strong></em>，给定 <span class="math inline">\(\mathbf{t}^i \in \mathcal{R}^{b \times 1 \times h_1}\)</span> 作为当前生成token嵌入<span class="math inline">\(i\)</span>层，推理计算需要 i） 更新 KV 缓存：<span class="math display">\[
+\begin{array}{cc}
+     &amp; \mathbf{x}_K^i \leftarrow \textsf{Concat}\left( \mathbf{x}_K^i, \mathbf{t}^i \cdot \mathbf{w}_K^i \right)\\
+     &amp; \mathbf{x}_V^i \leftarrow \textsf{Concat}\left( \mathbf{x}_V^i, \mathbf{t}^i \cdot \mathbf{w}_V^i \right)
+\end{array}
+\]</span> 和 ii） 计算当前层的输出： <span class="math display">\[
+\begin{array}{cc}
+     &amp; \mathbf{t}_Q^i = \mathbf{t}^i \cdot \mathbf{w}_Q^i \\
+     &amp; \mathbf{t}_{\textsf{Out}}^i = f_{\textsf{Softmax}}\left( \frac{\mathbf{t}_Q^i {\mathbf{x}_K^i}^T}{\sqrt{h}}\right)\cdot \mathbf{x}_V^i \cdot \mathbf{w}_O^i + \mathbf{t}^i\\
+     &amp; \mathbf{t}^{i+1} = f_{\textsf{relu}}\left(\mathbf{t}_{\textsf{Out}}^i \cdot \mathbf{w}_1\right) \cdot \mathbf{w}_2+ \mathbf{t}_{\textsf{Out}}^i
+\end{array}
+\]</span></p>
+<p><strong>记忆分析。</strong>LLM推断的内存占用主要来自模型权重和KV cache。考虑 中的 <code>FP16</code>OPT-175B 模型，存储参数的总字节数大约可以由 <span class="math inline">\(l (8h_1^2+ 4h_1 h_2 )\)</span> 计算出 <a class="footnote-ref" href="#fn1" id="fnref1" role="doc-noteref"><sup>1</sup></a>。用于存储KV cache峰值的字节总数为<span class="math inline">\(4 \times  b  l  h_1 (s+n)\)</span>。</p>
+<p>在实际且GPU数量充足的情况下，OPT-175B型号（<span class="math inline">\(l=96, h_1=12288, h_2=49152\)</span>）占用 <span class="math inline">\(325\)</span> GB。batch大小为 <span class="math inline">\(b=512\)</span>，输入序列长度 <span class="math inline">\(s=512\)</span>，输出序列长度为 <span class="math inline">\(n=32\)</span>，存储KV cache所需的总内存为 <span class="math inline">\(1.2\)</span> <span class="math inline">\(3.8\times\)</span> 模型权重，使KV cache成为大批量高吞吐推断的新瓶颈。在FlexGen中，针对OPT-175B，我们将有效batch规模扩大到 <span class="math inline">\(256\)</span> ，以实现 <span class="math inline">\(0.69\)</span> token/秒的吞吐量。</p>
+<p><strong>吞吐量和延迟。</strong> 考虑有效batch <span class="math inline">\(b\)</span>、输入序列长度 <span class="math inline">\(s\)</span>和输出序列长度 <span class="math inline">\(n\)</span>，延迟 <span class="math inline">\(t\)</span> 定义为处理prompt和生成所有 <span class="math inline">\(bn\)</span> token所花费的总秒数。生成吞吐量定义为 <span class="math inline">\(bn / t\)</span>。</p>
+<figure class="figure" data-latex-placement="h" id="fig:computational_graph">
+<img alt="大语言模型推理的计算图" loading="lazy" src="../assets/papers/flexgen-full/figure-03.png"/>
+<figcaption class="caption">大语言模型推理的计算图 </figcaption>
+</figure>
+<h2 id="sec:offload">4 卸载策略</h2>
+<p>本节不放宽LLM推断的计算，并展示了如何在GPU、CPU和磁盘存储层级下形式化卸载过程。我们首先提出问题，然后在FlexGen中构建可能卸载策略的搜索空间。为了找到高效的策略，FlexGen 构建了一个分析成本模型，并基于线性规划的优化器搜索配置。</p>
+<h3 id="subsec:formulation">4.1 问题表述</h3>
+<p>考虑一台有三个设备的机器：GPU、CPU，还有磁盘。GPU和CPU可以执行计算，而磁盘不能。这三种设备形成三级内存层级结构，GPU 拥有最小但最快的内存，磁盘拥有最大但最慢的内存。当LLM无法完全装入GPU时，我们需要将其卸载到二级存储，并通过部分加载LLM来分段完成计算。</p>
+<p>我们将带有卸载的生成推理表述为图遍历问题。 <a data-reference="fig:computational_graph" data-reference-type="ref+label" href="#fig:computational_graph">2</a> 展示了一个计算图示例，模型有 4 层，我们每个prompt生成 3 个token。由于我们关注的是吞吐量导向的场景，我们假设一个数据集中有无限多个prompt需要处理。图中，正方形表示计算某层GPUbatch。同色方块共享相同的层权重。我们将有效路径定义为遍历（即计算）所有正方形的路径，同时受以下约束条件约束：</p>
+<ul>
+<li><p>只有当同一行左侧的所有正方形都被计算出来时，方形才能被计算出来。</p></li>
+<li><p>要计算设备上的方格，所有输入（权重、激活、缓存）都必须加载到同一设备。</p></li>
+<li><p>计算后，方形会产生两个输出：激活和KV cache。激活应存储，直到计算出其右兄弟节点。KV cache应存储到计算出同行最右边的方格。</p></li>
+<li><p>在任何时刻，设备中存储的总张量大小不能超过其内存容量。</p></li>
+</ul>
+<p>目标是找到一条有效路径，以最小化总执行时间，包括在设备间移动张量时的计算成本和I/O成本。</p>
+<h3 id="subsec:search-space">4.2 搜索空间</h3>
+<p>根据上述表述，我们在FlexGen中构建一个可能有效策略的搜索空间。</p>
+<p><strong>计算日程。</strong> 直观上，图2中遍历有两种 <a data-reference="fig:computational_graph" data-reference-type="ref+label" href="#fig:computational_graph">顺序：逐</a>行和列逐列。所有现有系统都逐行遍历图，如 <a data-reference="fig:block_schedule" data-reference-type="ref+label" href="#fig:block_schedule">3</a>（a）所示。这是合理的，因为这是完成一批生成的最快方法，且KV cache可以在一行后立即释放。然而，由于每隔两个相邻方格不共享权重，该计划必须反复加载权重，并产生巨大的输入输出成本。</p>
+<figure class="figure" data-latex-placement="t" id="fig:block_schedule">
+<img alt="两种不同的时间表。红色箭头表示计算顺序。" loading="lazy" src="../assets/papers/flexgen-full/figure-04.png"/>
+<figcaption class="caption">两种不同的时间表。红色箭头表示计算顺序。</figcaption>
+</figure>
+<p>为了降低权重的输入输出成本，我们可以逐列遍历图 列中的所有方块权重共享，所以权重可以留在GPU上重复使用，只加载/卸载激活和KV cache。然而，我们无法遍历一列直到最后，因为激活和KV cache仍需存储。因此，当它们占满CPU和磁盘内存时，我们必须停止。综合考虑这些，我们收敛到锯齿形块调度，如 <a data-reference="fig:block_schedule" data-reference-type="ref+label" href="#fig:block_schedule">3</a>（b）所示。此外，我们还提出了另一种更高级、I/O最优的计划，但由于最优方案的实际实现难度，仅实现了更简单的块。然而，我们证明了块调度最多比 <a data-reference="subsec:optimality" data-reference-type="ref+label" href="#subsec:optimality">8.2</a>中最优调度差两倍。</p>
+<div class="restatable">
+<p>定<span>理</span><span>次优</span><span data-label="thm:suboptimal" id="thm:suboptimal"></span>之字形的输入输出复杂度<br/>块排度距离最优解 <span class="math inline">\(2\times\)</span> 。</p>
+</div>
+<p>另一个典型的优化是重叠。我们可以叠加下一层的权重负载、下一批batch的缓存/激活负载、上一批的缓存/激活存储以及当前batch的计算。在块调度中添加重叠会得到 <span>[alg：block-schedule]。</span>最内层循环中的前六个函数可以看作是与六个逻辑线程并行启动，因为没有依赖关系。最后一个函数随后同步这六个逻辑线程。我们依赖操作系统和CUDA驱动程序来解决底层硬件资源的调度。作为结论，该算法在搜索空间中引入了两个参数：GPUbatch大小和一个块中GPUbatch的数量。GPUbatch大小与GPUbatch数量的乘积称为块大小（或 <strong>有效batch大小</strong>）。</p>
+<p><strong>张量位置。</strong> 除了计算计划外，策略还应明确如何将这些张量存储在内存层级中。我们使用三个变量 <span class="math inline">\(wg\)</span>、 <span class="math inline">\(wc\)</span>和 <span class="math inline">\(wd\)</span> 分别定义GPU上、CPU和磁盘上存储权重的百分比。同样，我们使用三个变量 <span class="math inline">\(hg\)</span>、 <span class="math inline">\(hc\)</span>、 <span class="math inline">\(hd\)</span> 来定义激活百分比，并使用 <span class="math inline">\(cg\)</span>、 <span class="math inline">\(cc\)</span>、 <span class="math inline">\(cd\)</span> 来表示KV cache。根据百分比，仍有多种方法可以划分张量。以权重张量为例，从粗粒到细粒度，我们可以按模型粒度划分权重（例如，将模型中的 <span class="math inline">\(50\%\)</span> 层分配给GPU）、在层粒度处（例如，将 <span class="math inline">\(50\%\)</span> 张量分配给GPU;在张量粒度处，权重分配给GPU;例如，将 <span class="math inline">\(50\%\)</span> 张量中元素的元素映射到GPU的张量）。更粗粒度降低了运行时间开销，但灵活性较低，成本分析也较为困难。考虑到运行时开销和所需的灵活性，我们使用层粒度表示权重，张量粒度用于激活和 KV 缓存。</p>
+<p><strong>计算委派。</strong> 虽然CPU比GPU慢得多，但我们发现在某些情况下使用CPU计算仍然有益。这是因为解码时注意力分数的计算是I/O限制的。考虑一个 KV 缓存存储在 CPU 上的情形。计算GPU上的注意力分数需要将整个KV cache迁移到GPU上，这会产生相当高的I/O成本，因为KV cache体积庞大。相比之下，计算CPU上的注意力分数不需要移动KV cache。只需要把激活从GPU转移到CPU。定量上，设 <span class="math inline">\(b\)</span> 为 GPU batch大小， <span class="math inline">\(s\)</span> 为序列长度， <span class="math inline">\(h_1\)</span> 为隐藏大小。移动的KV cache大小为 <span class="math inline">\(b \times s \times h_1 \times 4\)</span> 字节，移动激活的大小为 <span class="math inline">\(b \times h _1\times 4\)</span> 字节，因此CPU的计算注意力分数会使I/O减少 <span class="math inline">\(s \times\)</span>。对于较长的序列（例如 <span class="math inline">\(s \geq 512\)</span>），如果相关的KV cache未存储在GPU上，最好在CPU上计算注意力分数。</p>
+<h3 id="subsec:cost-model">4.3 成本模型与政策检索</h3>
+<p><a data-reference="subsec:search-space" data-reference-type="ref+label" href="#subsec:search-space">4.2</a> 中的调度和位置构建了一个包含多个参数的搜索空间。现在，我们开发一个分析成本模型，以根据这些算法参数和硬件规格估算执行时间。</p>
+<p><strong>成本模型。</strong> 成本模型预测一个图层（记为 <span class="math inline">\(T_{pre}\)</span>）的prefill延迟，以及一个块中一个图层（记 <span class="math inline">\(T_{gen}\)</span> ）的解码平均延迟。计算一个块的总延迟可以估算为 <span class="math inline">\(T=T_{pre} \cdot l + T_{gen} \cdot (n-1) \cdot l\)</span>，其中 <span class="math inline">\(l\)</span> 是层数， <span class="math inline">\(n\)</span> 是要生成的token数。</p>
+<p>假设完全重叠，<span class="math inline">\(T_{pre}\)</span>可估计为<span class="math inline">\(T_{pre} = \max(ctog^p, gtoc^p, dtoc^p, ctod^p, comp^p)\)</span>，其中<span class="math inline">\(ctog^p\)</span>、<span class="math inline">\(gtoc^p\)</span>、<span class="math inline">\(dtoc^p\)</span>、<span class="math inline">\(comp^p\)</span> <span class="math inline">\(ctod^p\)</span>，分别表示从CPU读取到GPU、从GPU写到CPU、从磁盘到CPU、从CPU写到磁盘的延迟，分别在一层prefill期间。</p>
+<p>同样，<span class="math inline">\(T_{gen}\)</span>可以被估计为<span class="math inline">\(comp^g\)</span> <span class="math inline">\(ctod^g\)</span> <span class="math inline">\(dtoc^g\)</span> <span class="math inline">\(gtoc^g\)</span> <span class="math inline">\(ctog^g\)</span>，分别表示从CPU到GPU的读取、GPU到CPU的写入、从CPU到磁盘的写入、计算，以及在一层解码过程中的计算。<span class="math inline">\(T_{gen} = \max(ctog^g, gtoc^g, dtoc^g, ctod^g, comp^g),\)</span></p>
+<p>对于像 <span class="math inline">\(dtoc^g\)</span>这样的I/O术语，通过将包含权重、激活和缓存读取的I/O事件加总来估算。一个Transformer层的权重大小 <code>FP16</code> 为 <span class="math inline">\(8h_1^2 + 4h_1\cdot h_2\)</span> 字节， <span class="math inline">\(h_1\)</span> 表示隐藏大小， <span class="math inline">\(h_2\)</span> 表示第二个MLP层的隐藏大小。设 <span class="math inline">\(bls\)</span> 为块大小， <span class="math inline">\(s\)</span> 为prompt长度;那么，单层激活的规模为 <span class="math inline">\(2\cdot bls \cdot h_1\)</span>。平均而言，一层的KV cache容量为 <span class="math inline">\(4 \cdot bls\cdot (s+\frac{n}{2}) \cdot h_1\)</span>。我们必须分别从磁盘加载权重、激活次数和KV cache的 <span class="math inline">\(wd, hd, cd\)</span> %，以确保磁盘读取的总延迟 <span class="math inline">\(dtoc^g = \frac{1}{\text{disk\_to\_cpu\_bandwidth}}((8h_1^2 + 4h_1\cdot h_2)\cdot wd + 4 \cdot bls\cdot (s+\frac{n}{2}) \cdot h_1\cdot cd + 2\cdot bls \cdot h_1\cdot hd)\)</span>。</p>
+<p>同样，计算项也汇总所有计算事件，包括 CPU 和 GPU 上的矩阵乘法和批量矩阵乘法。</p>
+<p>除了延迟估计外，我们还估算了GPU、CPU和磁盘的峰值内存使用情况，然后加上内存约束。全成本模型是在 <a data-reference="sec:full-cost-model" data-reference-type="ref+label" href="#sec:full-cost-model">8.3</a>版本。</p>
+<p><strong>政策搜索。</strong> 策略包含11个变量：块大小 <span class="math inline">\(bls\)</span>、GPUbatch大小 <span class="math inline">\(gbs\)</span>、权重放置 <span class="math inline">\(wg, wc, wd\)</span>、激活放置 <span class="math inline">\(hg, hc, hd\)</span>和KV cache放置 <span class="math inline">\(cg, cc, cd\)</span>。在实际操作中，百分比不能是 <span class="math inline">\(0\)</span> 到 <span class="math inline">\(1\)</span>之间的任意实数，因为张量不能被任意分割。然而，由于百分比是渐变的，我们会在成本模型中放宽百分比变量，使其在 <span class="math inline">\(0\)</span> 和 <span class="math inline">\(1\)</span> 之间任意实数。我们将问题解为一个二级优化问题。我们首先列举 <span class="math inline">\((bls, gbs)\)</span> 元组的几个选择。通常， <span class="math inline">\(gbs\)</span> 是4的倍数， <span class="math inline">\(bls\)</span> 小于20，所以选择不多。然后，对于固定 <span class="math inline">\(bls, gbs\)</span>，寻找最佳 <span class="math inline">\(p=(wg, wc, wd, cg, cc, cd, hg, hc, hd)\)</span> 的位置成为一个线性规划问题，见 <a data-reference="eq:policy_lp" data-reference-type="ref+label" href="#eq:policy_lp">相应公式。</a>线性规划问题可以很快解决，因为只有9个变量。该表述也可以灵活扩展，包含延迟约束和模型近似方法，如压缩。</p>
+<p><span class="math display" id="eq:policy_lp">\[
+\begin{array}{rrclcl}
+\displaystyle \min_{p} &amp; \multicolumn{3}{c}{T/bls} \\
+\textrm{s.t.}
+&amp;gpu\ peak\ memory &amp;&lt;&amp; gpu\ mem\ capacity\\
+&amp;cpu\ peak\ memory &amp;&lt;&amp; cpu\ mem\ capacity\\
+&amp;disk\ peak\ memory &amp;&lt;&amp; disk\ mem\ capacity\\
+&amp;wg+wc+wd&amp;= &amp;1\\
+&amp;cg+cc+cd&amp;= &amp;1\\
+&amp;hg+hc+hd&amp;= &amp;1
+\end{array}
 
-</style>
-<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-</head>
-<body>
-<main class="paper">
-<nav class="paper-nav" data-six-paper-revision><a href="../index.html">← 论文目录</a><a href="paper-qa/flexgen-2303.06865-qa.html">Q1–Q7 详细问答 →</a></nav>
-<h1>FlexGen：单 GPU 上的高吞吐大语言模型生成式推理：中文精读与校订</h1>
-<div class="authors">Ying Sheng, Lianmin Zheng, Binhang Yuan, Zhuohan Li, Max Ryabinin, Daniel Y. Fu, Zhiqiang Xie, Beidi Chen, Clark Barrett, Joseph E. Gonzalez, Percy Liang, Christopher Re, Ion Stoica, Ce Zhang</div>
-<div class="meta">源文件：arXiv 2303.06865 | ICML 2023 | 23 页 | 保留术语：offloading、throughput-oriented inference、KV cache、weight compression、group-wise quantization、linear programming</div>
-<section class="columns">
-<section class="overview"><h2>这篇论文做什么？</h2><p class="doing">面向延迟不敏感的离线生成，把权重、激活与 KV cache 统一放到 GPU/CPU/磁盘三级存储，以线性规划搜索卸载比例和 batch 参数，并用 4-bit 压缩扩大可执行批量。</p><ul><li>问题：超大模型单卡放不下；朴素逐层卸载被 PCIe/磁盘 I/O 卡住。</li><li>方法：统一张量放置、块状调度、I/O—计算重叠、LP 搜索与 4-bit 压缩。</li><li>结果：OPT-175B 可在单张 16GB GPU 上以有效 batch 144 达到约 1 token/s。</li></ul><p class="revision-note">校订说明：本页按原论文的论证顺序重写术语与因果关系；图均裁自论文原图，数据结论保留论文适用条件，不把峰值结果泛化为固定加速。</p></section>
-<section class="abstract"><p><strong>摘要。</strong>大语言模型推理的高计算和内存需求使其只能在多个高端加速器上运行。受延迟不敏感的批量处理任务需求驱动，论文开创了使用有限资源（如单张商品级 GPU）进行高吞吐 LLM 推理的研究。FlexGen 是一个高吞吐生成引擎，可以在有限 GPU 内存下运行 LLM。FlexGen 可以在各种硬件资源约束下灵活配置，通过聚合 GPU、CPU 和磁盘的内存与计算。通过求解线性规划问题，搜索高效的张量存储和访问模式。FlexGen 进一步将权重和注意力缓存压缩到 4 bit，精度损失可忽略。这些技术使 FlexGen 拥有更大的 batch size 选择空间，从而显著提升最大吞吐量。在单张 16GB GPU 上运行 OPT-175B 时，FlexGen 相比 SOTA 卸载系统实现显著更高吞吐量，首次达到 1 token/s 的生成吞吐量（有效 batch size 144）。</p></section>
-
-<h2>1 引言</h2>
-<p>除了交互式应用（如聊天机器人），LLM 还广泛用于"后台"任务：基准测试、信息抽取、数据整理、表单处理。这些任务需要对大量 token 批量运行 LLM 推理，但对延迟不敏感。因此可以用延迟换吞吐量，降低资源需求。论文称这一场景为<span class="term">吞吐量导向的生成式推理</span>。</p>
-<p>在单张商品级 GPU（如 NVIDIA T4 16GB）上运行 175B 模型面临极端挑战：模型权重需 325GB，远超 GPU 内存。现有方案有三类：模型压缩、协作推理、卸载（offloading）。现有卸载系统（DeepSpeed Zero-Inference、HuggingFace Accelerate）因低效的 I/O 调度和张量放置，在单 GPU 上吞吐量极低——batch size 仅 1-2。</p>
-
-<h2>2 挑战</h2>
-<h3>2.1 卸载策略设计</h3>
-<p>生成式推理中有三类张量：权重（weights）、激活值（activations）和 KV cache。卸载策略需指定：卸载哪些张量、在 GPU-CPU-磁盘三级内存层级中放在哪里、推理过程中何时卸载。批-批、token-token、层-层的计算结构形成复杂依赖图，存在多种执行方式。现有系统从训练继承策略，对推理而言次优，执行过多 I/O，吞吐量远低于硬件理论上限。</p>
-
-<h3>2.2 压缩策略</h3>
-<p>将压缩与卸载结合用于高吞吐推理时，权重和 KV cache 的 I/O 成本和内存减少变得更为重要，需要替代性压缩方案。</p>
-
-<h2>3 FlexGen 设计</h2>
-<h3>3.1 卸载搜索空间</h3>
-<p>FlexGen 形式化定义了卸载策略的搜索空间，考虑计算调度、张量放置和计算委托三个维度。论文证明搜索空间覆盖的计算顺序的 I/O 复杂度在最优解的 2 倍以内。然后开发基于线性规划的搜索算法，在搜索空间内优化吞吐量。算法可配置不同硬件规格，可扩展纳入延迟和吞吐量约束。</p>
-
-<h3>3.2 统一张量放置</h3>
-<p>与传统系统将权重、激活值和 KV cache 分开管理不同，FlexGen 统一三者的放置策略。这使得 batch size 的上限大幅提高——权重可以常驻 CPU 或磁盘，仅在计算对应层时按需加载到 GPU，而 KV cache 可以根据可用内存灵活分布在 GPU/CPU/磁盘之间。大的 batch size 是实现高吞吐的关键：I/O 开销被大批量输入分摊。</p>
-
-<h3>3.3 压缩</h3>
-<p>FlexGen 展示了可以将 OPT-175B 等模型的权重和 KV cache 压缩到 4 bit 而无需重训练或校准，精度损失可忽略。这通过细粒度 group-wise 量化实现：将权重矩阵按行分组，每组独立量化。这种量化方式适合减少卸载场景下的 I/O 成本和内存使用。4-bit 压缩使所有权重可放入 CPU 内存，免除磁盘卸载的需要。</p>
-
-<h2>4 关键洞察</h2>
-<p>生成式推理的计算结构有一个关键特性：虽然每步只生成一个 token，但同一个模型的同一层在处理不同请求时共享权重。因此，将多个请求的同一层计算批量处理，可以用一次权重加载服务多个请求——这就是大 batch size 分摊 I/O 的原理。FlexGen 的线性规划优化器正是利用这一结构，寻找最优的权重加载和 KV cache 访问模式。</p>
-<p>另一个洞察是权重的访问模式是确定性的：推理过程中各层权重的访问顺序固定，可以精确预取和流水线化。而 KV cache 的访问取决于生成长度，具有不确定性，但可以通过合理的放置策略（GPU 存最近 token 的 cache，CPU/磁盘存较早的）来管理。</p>
-
-<h2>5 实验评估</h2>
-<p>在 NVIDIA T4（16GB）GPU、208GB CPU DRAM 和 1.5TB SSD 上评估 OPT-175B 和 OPT-30B。</p>
-<p>主要结果：在相同延迟 5000 秒下，FlexGen（有效 batch size 64）比 DeepSpeed Zero-Inference（batch size 1）高 40 倍吞吐量，HuggingFace Accelerate 无法完成单个 batch。允许 12000 秒延迟时，FlexGen 达到 69 倍最大吞吐量（有效 batch size 256）。启用 4-bit 压缩时，FlexGen 达到 100 倍最大吞吐量（有效 batch size 144），延迟 4000 秒——通过将所有权重放入 CPU 免除磁盘卸载。</p>
-<p>FlexGen 还与去中心化协作推理系统 Petals 对比，在每 GPU 吞吐量上优于 Petals 集群，在特定配置下甚至延迟更低。</p>
-
-<h2>6 局限与选题启发</h2>
-<p>FlexGen 面向吞吐量导向的离线场景，延迟在分钟到小时级别，不适合交互式服务。其卸载策略虽然是线性规划优化的，但受限于三级内存层级的物理带宽——GPU-CPU 间 PCIe 带宽和 CPU-磁盘间带宽是硬瓶颈。此外，4-bit 量化虽然精度损失小，但对某些模型和任务可能不够鲁棒。</p>
-<div class="callout"><p><strong>对本仓库方向的意义。</strong>FlexGen 是 LLM 推理资源受限场景的先驱工作。它揭示了通过卸载和压缩在商品硬件上运行超大模型的可能性，以及 I/O 感知的张量放置策略的重要性。在 agentic workflow 场景下，当 GPU 资源不足以同时服务所有 agent 时，FlexGen 的卸载思想可以作为后备策略——将不活跃 agent 的 KV cache 卸载到 CPU/磁盘，为活跃 agent 释放 GPU 内存。这与 vLLM 的抢占式换出策略一脉相承，但 FlexGen 更深入地优化了卸载的 I/O 调度。</p></div>
-
-<h2>公式与目标函数</h2><div class="equation"><div class="math">\[\max_{b,g,p}\ \operatorname{Throughput}(b,g,p)\quad\text{s.t. }M_{GPU},M_{CPU},M_{disk}\text{ and bandwidth constraints}\]</div><p>b、g、p 可理解为 batch、GPU batch 分块和各类张量放置比例。LP 用硬件带宽/容量与算子代价估计稳态瓶颈，选择能最大化离线吞吐的执行策略。</p></div><h2>原论文图解</h2><figure class="figure wide"><img src="../assets/papers/flexgen/fig-01-throughput.png" alt="图 1：低 batch 时 FlexGen 牺牲延迟，但在高 batch 区间显著提高吞吐。" loading="lazy"><figcaption class="caption">图 1：低 batch 时 FlexGen 牺牲延迟，但在高 batch 区间显著提高吞吐。</figcaption></figure>
-<figure class="figure wide"><img src="../assets/papers/flexgen/fig-02-computation-graph.png" alt="图 2：LLM 推理的块状计算图，为跨层流水和张量搬运重叠提供结构。" loading="lazy"><figcaption class="caption">图 2：LLM 推理的块状计算图，为跨层流水和张量搬运重叠提供结构。</figcaption></figure>
-<figure class="figure wide"><img src="../assets/papers/flexgen/fig-04-offloading.png" alt="图 4：不同 GPU/CPU 批块下的延迟与每 GPU 吞吐。" loading="lazy"><figcaption class="caption">图 4：不同 GPU/CPU 批块下的延迟与每 GPU 吞吐。</figcaption></figure><h2>证据边界与校订结论</h2><p>FlexGen 面向 throughput-oriented、latency-insensitive workload，不能把其 1 token/s 解读为交互式体验。论文的重要贡献是让极小 GPU 能运行此前不可运行的模型，并通过大 batch 摊薄权重搬运；与 vLLM 这类在线低延迟服务目标不同。</p>
-<h2>参考说明</h2>
-<pre class="note">参考文献保留在原 PDF 中。本文译稿覆盖摘要、吞吐量导向推理动机、卸载策略搜索空间、线性规划优化、4-bit 压缩和实验结果。</pre>
-
-<div class="source-actions"><a class="primary" href="paper-qa/flexgen-2303.06865-qa.html">阅读 Q1–Q7 详细问答</a><a href="https://arxiv.org/abs/2303.06865">查看原论文</a><a href="../index.html">返回目录</a></div>
+\]</span></p>
+<p>使用成本模型时，我们在硬件上进行剖析，抽样一些数据点并拟合硬件参数。然后我们调用优化器获取卸载策略。由于我们的宽松和准确建模峰值内存使用（如碎片化）的困难，有时策略搜索中的策略可能会内存不足。在这种情况下，我们会手动稍微调整策略。成本模型通常能带来良好的保单，但手动调整通常能获得更好的保单。</p>
+<h3 id="subsec:multi-gpu">4.4 扩展至多显卡</h3>
+<p>我们讨论了如果有多块显卡，如何在FlexGen中扩展卸载策略。虽然我们可以找到一个GPU的近乎最优策略，但该策略仍然受I/O限制，且GPU利用率较低。如果我们拥有更多的GPU和CPU，模型并行可以利用来降低每个GPU的内存压力，这可能导致解码的超线性扩展。</p>
+<p>模型并行有两种类型：张量并行和流水线并行。张量并行可以降低单查询延迟，但流水线并行由于通信成本低，可以实现良好的吞吐量扩展。由于我们以吞吐量为目标，FlexGen 实现了流水线并行。</p>
+<p>我们使用流水线并行，将 <span class="math inline">\(l\)</span>层LLM平均分区在 <span class="math inline">\(m\)</span> GPU上，然后所有GPU的执行遵循相同模式。问题归结为在一块GPU上运行 <span class="math inline">\(n/m\)</span>层Transformer。我们可以直接复用为一块GPU开发的策略搜索。为了实现微batch流水线，在 <span>[alg：block-schedule]</span> 中添加了新的for循环，将迭代级流水线并行执行计划与单设备卸载运行时结合起来。</p>
+<h2 id="sec:approximate">5 近似方法</h2>
+<p>上一节重点讲述具体计算。然而，如果允许某些近似，推断吞吐量可以大幅提升，精度损失可忽略不计，因为大语言模型通常对精细近似具有鲁棒性。本节介绍了两种近似：群量化和稀疏注意。</p>
+<p>按<strong>群进行量化。</strong>我们证明，权重和KV cache都可以直接量化为4位整数，无需重新训练或校准，同时保持相似的精度（<a data-reference="subsec:eval-approximation" data-reference-type="ref+label" href="#subsec:eval-approximation">6.2</a>）。与一些主要用于加速计算的整数矩阵乘法相关研究相比，我们情形下的量化主要目标是压缩和降低输入输出成本。因此，我们可以选择细粒度的量化格式，以支持高压缩比，并在计算前将张量降回FP16。我们使用细粒度的逐组非对称量化方法 。给定一个张量，我们选择沿某维度连续<span class="math inline">\(g\)</span>个元素作为一个群。对于每个群，我们计算群元素的 <span class="math inline">\(min\)</span> 和 <span class="math inline">\(max\)</span>，并将每个<span class="math inline">\(x\)</span> <span class="math inline">\(x_{quant} = round\left( \frac{x - min}{max - min} \times (2^b - 1)\right)\)</span> 量化为 <span class="math inline">\(b\)</span> 位整数。</p>
+<p>张量以量化格式存储，计算前转换为FP16。由于权重和KV cache都占用大量内存，我们将两者压缩为4位，组大小为64。选择分组维度有多种方式。我们发现，将权重按输出通道维度分组，KV cache按隐藏维度分组，既保持准确性，又在实际运行时效率高。需要说明的是，FlexGen中如此细粒度的分组量化会导致压缩和解压的开销。如果CPU运行，这种开销可能非常大，导致CPU委派变得无用，所以我们在启用量化时关闭CPU委派。同时进行的研究还发现，4位精度几乎是OPT模型总比特和零拍摄精度的最优。与之前的工作相比，我们首先提议压缩KV cache，并将结果展示在OPT-175B上。</p>
+<p>注意力<strong>稀疏。</strong>我们证明，只要在OPT-175B上加载最前10%的注意力值缓存，同时保持模型质量，就可以利用自我注意力的稀疏性。我们给出一个简单的Top-K稀疏近似。计算注意力矩阵后，对于每个查询，我们从K缓存中计算其Top-Ktoken的索引。然后我们只需丢弃其他token，只根据索引加载V缓存的子集。</p>
+<p>这些近似的应用非常简单。我们呈现这些初步但有趣的结果，并旨在强调FlexGen是一个通用框架，可以无缝插入多种近似方法。</p>
+<h2 id="sec:evaluation">6 实验评估</h2>
+<div id="table:hardware_specs">
+<table>
+<caption>Hardware Specs</caption>
+<thead>
+<tr>
+<th style="text-align: left;">装置</th>
+<th style="text-align: left;">模型</th>
+<th style="text-align: left;">记忆</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">GPU</td>
+<td style="text-align: left;">NVIDIA T4</td>
+<td style="text-align: left;">16 GB</td>
+</tr>
+<tr>
+<td style="text-align: left;">中央处理器</td>
+<td style="text-align: left;">英特尔至强 @ 2.00GHz</td>
+<td style="text-align: left;">208 GB</td>
+</tr>
+<tr>
+<td style="text-align: left;">圆盘</td>
+<td style="text-align: left;">云默认SSD（NVMe）</td>
+<td style="text-align: left;">1.5 TB</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>硬件。</strong> 我们在Google Cloud上的NVIDIA T4 GPU实例上进行了实验。硬件规格列于 <a data-reference="table:hardware_specs" data-reference-type="ref+label" href="#table:hardware_specs">1</a>.SSD的读带宽大约是2GB/s，写带宽大约是1GB/s。我们的方法和实现不依赖于特定的硬件架构。某些架构（例如统一内存）可能更适合我们的方法。关于不同硬件配置的讨论和实验，请参见 <a data-reference="subsec:more-exp" data-reference-type="ref+Label" href="#subsec:more-exp">8.4</a> 版本。</p>
+<p><strong>模特。</strong> 评估中使用参数为6.7B至175B的OPT模型。虽然我们不评估其他模型，但FlexGen中的卸载技术可以应用于其他变换型大语言模型，如GPT-3、PaLM和BLOOM，因为它们共享相似的结构。</p>
+<p><strong>工作量。</strong> 我们的重点是对给定数据集进行高吞吐生成。我们使用合成数据集，所有prompt都填充到相同长度。系统要求为每个prompt生成32个token。我们测试两个prompt长度：512和1024（更多场景中的实验见 <a data-reference="subsec:more-exp" data-reference-type="ref+label" href="#subsec:more-exp">8.4</a>）。评估指标是生成吞吐量，定义为生成token数量 / （prefill时间 + 解码时间）。有时对某些系统来说，运行完整batch会花费太长时间——在这种情况下，我们会生成较少的token并预测最终吞吐量。我们在所有系统的吞吐量基准中使用虚拟模型权重，准确性评估则使用真实权重。</p>
+<p><strong>基线。</strong> 我们使用 DeepSpeed ZeRO-Inference 和 Hugging Face Accelerate 作为基线。它们是唯一能在GPU内存不足时运行LLM的系统。DeepSpeed 支持将整个权重卸载到 CPU 或磁盘。如果有多个 GPU，它使用 ZeRO 数据并行处理。加速支持卸下部分负重。它不支持不同机器上的分布式 GPU。它们都使用逐行调度，只能在GPU上放置缓存和激活。这些系统支持不同的量化方法。然而，Accelerate 中的量化不兼容卸载，DeepSpeed 中的量化无法保持 175B 的精度，因此我们不启用这些系统的量化。除了卸载外，去中心化协作推理也是降低LLM推理资源需求的另一种选择。因此，我们也将花瓣作为额外的基准。</p>
+<p><strong>实施。</strong> FlexGen 是在 PyTorch 之上实现的。FlexGen 管理多个 CUDA 流和 CPU 线程，使 I/O 与计算重叠。FlexGen 为存储在磁盘上的张量创建文件，并将其映射为虚拟内存以便访问。</p>
+<h3 id="sec:eval_offloading">6.1 卸载</h3>
+<p><strong>最大吞吐量基准测试。</strong> 我们首先评估系统在两个prompt长度下，单个GPU能实现的最大生成吞吐量。如 <span>[表：e2e_throughput_1_gpu]</span>所示，FlexGen在所有情况下都优于所有基线。在OPT-6.7B中，Accelerate和FlexGen可以成功将整个模型装入一个GPU，因此他们选择只使用GPU。DeepSpeed 内存开销较高，且无法将 OPT-6.7B 集成到 GPU 中，因此它使用较慢的 CPU 卸载。在OPT-30B上，所有系统切换到CPU卸载。DeepSpeed和Accelerate将KV cache存储在GPU上，因此无法使用非常大的batch，而FlexGen则将大部分权重和所有KV cache卸载到CPU，从而实现更大的GPUbatch。此外，FlexGen通过块调度重用权重。在OPT-175B上，所有系统开始将权重卸载到磁盘上。基线系统最多只能使用2batch大小，但FlexGen可以使用32的GPUbatch大小和 <span class="math inline">\(32\times 8\)</span>块大小，从而实现 <span class="math inline">\(69\times\)</span> 更高的吞吐量。启用压缩后，FlexGen在单个GPU上实现 <span class="math inline">\(112\times\)</span> 更高的生成吞吐量，prompt序列长度为512。这一巨大改进是因为FlexGen使用有效batch144，并将权重和KV cache压缩到CPU内存中，以避免磁盘交换速度变慢。关于策略设置和有效batch规模的更多细节可在 <a data-reference="subsec:more-exp" data-reference-type="ref+label" href="#subsec:more-exp">8.4</a>中找到。关于磁盘规格如何影响吞吐量的更多实验，请参见 <a data-reference="subsec:more-exp" data-reference-type="ref+Label" href="#subsec:more-exp">8.4</a>。</p>
+<p><span>[表：e2e_throughput_4_gpu]</span> 显示了4台机器的结果，每台机器配备一块GPU。OPT-30B 或 OPT-175B 仍然无法装入 4 块 GPU。简单地说，我们可以以数据并行方式运行4个独立的FlexGen，实现吞吐量的线性扩展。但在这里我们展示了流水线并行可以实现对解码吞吐量的超线性扩展。通过流水线并行，每台机器的内存压力降低，我们可以从小批量切换到大批量，或者从磁盘卸载切换到仅CPU卸载。在 <span>[表：e2e_throughput_4_gpu]</span>中，FlexGen未能实现生成吞吐量的线性扩展（该吞吐量包括prefill和解码时间成本）。这是因为prefill阶段有流水线气泡，而我们的工作负载设置只生成32个token。然而，FlexGen 在解码吞吐量上实现了超线性缩放（仅在prefill完成的情况下计算解码时间成本）。这意味着如果我们生成更多token，流水线并行性将显现其优势，因为解码时间将占据主导地位。</p>
+<p><strong>延迟与吞吐量的权衡。</strong> 我们将这些系统配置为在各种延迟约束下实现最大吞吐量，并在 <a data-reference="fig:throughput_vs_latency" data-reference-type="ref+label" href="#fig:throughput_vs_latency">1</a>中绘制它们的延迟-吞吐量权衡曲线。FlexGen 设定了一个新的帕累托最优前沿，显著优于基线。在低延迟方面，FlexGen支持部分卸载，并且能用更多空间来存放权重。在高吞吐量方面，FlexGen 积极地将所有内容卸载出 GPU 外，以实现较大的 GPU batch大小和块大小。在相同的延迟要求为5000秒的情况下，不压缩的FlexGen可实现比DeepSpeed和Accelerate更高的吞吐量 <span class="math inline">\(40\times\)</span> 。如果允许更高的延迟和压缩，FlexGen 可以通过使用有效batch大小 144 进一步提升吞吐量并实现 <span class="math inline">\(100\times\)</span> 改进。在这种情况下，压缩使 FlexGen 能够将所有内容放入 CPU 内存，避免磁盘 I/O。详细的延迟、吞吐量和策略设置可在 <a data-reference="subsec:more-exp" data-reference-type="ref+label" href="#subsec:more-exp">8.4</a>中找到。</p>
+<p><strong>播放时间分解。</strong>我们在 <a data-reference="subsec:more-exp" data-reference-type="ref+label" href="#subsec:more-exp">8.4</a> 版本的 <span>相应表格</span> 中展示了 FlexGen 上 OPT-175B 的运行时间分解。我们关闭重叠，并对主要组件所用时间进行分析。GPU 计算利用率分别为 82% 和 13%，用于prefill和解码。</p>
+<p><strong>消融手术。</strong> 然后我们筛选出每种技术带来的提升。 <span>[表：tech_ablation]</span> 列出了 FlexGen 在一次禁用一种技术后所能达到的吞吐量。在OPT-30B中，启用所有优化后，我们在GPU上加 <span class="math inline">\(20\%\)</span> 权重，CPU <span class="math inline">\(80\%\)</span> 权重，所有激活和KV cache都加到CPU。我们还选择了 GPU batch大小为 <span class="math inline">\(48\)</span> ，块大小为 <span class="math inline">\(48\times3\)</span>。“无政策搜索”说明了更差策略的表现，显示了良好政策的重要性。在这两个模型中，使用CPU计算和重叠带来了非易事的提升。我们还将DeepSpeed/Accelerate中使用的策略移植到FlexGen运行时，显示了他们策略的次优性。更详细的消融研究见 <a data-reference="subsec:more-exp" data-reference-type="ref+label" href="#subsec:more-exp">8.4</a>。</p>
+<p><strong>HELM和Data的管控。</strong> 我们通过评估一款新型号OPT-IML-30B测试了FlexGen与HELM的相互作用，该型号尚未被纳入官方HELM发布。FlexGen 在 1 中描述的硬件设置下，在 21 小时内完成了 7 个代表性子场景的基准测试，包含所有系统开 <a data-reference="table:hardware_specs" data-reference-type="ref+label" href="#table:hardware_specs">销。</a>[ <span>表：helm_integration]</span> 在 <a data-reference="subsec:more-exp" data-reference-type="ref+label" href="#subsec:more-exp">8.4</a> 中显示了任务的详细信息及相应的运行时间。我们还使用 FlexGen 来运行 OPT 模型的数据整理任务。详细的任务配置和运行时间均为 <a data-reference="subsec:more-exp" data-reference-type="ref+label" href="#subsec:more-exp">8.4</a>版本。</p>
+<h3 id="subsec:eval-approximation">6.2 近似</h3>
+<p>我们使用两个任务证明我们的近似方法精度损失可忽略不计：Lambada 上的下一个单词预测和 WikiText 上的语言建模。如 <span>[表：approximations_accuracy]</span>所示，“4位”指的是通过分组量化将权重和KV cache压缩为4位整数。“4位S”是指将量化和稀疏注意力与值缓存的10%稀疏性结合起来。这 <code>FP16</code>两种方法相比，精度损失可忽略不计。结果显示了大语言模型对这些近似的鲁棒性。我们也尝试过3位压缩，但无法保持准确性。</p>
+<h3 id="subsec:collaborative">6.3 卸载推理与协同推理</h3>
+<p>我们通过在GCP上设置一个私有Petals集群，每个节点配备一个T4 GPU，比较FlexGen和Petals在不同网络条件下的表现。我们使用Linux流量控制来限制实例之间的连接，以模拟一个真实的去中心化网络，并对OPT-30B模型（输入序列长度：512，输出序列长度：32）的性能进行基准测试。我们将每个请求的batch大小调为2，并由6个并行客户端进程发出请求，以实现最大吞吐量<a class="footnote-ref" href="#fn2" id="fnref2" role="doc-noteref"><sup>2</sup></a>。此外，我们通过使用GPU数量来规范Petals的吞吐量。如 <a data-reference="fig:vs_petals" data-reference-type="ref+label" href="#fig:vs_petals">5</a>所示，我们发现FlexGen在单T4时的吞吐量在所有测试网络条件下均优于Petals集群的每GPU吞吐量。Petals 不使用卸载功能，因此无法使用非常大的batch，这限制了其吞吐量的缩放。因此，我们认为卸载可能比在长分散式流水线中传输大量激活更为高效的吞吐量解决方案;另一方面，在对延迟敏感的场景中，协作推断可能是一个更可行的选择。</p>
+<p>有趣的是，我们发现FlexGen在低速且短发电的网络中，能够实现比Petals更低的延迟。我们推测这是因为网络带宽成为激活传输的瓶颈，而较大的延迟会在管道中的每个通信步骤产生显著的开销。对于100毫秒延迟网络的曲线，我们可以观察到FlexGen和Petals之间的交叉点。这是因为prefill期间的激活次数比解码时的激活量多于输入序列长度的倍数。因此，通信开销相应增加，这大大降低了 Petals 在prefill阶段的变速。</p>
+<h2 id="sec:conclusion">7 结论</h2>
+<p>我们介绍FlexGen，一个用于LLM推理的高吞吐生成引擎，专注于资源受限场景下的延迟不敏感batch任务。</p>
+<h2 class="unnumbered" id="acknowledgements">致谢</h2>
+<p>我们感谢克拉克·巴雷特和约瑟夫·E·冈萨雷斯的资助支持，以及谢志强、傅宇、张浩、周尼克、本杰明·斯佩克特、肖光轩、王珏、德赛阿俊、傅耀、魏安江和叶子昊的深刻评审和讨论。</p>
+<h2 id="sec:appendix">附录</h2>
+<h3 id="subsec:appendix-notation">7.1 符号</h3>
+<p>我们在附录中使用 <a data-reference="tab:model_vars" data-reference-type="ref+Label" href="#tab:model_vars">了2</a> 号的记谱。</p>
+<div id="tab:model_vars">
+<table>
+<caption>Notations</caption>
+<thead>
+<tr>
+<th style="text-align: center;">瓦尔</th>
+<th style="text-align: left;">含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(l\)</span></td>
+<td style="text-align: left;">模型中的层数</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(s\)</span></td>
+<td style="text-align: left;">prompt序列长度</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(n\)</span></td>
+<td style="text-align: left;">输出序列长度</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(bls\)</span></td>
+<td style="text-align: left;">块大小</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(h_1\)</span></td>
+<td style="text-align: left;">隐藏尺寸</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(h_2\)</span></td>
+<td style="text-align: left;">第二层MLP的隐藏大小</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(nh\)</span></td>
+<td style="text-align: left;">模型中的气头数</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="subsec:optimality">7.2 计算计划最优性</h3>
+<p>本节讨论 <a data-reference="subsec:formulation" data-reference-type="ref+Label" href="#subsec:formulation">4.1</a> 中描述的图遍历问题，仅考虑模型无法放入单个GPU的情况。我们不假设CPU计算的应用。计算平方时，GPU加载所需的张量，完成后卸载缓存和激活。我们将分析两种时间表： <a data-reference="subsec:search-space" data-reference-type="ref+label" href="#subsec:search-space">4.2</a> 中使用的之字形块时间表和本节引入的I/O最优对角块时间表。注意，我们的分析仅考虑理论上的I/O复杂度。在真实系统中，延迟和内存消耗不可能与理论计算相同。</p>
+<p>生成过程中需要存储三样东西：权重、激活次数和KV cache。从计算图中，我们有三个观察结果。（1）假设我们需要在GPU中交换权重的进出。无论部分是多少，为了完成一个prompt的生成，我们需要交换 <span class="math inline">\(n\)</span> 次以换取 <span class="math inline">\(n\)</span> token。因此，更倾向于将已加载的权重用于一批prompt，从而摊销权重的 I/O 时间。（2）每个方块输出激活值，这些激活将被输入到下一层。计算图中的每一行同时只需保持一个格子的激活次数。（3） 对于除行中最后 <span class="math inline">\(l\)</span> 格外的每个方格，该方块倾倒的KV cache必须生成最后一个token（计算图中的最后 <span class="math inline">\(l\)</span> 列）。它不会在行或列之间共享，这会是限制batch大小的主要因素。</p>
+<h4 id="zig-zag-block-schedule-and-diagonal-block-schedule">7.2.1 之字形块调度和对角块调度</h4>
+<p>锯<strong>齿形的排班表。</strong>受<a data-reference="subsec:search-space" data-reference-type="ref+Label" href="#subsec:search-space">4.2</a>中引入的三个观察启发，我们计算计算图中<span class="math inline">\(bls\)</span>样本的第一列，保存倾倒的缓存和激活，然后计算<span class="math inline">\(bls\)</span>样本的第二列，直到最后一列样本<span class="math inline">\(bls\)</span>样本。我们称<span class="math inline">\(bls\)</span>为<a data-reference="subsec:search-space" data-reference-type="ref+Label" href="#subsec:search-space">4.2</a>中引入的块大小。计算出来的<span class="math inline">\(bls \cdot n \cdot l\)</span>方称为块。</p>
+<p>假设 <code>FP16</code> 精度，要在一个块计算中生成 <span class="math inline">\(n\cdot bls\)</span> 个token，我们必须加载 <span class="math inline">\(n\)</span> 倍的模型权重，对激活执行总共 <span class="math inline">\(2(2h_1\cdot s \cdot bls\cdot l + 2h_1 \cdot bls \cdot l \cdot (n-1))\)</span> 字节的I/O操作，以及对KV cache的总计 <span class="math inline">\(4h_1\cdot bls\cdot l \cdot (s \cdot n + n (n - 1) / 2)\)</span> 字节的I/O操作。</p>
+<p>设 <span class="math inline">\(w\)</span> 表示单层权重的大小。用于存储权重、激活和KV cache的峰值内存可估计为 <span class="math display">\[\text{peak\_mem} = w + 2h_1\cdot bls + 4h_1\cdot bls\cdot l\cdot (s+n)\]</span></p>
+<p>如果只和CPU交换，那么 <span class="math inline">\(&lt;\)</span> CPU内存——也就是开销。设 <span class="math inline">\(cmem\)</span> 表示右手，有 <span class="math display">\[bls \leq \frac{cmem - w}{2h_1 + 4h_1\cdot l\cdot (s+n)} = bls_1\]</span></p>
+<p>现在我们证明了有更好的调度，既能实现相同的I/O效率，又能在某些情况下将 <span class="math inline">\(bls\)</span> 扩大约2倍。</p>
+<h4 id="diagonal-block-schedule">7.2.2 对角块时间表</h4>
+<figure class="figure" data-latex-placement="t" id="fig:diagonal-block">
+<img alt="对角块时间表" loading="lazy" src="../assets/papers/flexgen-full/figure-05.png"/>
+<figcaption class="caption">对角块时间表</figcaption>
+</figure>
+<p><a data-reference="fig:diagonal-block" data-reference-type="ref+Label" href="#fig:diagonal-block">6</a> 是我们对角块时间表的示意图 我们有一个包含4个GPUbatch的模块，我们将生成4个token，模型有4个层。将有一个一次性的预热阶段（灰色区域），用于计算对角线以上的面积。然后，对于每次迭代，系统会计算一个包含4个子对角线的对角线（第一个子对角线为4个被红色轮廓包围的方格，第二个子对角线为4个被蓝色轮廓包围的方格）。完成4个子对角线后，下一行重复同样的计算。</p>
+<p>为了简化起见，考虑这样一个好情况：内存容量足够大，使得对角线可以覆盖<span class="math inline">\(n\)</span>token的所有生成迭代<span class="math inline">\(n\)</span>。<span class="math inline">\(bls\)</span>块大小定义为对角线接触的样本数。</p>
+<p>总计计算一个对角线时，每层的权重会加载一次，激活和KV cache的I/O大小大致相当于之字形块调度中的值 <span class="math inline">\(1/n\)</span> 。会生成 <span class="math inline">\(bls\)</span> token。所以每个token的输入输出（I/O）和一次预热后的之字形块调度是一样的，如果是同一 <span class="math inline">\(bls\)</span>。</p>
+<p>用于存储必要权重、激活次数和KV cache所需的峰值内存估计为</p>
+<p><span class="math inline">\(\text{peak\_mem}\leq cmem\)</span>，我们有<span class="math display">\[bls\leq \frac{n(cmem - w)}{2h_1\cdot n +  2h_1\cdot l \cdot (2s+n)(n-1)} = bls_2\]</span> <span class="math display">\[\begin{aligned}
+    \text{peak\_mem} &amp;= w + 2h_1\cdot bls\\
+    &amp;+ \frac{4h_1\cdot bls\cdot l (2s+n)(n-1)}{2n}
+\end{aligned}\]</span></p>
+<p>尽管一开始只有一次热身。斜角块调度可以在 <span class="math display">\[\frac{bls_2}{bls_1} = \frac{2s+2n}{2s+n} + O\left(\frac{1}{n}\right)\]</span> 比比大于锯齿形块调度时容纳比更大的块， <span class="math inline">\(n\gg s\)</span>时接近 <span class="math inline">\(s\gg n\)</span>时接近1。</p>
+<p>更大的 <span class="math inline">\(bls\)</span> 不会改变激活次数，KV cache每个token的I/O，但可以按比例减少每个token的I/O权重，而权重I/O通常可以占据较大部分。</p>
+<p><strong>讨论。</strong> 在卸载环境中，输入输出在延迟和吞吐量上是显著瓶颈，因此当 <span class="math inline">\(n\)</span> 相较于 <span class="math inline">\(s\)</span> 且内存足够大以容纳 <span class="math inline">\(n\)</span> 采样时，对角块调度应能带来显著的增益。</p>
+<p>当计算资源足够避免卸载时，对角块调度仍能减少峰值内存并扩大batch规模，从而提高GPU利用率。</p>
+<p>与之字形分块调度相比，另一个优点是，在相同吞吐量下，每个prompt的生成延迟会更低。例如，假设在之字形块调度中，采样 <span class="math inline">\(bls\)</span> 同时完成生成，延迟 <span class="math inline">\(T\)</span>。在对角块调度中，前 <span class="math inline">\(bls/n\)</span> 采样以延迟 <span class="math inline">\(T/n\)</span>结束生成，第二 <span class="math inline">\(bls/n\)</span> 采样以延迟 <span class="math inline">\(2T/n\)</span>结束，依此类推。完成的平均延迟减半。</p>
+<p>尽管有其优势，但实施对角块时间表仍存在一些困难。主要的实现难点是 KV 缓存缓冲区的动态更新。为了提高运行效率，FlexGen 现在在块开始处为所有 KV 缓存预先分配连续缓冲区。这对之字形时段的安排非常有效。然而，对于对角块调度，预分配连续缓冲区会使得无法再节省内存。要利用对角块调度的内存节省性质，需要在非连续内存上实现高效的注意力计算。</p>
+<h4 id="proof-of-thmsuboptimal">7.2.3 [ thm：次优] 的证明</h4>
+<p>注意，无论如何，当我们从计算一个方格移动到另一个方格时，都需要卸载并加载相应的KV cache。这样 KV 缓存产生的总 I/O 是恒定的。激活产生的总I/O可能有所不同，但尽管有prefill阶段，但每个格子的大小远小于同一格的KV cache。总体而言，激活次数约为KV cache的 <span class="math inline">\(1/(2s+n)\)</span> 。为了简化，我们将忽略激活产生的I/O，这可能导致最多 <span class="math inline">\(1/(2s+n)\)</span> 的乘法误差。剩下的就是权重 I/O。从现在开始，语境中的 I/O 复杂度指的是权重产生的 I/O 复杂度。</p>
+<div class="definition">
+<p><strong>定义1</strong>。 我们定义GPU计算正方形时的工作状态如下。假设有 <span class="math inline">\(k\)</span> 个GPUbatch中。最近计算出的方格（包括当前方格）的列索引分别为 <span class="math inline">\(a_1, a_2, ..., a_k\)</span>和 <span class="math inline">\(1 \le a_i \le n \times l\)</span>。不同的batch完全独立，所以假设 <span class="math inline">\(a_1\geq a_2\geq ...\geq a_k\)</span>。那么工作态是一个元组 <span class="math inline">\((a_1, a_2,..., a_k)\)</span>。对方格进行计算的移动是一对状态 <span class="math inline">\(s^{(1)}, s^{(2)}\)</span> 意味着从状态 <span class="math inline">\(s^{(1)}\)</span> 到 <span class="math inline">\(s^{(2)}\)</span>。</p>
+</div>
+<p>考虑一个最优顺序，记为无限序列 <span class="math inline">\(m_1, m_2, ...., m_{\infty}\)</span>，其中 <span class="math inline">\(m_i\)</span> 是 <span class="math inline">\(i\)</span>步。对于每个 <span class="math inline">\(i\)</span>，设 <span class="math inline">\(s_i\)</span> 为当前工作状态。</p>
+<div class="lemma" id="lem:uniform-delta">
+<p>引<strong>理2</strong>。 <em>如果存在从状态<span class="math inline">\(s\)</span>开始，回到状态<span class="math inline">\(s\)</span>的走法列表，则每列计算出的格数（一层对应一个token）是相同的。</em></p>
+</div>
+<div class="proof">
+<p><em>证据。</em> 假设起始状态 <span class="math inline">\(s=(a_1, a_2,..., a_k)\)</span>。对于占据整行的计算，每列计算出的方格数相同。所以我们只需要考虑那些未被完全遍历（被最终状态捕获）的行。对于每个 <span class="math inline">\(a_i\)</span>，如果底层行在末尾未完成，且以索引 <span class="math inline">\(b_i\)</span>结尾，则将 <span class="math inline">\(a_i\)</span> 与 <span class="math inline">\(b_i\)</span>配对。如果底层行已经完成，我们会将其与新开但未完成的行配对，仍设 <span class="math inline">\(b_i\)</span> 表示新索引。</p>
+<p>因此，我们已经从<span class="math inline">\(S_a = (a_1, a_2,..., a_k)\)</span>状态转移到了另一个状态<span class="math inline">\(S_b=(b_1, b_2,..., b_k)\)</span>。<span class="math inline">\(S_a\)</span>中的索引按<span class="math inline">\(a_1\geq a_2\geq ...\geq a_k\)</span>排序。<span class="math inline">\(S_b\)</span>中的索引没有排序，但<span class="math inline">\(b_i\)</span>与<span class="math inline">\(a_i\)</span>根据上述段落配对。对于每个<span class="math inline">\(i\)</span>，如果<span class="math inline">\(b_i &gt; a_i\)</span>，我们需要将<span class="math inline">\((a_i, b_i]\)</span>中的方格数为1。如果<span class="math inline">\(b_i &lt; a_i\)</span>，我们需要将<span class="math inline">\((b_i, a_i]\)</span>中的平方数为-1。现在我们论证，对于每个列索引<span class="math inline">\(j\)</span>和<span class="math inline">\(1 \le j \le n \times l\)</span>，其计数相加为0。假设不存在<span class="math inline">\(p\)</span>正计数和<span class="math inline">\(q\)</span>负计数和<span class="math inline">\(p\neq q\)</span>。然后状态<span class="math inline">\(a\)</span>中<span class="math inline">\(p\)</span>小于<span class="math inline">\(j\)</span>的值，<span class="math inline">\(q\)</span>小于<span class="math inline">\(j\)</span>状态<span class="math inline">\(b\)</span>。这与<span class="math inline">\(S_a\)</span>和<span class="math inline">\(S_b\)</span>是同一状态只是顺序不同的事实相矛盾。因此，每列计算出的方格数相同。◻</p>
+</div>
+<div class="theorem" id="thm:optimal">
+<p><strong>定理3</strong>。  <em>对角块排定在渐近时是I/O最优的。</em></p>
+</div>
+<div class="proof">
+<p><em>证据。</em> 注意，由于内存容量有限，状态长度有限，因此可能状态的数量是有限的。如果每个状态在序列中出现有限次，那么序列就不能是无限的。因此，存在一个状态 <span class="math inline">\(s\)</span> 在序列中出现无限次。</p>
+<p>设 <span class="math inline">\(j_1, j_2,..., j_{\infty}\)</span> 为序列中状态为 <span class="math inline">\(s\)</span>的指标。每个相邻 <span class="math inline">\(s\)</span> 状态之间的移动对应于吞吐量。 <span class="math inline">\(j_1\)</span> 与 <span class="math inline">\(j_2\)</span> 之间的移动应能创造出从状态 <span class="math inline">\(s\)</span> 推送到 <span class="math inline">\(s\)</span>的最高吞吐量。否则，我们可以替换它以获得更高的总吞吐量，这与它是一个最优顺序的说法相矛盾。这样我们就能在每个相邻 <span class="math inline">\(j_i, j_{i+1}\)</span> 之间重复这种策略，获得最优的计算顺序。</p>
+<p>现在问题归结为寻找 <span class="math inline">\(j_1\)</span> 和 <span class="math inline">\(j_2\)</span>之间的最优计算阶。对于无限循环，从 <span class="math inline">\(j_1\)</span> 到 <span class="math inline">\(j_2\)</span> 的最高吞吐量在整个序列中获得最高的吞吐量。</p>
+<p>假设计算顺序在 <span class="math inline">\(j_1\)</span> 到 <span class="math inline">\(j_2\)</span>之间最优。从 <a data-reference="lem:uniform-delta" data-reference-type="ref+Label" href="#lem:uniform-delta">2</a>开始，每列记为 <span class="math inline">\(c\)</span>，计算的方格数相同。在这种固定 <span class="math inline">\(c\)</span>下，吞吐量由 <span class="math inline">\(j_1\)</span> 到 <span class="math inline">\(j_2\)</span>之间的输入输出时间决定。我们为 <a data-reference="fig:computational_graph" data-reference-type="ref+Label" href="#fig:computational_graph">每种</a> 颜色加载权重的次数决定了总的I/O时间。每次加载权重时，例如计算黄色方块的权重，我们无法在同一行计算两个黄色方块而不交换权重，因为它们之间的方格尚未被计算，需要其他权重。</p>
+<p>因此，对于一次加载，我们只能计算不同行的方块，这意味着所有与这些方块对应的缓存和激活都必须被保留（无论是在CPU还是磁盘上）。每个格子对应一定的内存消耗，例如， <span class="math inline">\(i\)</span>个token范围内的格子需要为 <span class="math inline">\(s+i-1\)</span> 个token消耗缓存。所有方块的内存消耗之和是一个常数，记作 <span class="math inline">\(M\)</span>。设 <span class="math inline">\(M'\)</span> 表示存储容量。重量的加载时间至少有 <span class="math inline">\(\lceil M/M' \rceil\)</span>。设 <span class="math inline">\(t_w\)</span> 表示一种颜色加载权重的I/O时间，最优吞吐量最多为 <span class="math inline">\(c/\lceil M/M' \rceil/t_w\)</span>。</p>
+<p>在对角块计划中，预热后，每次加载权重时，峰值内存是每个计算方块内存消耗的总和，每次加载权重时均相同。我们可以设置它<span class="math inline">\(M'\)</span><a class="footnote-ref" href="#fn3" id="fnref3" role="doc-noteref"><sup>3。</sup></a>取<span class="math inline">\(c\)</span>对角线数作为重复的移动列表，记为<span class="math inline">\(\vec{q}\)</span>。将起始状态设置为<span class="math inline">\(s\)</span>会<span class="math inline">\(\vec{q}\)</span>通过构造恢复该状态为 <span class="math inline">\(s\)</span>。<span class="math inline">\(\vec{q}\)</span>期间的权重加载时间为<span class="math inline">\(\lceil M/M' \rceil\)</span>，满足下限，并达到吞吐量上限<span class="math inline">\(c/\lceil M/M' \rceil/t_w\)</span>。在无限序列的设定中，热身阶段可以忽略。总之，对角块排定在渐近上是I/O最优的。◻</p>
+</div>
+<p>之字形块排期并不理想，因为每次加载权重时峰值内存消耗都不相同。计算最后一个token的层时，峰值内存随 <span class="math inline">\(s+n-1\)</span>缩放，而第一个token则随 <span class="math inline">\(s\)</span>进行缩放。为了让前者融入 <span class="math inline">\(M'\)</span>，后者必须小于 <span class="math inline">\(M'\)</span>。但生成token时内存消耗变化是线性的，因此每次权重加载的平均内存消耗至少可以推到 <span class="math inline">\(M'/2\)</span>。由此，之字形块调度至少可以达到 <span class="math inline">\(c/\lceil M/(M'/2)\rceil /t_w\)</span> 吞吐量，这 <span class="math inline">\(1/2\)</span> 于吞吐量上限。在无限序列设置下，这意味着之字形块调度最多可实现2<span class="math inline">\(\times\)</span> 最优的I/O复杂度。因此，我们有：</p>
+<h3 id="sec:full-cost-model">7.3 成本模型</h3>
+<p>在本节中，我们将介绍完整的成本模型。注意我们用单一变量表示带宽和TFLOPS等常数，以简化下面的表述。在实际系统中，这些常数会根据总负载变化。我们通过使用分段函数并添加正则化项来处理此类动力学。我们通过仅依赖其他常量（如隐藏大小）来仔细建模动力学，因此优化问题仍然是相对于策略变量的线性规划问题。</p>
+<p><a data-reference="tab:model_vars" data-reference-type="ref+Label" href="#tab:model_vars">2</a> 和 <a data-reference="tab:cost_vars" data-reference-type="ref+Label" href="#tab:cost_vars">3</a> 给出了成本模型中使用的常数的含义。</p>
+<div id="tab:cost_vars">
+<table>
+<caption>Notation Variables</caption>
+<thead>
+<tr>
+<th style="text-align: center;">瓦尔</th>
+<th style="text-align: left;">含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(ctog\_bdw\)</span></td>
+<td style="text-align: left;">CPU到GPU的带宽</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(gtoc\_bdw\)</span></td>
+<td style="text-align: left;">GPU与CPU的带宽</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(dtoc\_bdw\)</span></td>
+<td style="text-align: left;">磁盘到CPU的带宽</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(ctod\_bdw\)</span></td>
+<td style="text-align: left;">CPU到磁盘的带宽</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(mm\_flops\)</span></td>
+<td style="text-align: left;">矩阵乘法中GPU每秒的浮点率</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(bmm\_flops\)</span></td>
+<td style="text-align: left;">batch矩阵乘法的GPU每秒浮点率</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(cpu\_flops\)</span></td>
+<td style="text-align: left;">CPU每秒浮点率</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(wg\)</span></td>
+<td style="text-align: left;">GPU 权重百分比</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(wc\)</span></td>
+<td style="text-align: left;">CPU 权重百分比</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(wd\)</span></td>
+<td style="text-align: left;">圆盘上权重的百分比</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(cg\)</span></td>
+<td style="text-align: left;">GPU上KV cache的百分比</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(cc\)</span></td>
+<td style="text-align: left;">CPU 上 KV 缓存的百分比</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(cd\)</span></td>
+<td style="text-align: left;">磁盘上KV cache的百分比</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(hg\)</span></td>
+<td style="text-align: left;">GPU激活百分比</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(hc\)</span></td>
+<td style="text-align: left;">CPU激活的百分比</td>
+</tr>
+<tr>
+<td style="text-align: center;"><span class="math inline">\(hd\)</span></td>
+<td style="text-align: left;">磁盘激活百分比</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>其目标是最大化吞吐量（token/s），这等同于最小化倒数（s/token）。自由变量以蓝色表示。</p>
+<h4 id="objective">7.3.1 目标</h4>
+<p><span class="math display">\[\text{Minimize\space\space\space} T/\textcolor{blue}{bls}\]</span>然后以下约束描述了总延迟的计算：<span class="math display">\[T = Tpre\cdot l + Tgen\cdot (n-1)\cdot l\]</span> <span class="math display">\[Tpre = \max(ctog^p, gtoc^p, dtoc^p, ctod^p, comp^p)\]</span> <span class="math display">\[\begin{aligned}
+    ctog^p = &amp;\text{ } \frac{weights\_ctog^p + act\_ctog^p}{ctog\_bdw}\\
+    = &amp;\text{ } \frac{1}{ctog\_bdw} ((\textcolor{blue}{wc}+\textcolor{blue}{wd})(8h_1^2 + 4h_1\cdot h_2)\\
+      &amp;\text{\space\space\space\space\space\space\space\space\space\space\space\space\space\space\space\space\space\space} + 2(\textcolor{blue}{hc}+\textcolor{blue}{hd})s\cdot h_1\cdot \textcolor{blue}{bls})
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    gtoc^p = &amp;\text{ } \frac{cache\_gtoc^p + act\_gtoc^p}{gtoc\_bdw}\\
+    = &amp;\text{ } \frac{1}{gtoc\_bdw} (4(\textcolor{blue}{cc}+\textcolor{blue}{cd})(s+1)h_1\cdot \textcolor{blue}{bls}\\  &amp;\text{\space\space\space\space\space\space\space\space\space\space\space\space\space\space\space\space\space\space}+2(\textcolor{blue}{hc}+\textcolor{blue}{hd})s\cdot h_1\cdot \textcolor{blue}{bls})
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    dtoc^p = &amp;\text{ } \frac{weights\_dtoc^p + act\_dtoc^p}{dtoc\_bdw}\\
+    = &amp;\text{ } \frac{1}{dtoc\_bdw} (\textcolor{blue}{wd}(8h_1^2 + 4h_1\cdot h_2)\\
+      &amp;\quad\quad\quad\quad\text{\space\space} + 2\textcolor{blue}{hd}\cdot s\cdot h_1\cdot \textcolor{blue}{bls})
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    ctod^p = &amp;\text{ } \frac{cache\_ctod^p + act\_ctod^p}{ctod\_bdw}\\
+    = &amp;\text{ } \frac{1}{ctod\_bdw} (4\textcolor{blue}{cd}\cdot \textcolor{blue}{bls}\cdot (s+1)\cdot h_1\\
+      &amp;\quad\quad\quad\quad\text{\space\space} + 2\textcolor{blue}{hd}\cdot s\cdot h_1\cdot \textcolor{blue}{bls})
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    comp^p = &amp;\text{ } \frac{linear\_layer^p}{mm\_flops} + \frac{att^p}{bmm\_flops}\\
+    =&amp;\text{ } \frac{\textcolor{blue}{bls}(8s\cdot h_1^2 + 4s\cdot h_1\cdot h_2)}{mm\_flops}\\
+    &amp;\text{ }+ \frac{4\textcolor{blue}{bls}\cdot s^2\cdot h_1}{bmm\_flops}
+\end{aligned}\]</span> <span class="math display">\[Tgen = \max(ctog^g, gtoc^g, dtoc^g, ctod^g, comp^g)\]</span> <span class="math display">\[\begin{aligned}
+    ctog^g = &amp;\text{ } \frac{weights\_ctog^g + act\_ctog^g}{ctog\_bdw}\\
+    = &amp;\text{ } \frac{1}{ctog\_bdw} ((\textcolor{blue}{wc}+\textcolor{blue}{wd})(8h_1^2 + 4h_1\cdot h_2)\\
+      &amp;\quad\quad\quad\quad\text{\space\space} + 2(\textcolor{blue}{hc}+\textcolor{blue}{hd})h_1\cdot \textcolor{blue}{bls})
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    gtoc^g = &amp;\text{ } \frac{act\_gtoc^g}{gtoc\_bdw}\\
+    = &amp;\text{ } \frac{1}{gtoc\_bdw} (2(\textcolor{blue}{hc}+\textcolor{blue}{hd})\cdot h_1\cdot \textcolor{blue}{bls})
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    dtoc^g = &amp;\text{ } \frac{cache\_dtoc^g +weights\_dtoc^g + act\_dtoc^g}{dtoc\_bdw}\\
+    = &amp;\text{ } \frac{1}{dtoc\_bdw} (4\textcolor{blue}{cd}\cdot \textcolor{blue}{bls}\cdot (s+n/2)\cdot h_1\\
+      &amp;\quad\quad\quad\quad\text{\space\space} +\textcolor{blue}{wd}(8h_1^2 + 4h_1\cdot h_2)\\
+      &amp;\quad\quad\quad\quad\text{\space\space} + 2\textcolor{blue}{hd}\cdot h_1\cdot \textcolor{blue}{bls})
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    ctod^g = &amp;\text{ } \frac{cache\_ctod^g + act\_ctod^g}{ctod\_bdw}\\
+    = &amp;\text{ } \frac{1}{ctod\_bdw} (4\textcolor{blue}{cd}\cdot \textcolor{blue}{bls}\cdot h_1 + 2\textcolor{blue}{hd}\cdot h_1\cdot \textcolor{blue}{bls})
+\end{aligned}\]</span> <span class="math display">\[comp^g = gpu\_comp^g + cpu\_comp^g\]</span> <span class="math display">\[\begin{aligned}
+    gpu\_comp^g = &amp;\text{ } \frac{linear\_layer^g}{mm\_flops} + \frac{att^g}{bmm\_flops}\\
+    =&amp;\text{ } \frac{\textcolor{blue}{bls}(8h_1^2 + 4h_1\cdot h_2)}{mm\_flops}\\
+     &amp;\text{ }+ \frac{4\textcolor{blue}{cg}\cdot \textcolor{blue}{bls}\cdot (s+n/2)\cdot h_1}{bmm\_flops}
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+cpu\_comp^g &amp;= \frac{att^g}{cpu\_flops}\\
+&amp;= \frac{4(\textcolor{blue}{cc}+\textcolor{blue}{cd})\textcolor{blue}{bls}\cdot (s+n/2)\cdot h_1}{cpu\_flops}\\
+\end{aligned}\]</span></p>
+<h4 id="peak-memory-constraints">7.3.2 峰值内存约束</h4>
+<ul>
+<li><p>prefill期间GPU峰值内存约束：</p>
+<p>用于存储权重、激活和缓存固定比例的GPU内存是 <span class="math display">\[\begin{aligned}
+    gpu\_home^p = &amp;\text{ } \textcolor{blue}{wg}\cdot (8h_1^2 + 4h_1\cdot h_2) \cdot l \\
+    &amp;\text{ }+ \textcolor{blue}{hg}\cdot 2s\cdot h_1 \cdot \textcolor{blue}{bls} \\
+    &amp;\text{ }+ 4(s+n)h_1\cdot \textcolor{blue}{cg}\cdot\textcolor{blue}{bls}\cdot l.
+\end{aligned}\]</span></p>
+<p>GPU工作内存（省略掩码）： <span class="math display">\[\begin{aligned}
+    qkv^p =&amp;\text{ }\textcolor{blue}{gbs} \cdot(2s\cdot h_1 + 3(2s\cdot h_1)) \\
+    =&amp;\text{ } \textcolor{blue}{gbs} \cdot 8s\cdot h_1\\
+    att_1^p =&amp;\text{ } \textcolor{blue}{cg}\cdot\textcolor{blue}{gbs} \cdot (2s\cdot h_1 + 2s\cdot h_1 + 2nh\cdot s^2) \\
+    att_2^p =&amp;\text{ }\textcolor{blue}{cg}\cdot\textcolor{blue}{gbs}\cdot( 2nh\cdot s^2+ 2s\cdot h_1 + 2s\cdot h_1) \\
+    embed^p =&amp;\text{ }\textcolor{blue}{gbs} \cdot(2s\cdot h_1 + 2s\cdot h_1)\\
+    =&amp;\text{ } \textcolor{blue}{gbs} \cdot 4s\cdot h_1 \\
+    mlp_1^p =&amp;\text{ } \textcolor{blue}{gbs} \cdot 2(s\cdot h_1 + s\cdot h_2) \\
+    =&amp;\text{ } 2\textcolor{blue}{gbs} \cdot s (h_1+h_2) \\
+    mlp_2^p =&amp;\text{ } \textcolor{blue}{gbs} \cdot 2(s\cdot h_2 + s\cdot h_1) \\
+    =&amp;\text{ } 2\textcolor{blue}{gbs} \cdot s (h_1 + h_2)
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    gpu\_w^p&amp;=\text{ } 2(1- \textcolor{blue}{wg})(8h_1^2+4h_1\cdot h_2) \\
+    + &amp;(1-\textcolor{blue}{hg})\cdot 2s\cdot h_1\cdot \textcolor{blue}{gbs} \\
+       + &amp;\max(
+        qkv,
+        att_1,
+        att_2,
+        embed,
+        mlp_1,
+        mlp_2)
+\end{aligned}\]</span> <span class="math display">\[gpu\_peak^p = gpu\_home^p + gpu\_w^p &lt; gmem\]</span></p></li>
+<li><p>prefill后的GPU峰值内存约束：</p>
+<p>用于存储权重、激活和缓存固定比例的GPU内存是 <span class="math display">\[\begin{aligned}
+    gpu\_home^g = &amp;\text{ } \textcolor{blue}{wg}\cdot (8h_1^2 + 4h_1\cdot h_2) \cdot l \\
+    &amp;\text{ }+ \textcolor{blue}{hg}\cdot 2 h_1 \cdot \textcolor{blue}{bls} \\
+    &amp;\text{ }+ 4(s+n)h_1\cdot \textcolor{blue}{cg}\cdot\textcolor{blue}{bls} \cdot l.
+\end{aligned}\]</span></p>
+<p>GPU工作内存（省略掩码）： <span class="math display">\[\begin{aligned}
+    qkv^g =&amp;\text{ }\textcolor{blue}{gbs} \cdot(2h_1 + 3(2h_1)) = 8\textcolor{blue}{gbs} \cdot h_1\\
+    att_1^g =&amp;\text{ } \textcolor{blue}{cg}\cdot\textcolor{blue}{gbs} \cdot (2h_1 +2(s+n) h_1 \\
+    &amp;\text{\quad\quad\quad\quad} + 2nh(s+n)) \\
+    att_2^g =&amp;\text{ }\textcolor{blue}{cg}\cdot\textcolor{blue}{gbs}\cdot( 2nh (s+n)+ 2(s+n)h_1 \\
+    &amp;\text{\quad\quad\quad\quad}+ 2h_1) \\
+    embed^g =&amp;\text{ }\textcolor{blue}{gbs} \cdot(2h_1 + 2h_1) = 4\textcolor{blue}{gbs} \cdot h_1 \\
+    mlp_1^g =&amp;\text{ } 2\textcolor{blue}{gbs} \cdot (h_1 + h_2) \\
+    mlp_2^g =&amp;\text{ } 2\textcolor{blue}{gbs} \cdot(h_2 + h_1)
+\end{aligned}\]</span> <span class="math display">\[\begin{aligned}
+    gpu\_w^g&amp; =\text{ } 2(1- \textcolor{blue}{wg})(8h_1^2+4h_1\cdot h_2) \\
+    +&amp;(1-\textcolor{blue}{hg})\cdot 2s\cdot h_1\cdot \textcolor{blue}{gbs} \\
+    +&amp;\max(
+    qkv^g,
+    att_1^g,
+    att_2^g,
+    embed^g,
+    mlp_1^g,
+    mlp_2^g)
+\end{aligned}\]</span> <span class="math display">\[gpu\_peak^g = gpu\_home^g + gpu\_w^g &lt; gmem\]</span></p></li>
+<li><p>prefill期间的CPU峰值内存约束：</p>
+<p>用于存储权重、激活和缓存固定百分比的CPU内存 <span class="math display">\[\begin{aligned}
+    cpu\_home^p = &amp;\text{ } \textcolor{blue}{wc}\cdot (8h_1^2 + 4h_1\cdot h_2) \cdot l \\
+    + &amp;\text{ } \textcolor{blue}{hc}\cdot 2s\cdot h_1 \cdot \textcolor{blue}{bls} \\
+    + &amp;\text{ } 4(s+n)h_1\cdot \textcolor{blue}{cc}\cdot \textcolor{blue}{bls} \cdot l.
+\end{aligned}\]</span></p>
+<p>CPU工作内存： <span class="math display">\[\begin{aligned}
+    cpu\_w^p =&amp;\text{ } (1-\textcolor{blue}{wg})(8h_1^2 + 4h_1\cdot h_2) \\
+        &amp;\text{ }+ (1-\textcolor{blue}{hg})\cdot 2s\cdot h_1\cdot \textcolor{blue}{gbs}.
+\end{aligned}\]</span> <span class="math display">\[cpu\_peak^p = cpu\_home^p + cpu\_w^p &lt; cmem\]</span></p></li>
+<li><p>prefill后的CPU峰值内存约束：</p>
+<p>用于存储权重、激活次数和缓存固定百分比的CPU内存是 <span class="math display">\[\begin{aligned}
+    cpu\_home^g = &amp;\text{ } \textcolor{blue}{wc}\cdot (8h_1^2 + 4h_1\cdot h_2) \cdot l \\
+    &amp;+ \textcolor{blue}{hc}\cdot 2h_1 \cdot \textcolor{blue}{bls} \\
+    &amp;+ 4(s+n)h_1\cdot \textcolor{blue}{cc}\cdot \textcolor{blue}{bls}\cdot l.
+\end{aligned}\]</span></p>
+<p>CPU工作内存： <span class="math display">\[\begin{aligned}
+    cpu\_w^g =&amp;\text{ } \textcolor{blue}{wd}(8h_1^2 + 4h_1\cdot h_2) \\
+        &amp;\text{ }+ 2\textcolor{blue}{hd}\cdot 2\cdot h_1\cdot \textcolor{blue}{gbs}\\
+        &amp;\text{ }+ 2\textcolor{blue}{cd}\cdot 4(s+n)h_1\cdot \textcolor{blue}{gbs}\\
+        &amp;\text{ }+ 2nh\cdot(s+n)\cdot \textcolor{blue}{gbs}\\
+        &amp;\text{ }+ 2h_1\cdot\textcolor{blue}{gbs}.
+\end{aligned}\]</span> <span class="math display">\[cpu\_peak^g = cpu\_home^g + cpu\_w^g &lt; cmem\]</span></p></li>
+<li><p>NVMe 峰值内存约束： <span class="math display">\[\begin{aligned}
+    nvme\_peak = &amp;\text{ } (8h_1^2 + 4h_1\cdot h_2) \cdot \textcolor{blue}{wd} \cdot l \\
+    &amp;\text{ }+ \textcolor{blue}{hd}\cdot 2s\cdot h_1\cdot \textcolor{blue}{bls} \\
+    &amp;\text{ }+ \textcolor{blue}{cd}\cdot 4(s+n)h_1\cdot \textcolor{blue}{bls} \cdot l \\
+    &lt;&amp;\text{ } nmem
+\end{aligned}\]</span></p></li>
+</ul>
+<h3 id="subsec:more-exp">7.4 表格及附加实验结果</h3>
+<p><strong>执行分解</strong> <span>[表：分解]</span> 显示了在 <a data-reference="table:hardware_specs" data-reference-type="ref+label" href="#table:hardware_specs">FlexGen</a> 上运行的 OPT-175B 的执行时间分解，设置内容在 1。</p>
+<p><strong>HELM 和数据整理</strong>[ <span>表：helm_integration]</span> 列出了 HELM 集成实验的详细信息。 <span>[表：data_wrangling_30b]</span> 和 <span>[表：data_wrangling_175b]</span> 显示了数据整理任务的额外结果。</p>
+<p><strong>策略细节补充表</strong> <span>相应表格</span> 和 <span>相应表格</span> 列出了 <span>相应表格</span> 中prompt长度 512 和 1024 的端到端吞吐量实验结果的具体策略设置。 <span>相应表格</span> 和 <span>相应表格</span> 列出了 <a data-reference="fig:throughput_vs_latency" data-reference-type="ref+label" href="#fig:throughput_vs_latency">1</a> 中数据点的延迟和吞吐量，展示了延迟与吞吐量之间的权衡。</p>
+<p><strong>浮压研究</strong> <span>[表：main_ablation_policy]</span> 列出了主要消融研究结果的具体政策设置，见<span>[表：tech_ablation]。</span><span>[表：tech_ablation_throughput]</span> 和 <span>[表：tech_ablation_latency]</span> 展示了一些关于政策的额外消融研究。在<span>[表：main_ablation_policy]</span>中，DeepSpeed选择将KV cache和激活存储存储在GPU上。对于OPT-30B，权重将完全存储在CPU上，因为它无法装进GPU。相应的百分比是<span class="math inline">\((0, 100, 100, 0, 100, 0)\)</span>。DeepSpeed 的计算顺序是逐行的，因此一个块中的 GPU batch数为 1。GPUbatch大小被设置为尽可能大，也就是8。对于OPT-175B，权重将完全存储在磁盘上，按照DeepSpeed的策略，因为权重无法存储在CPU上。相应的百分比是<span class="math inline">\((0, 0, 100, 0, 100, 0)\)</span>。一个块中的GPUbatch数为1，GPUbatch大小为2。在“无政策搜索”中，我们使用OPT-30B和OPT-175B的不同政策变更，以展示不同政策维度的影响。对于OPT-30B，我们将权重的百分比从（20， 80）改为（0， 100），并显示吞吐量变化不大。对于OPT-175B，我们将一个块中的GPUbatch数量从8个改为1个，结果显示吞吐量显著下降。对于“无CPU计算”，它比OPT-175B更严重地降低OPT-30B，因为OPT-175B的瓶颈在于磁盘卸载。因此，OPT-175B在CPU计算上的增益较小。而对于OPT-30B，磁盘尚未被使用，因此CPU计算的增益更为显著。</p>
+<p><strong>不同的SSD速度</strong> 强调SSD速度的限制和要求。我们在GCP上测试了两种磁盘，并在 <span>[表：ssd_throughput]</span> 中报告了生成吞吐量（token/s）（输入序列长度=512，输出序列长度=32）。</p>
+<p><strong>额外硬件与序列长度</strong> 我们的方法和实现不依赖于特定的硬件架构。只要PyTorch支持这些架构，它可以在不同的CPU架构（例如Intel、AMD）和不同的GPU架构（例如NVIDIA Ampere、NVIDIA Turing）上运行良好。某些架构（例如统一内存）可能更适合我们的做法。为了适应不同架构，我们需要拟合成本模型并运行策略搜索以生成卸载策略，这些策略可能根据不同架构的计算能力、内存容量和内存带宽而有所不同。最终的绝对性能会有所不同，但FlexGen可以轻松适应不同架构。我们在另一种硬件配置上做了额外实验：24GB RTX 3090，配备125GB CPU内存和1TB SSD，此外还使用之前设置的16GB T4处理器，配备208GB CPU内存和1.5TB SSD，见 <span>[表：3090]。</span>输入序列长度设为512，输出序列长度设为32。我们可以看到结果与主论文中的设定趋势相似。FlexGen 的表现明显优于其他基线。将3090设置与主论文中的T4设置进行比较，3090设置下的性能比30B和175B的T4设置差。这是因为CPU内存在需要卸载时也起着关键作用，使得我们拥有更大CPU内存的T4设置更为有利。</p>
+<p><span>[表：e2e_throughput_1_gpu_setup_256]</span> 和 <span>[表：more_seq_len_1_gpu]</span> 显示了额外prompt长度 256 的结果。由于主论文中的所有基准测试均以输出序列长度为32完成，因此我们在 <span>[表：e2e_throughput_1_gpu_setup_128_128]</span> 和 <span>[表：e2e_throughput_1_gpu_setup_512_8]</span>中增加了两个固定序列长度。前者中数字通常更高，因为输入序列长度较小，输出序列长度较大。由于吞吐量定义为（生成token数量）/（prefill时间 + 生成时间），此设置使prefill时间的比例更小。后者中数字通常较低，因为输出序列长度较短。</p>
+<p>总之，FlexGen在所有新增设置中都优于基线。FlexGen中使用的压缩技术仅适用于需要卸载的大型模型。CPU 内存容量对于需要卸载的大型模型至关重要。</p>
+<p><strong>不同序列长度的batch</strong> 我们还在 <span>[表：helm_mixed_length]</span>中添加了一个现实用例的实验，结合了prompt和输出长度（HELM基准测试）。对于batch 处理可变长度的序列，FlexGen 只需将所有输入填充到最大prompt长度，这是许多系统常用的方法。根据prompt长度的分布，这种简单填充方法的效率会有所不同。例如，如果大多数序列长度相近，那么缓存效率应当非常高。如果某些序列非常长，有些序列很短，FlexGen 就会花费大量时间在无用的填充token计算上。我们使用两个指标：填充吞吐量=（填充prompt中的token数 + 填充输出token数量）/ 延迟，实际吞吐量=（prompt中非填充token数量 + 输出中非填充token数量）/ 延迟。为了更好地处理不同长度的prompt，可以利用Orca的一些辅助技巧。</p>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">剧情描述</th>
+<th style="text-align: right;">prompt len</th>
+<th style="text-align: right;">伦将军</th>
+<th style="text-align: right;">Num seq</th>
+<th style="text-align: right;">时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">维基事实：K=5，主题=原告</td>
+<td style="text-align: right;">256</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">288</td>
+<td style="text-align: right;">10</td>
+</tr>
+<tr>
+<td style="text-align: left;">维基事实：k=5，主语=instance_of</td>
+<td style="text-align: right;">256</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">2592</td>
+<td style="text-align: right;">55</td>
+</tr>
+<tr>
+<td style="text-align: left;">MMLU：主语=abstract_algebra</td>
+<td style="text-align: right;">512</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">864</td>
+<td style="text-align: right;">31</td>
+</tr>
+<tr>
+<td style="text-align: left;">MMLU：主语=us_foreign_policy</td>
+<td style="text-align: right;">512</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1008</td>
+<td style="text-align: right;">33</td>
+</tr>
+<tr>
+<td style="text-align: left;">synthetic_reasoning：模式=pattern_match</td>
+<td style="text-align: right;">256</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">1584</td>
+<td style="text-align: right;">118</td>
+</tr>
+<tr>
+<td style="text-align: left;">synthetic_reasoning_natural：难度=简单</td>
+<td style="text-align: right;">512</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">1584</td>
+<td style="text-align: right;">100</td>
+</tr>
+<tr>
+<td style="text-align: left;">summarization_xsum：温度=0.3</td>
+<td style="text-align: right;">1984</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">1568</td>
+<td style="text-align: right;">902</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">任务</th>
+<th style="text-align: right;">序列数。</th>
+<th style="text-align: right;">输入序列长度</th>
+<th style="text-align: right;">输出序列长度</th>
+<th style="text-align: right;">片长</th>
+<th style="text-align: right;">总吞吐量（token/s）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">EM：Fodors-Zagats</td>
+<td style="text-align: right;">189</td>
+<td style="text-align: right;">744</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">541.550</td>
+<td style="text-align: right;">248.287</td>
+</tr>
+<tr>
+<td style="text-align: right;">EM：啤酒</td>
+<td style="text-align: right;">91</td>
+<td style="text-align: right;">592</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">238.58</td>
+<td style="text-align: right;">224.450</td>
+</tr>
+<tr>
+<td style="text-align: right;">EM：iTunes-Amazon</td>
+<td style="text-align: right;">109</td>
+<td style="text-align: right;">529</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">267.639</td>
+<td style="text-align: right;">198.775</td>
+</tr>
+<tr>
+<td style="text-align: right;">DI：餐厅</td>
+<td style="text-align: right;">86</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">60.310</td>
+<td style="text-align: right;">169.790</td>
+</tr>
+<tr>
+<td style="text-align: right;">DI：买</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: right;">488</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">185.882</td>
+<td style="text-align: right;">160.747</td>
+</tr>
+<tr>
+<td style="text-align: right;">ED：医院</td>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">158.329</td>
+<td style="text-align: right;">256.429</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">任务</th>
+<th style="text-align: right;">序列数。</th>
+<th style="text-align: right;">输入序列长度</th>
+<th style="text-align: right;">输出序列长度</th>
+<th style="text-align: right;">片长</th>
+<th style="text-align: right;">总吞吐量（token/s）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">EM：Fodors-Zagats</td>
+<td style="text-align: right;">189</td>
+<td style="text-align: right;">744</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3928.310</td>
+<td style="text-align: right;">34.228</td>
+</tr>
+<tr>
+<td style="text-align: right;">EM：啤酒</td>
+<td style="text-align: right;">91</td>
+<td style="text-align: right;">592</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1356.786</td>
+<td style="text-align: right;">35.083</td>
+</tr>
+<tr>
+<td style="text-align: right;">EM：iTunes-Amazon</td>
+<td style="text-align: right;">109</td>
+<td style="text-align: right;">529</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1569.062</td>
+<td style="text-align: right;">33.906</td>
+</tr>
+<tr>
+<td style="text-align: right;">DI：餐厅</td>
+<td style="text-align: right;">86</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">648.762</td>
+<td style="text-align: right;">16.968</td>
+</tr>
+<tr>
+<td style="text-align: right;">DI：买</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: right;">488</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">2086.961</td>
+<td style="text-align: right;">14.317</td>
+</tr>
+<tr>
+<td style="text-align: right;">ED：医院</td>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1154.133</td>
+<td style="text-align: right;">35.178</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">序列长度</th>
+<th colspan="3" style="text-align: center;">512 + 32</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span>2-4</span> 型号尺寸</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+</tr>
+<tr>
+<td style="text-align: left;">加速</td>
+<td style="text-align: left;">183.177</td>
+<td style="text-align: left;">2.077</td>
+<td style="text-align: left;">0.026</td>
+</tr>
+<tr>
+<td style="text-align: left;">深速</td>
+<td style="text-align: left;">38.027</td>
+<td style="text-align: left;">3.889</td>
+<td style="text-align: left;">0.019</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen</td>
+<td style="text-align: left;">233.756</td>
+<td style="text-align: left;">5.726</td>
+<td style="text-align: left;">0.384</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen（c）</td>
+<td style="text-align: left;">120.178</td>
+<td style="text-align: left;">16.547</td>
+<td style="text-align: left;">1.114</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">序列长度</th>
+<th colspan="3" style="text-align: center;">256</th>
+<th colspan="3" style="text-align: center;">512</th>
+<th colspan="3" style="text-align: center;">1024</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span>2-4</span>（lr）<span>5-7</span>（lr）<span>8-10</span> 模型尺寸</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+</tr>
+<tr>
+<td style="text-align: left;">加速</td>
+<td style="text-align: left;">50.66</td>
+<td style="text-align: left;">1.34</td>
+<td style="text-align: left;">0.02</td>
+<td style="text-align: left;">25.12</td>
+<td style="text-align: left;">0.62</td>
+<td style="text-align: left;">0.01</td>
+<td style="text-align: left;">13.01</td>
+<td style="text-align: left;">0.31</td>
+<td style="text-align: left;">0.01</td>
+</tr>
+<tr>
+<td style="text-align: left;">深速</td>
+<td style="text-align: left;">14.52</td>
+<td style="text-align: left;">1.30</td>
+<td style="text-align: left;">0.01</td>
+<td style="text-align: left;">9.28</td>
+<td style="text-align: left;">0.60</td>
+<td style="text-align: left;">0.01</td>
+<td style="text-align: left;">4.59</td>
+<td style="text-align: left;">0.29</td>
+<td style="text-align: left;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: left;">花瓣（<span class="math inline">\(&lt;\)</span>5毫秒，1Gb/s）</td>
+<td style="text-align: left;">9.03</td>
+<td style="text-align: left;">3.55</td>
+<td style="text-align: left;">0.09</td>
+<td style="text-align: left;">8.25</td>
+<td style="text-align: left;">2.84</td>
+<td style="text-align: left;">0.08</td>
+<td style="text-align: left;">6.56</td>
+<td style="text-align: left;">1.51</td>
+<td style="text-align: left;">0.06</td>
+</tr>
+<tr>
+<td style="text-align: left;">花瓣（<span class="math inline">\(&lt;\)</span>5毫秒，100Mb/s）</td>
+<td style="text-align: left;">9.15</td>
+<td style="text-align: left;">2.53</td>
+<td style="text-align: left;">0.06</td>
+<td style="text-align: left;">8.18</td>
+<td style="text-align: left;">1.67</td>
+<td style="text-align: left;">0.05</td>
+<td style="text-align: left;">6.52</td>
+<td style="text-align: left;">0.87</td>
+<td style="text-align: left;">0.03</td>
+</tr>
+<tr>
+<td style="text-align: left;">花瓣（100毫秒，100Mb/s）</td>
+<td style="text-align: left;">8.64</td>
+<td style="text-align: left;">0.75</td>
+<td style="text-align: left;">0.01</td>
+<td style="text-align: left;">7.82</td>
+<td style="text-align: left;">0.64</td>
+<td style="text-align: left;">0.01</td>
+<td style="text-align: left;">5.89</td>
+<td style="text-align: left;">0.37</td>
+<td style="text-align: left;">0.01</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen</td>
+<td style="text-align: left;">53.29</td>
+<td style="text-align: left;">16.01</td>
+<td style="text-align: left;">1.36</td>
+<td style="text-align: left;">25.26</td>
+<td style="text-align: left;">7.32</td>
+<td style="text-align: left;">0.69</td>
+<td style="text-align: left;">13.72</td>
+<td style="text-align: left;">3.50</td>
+<td style="text-align: left;">0.35</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen（c）</td>
+<td style="text-align: left;">56.72</td>
+<td style="text-align: left;">16.86</td>
+<td style="text-align: left;">2.26</td>
+<td style="text-align: left;">29.12</td>
+<td style="text-align: left;">8.70</td>
+<td style="text-align: left;">1.12</td>
+<td style="text-align: left;">13.18</td>
+<td style="text-align: left;">3.98</td>
+<td style="text-align: left;">0.42</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">序列长度</th>
+<th colspan="3" style="text-align: center;">256</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span>2-4</span> 型号尺寸</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+</tr>
+<tr>
+<td style="text-align: left;">加速</td>
+<td style="text-align: left;">50.66</td>
+<td style="text-align: left;">1.34</td>
+<td style="text-align: left;">0.02</td>
+</tr>
+<tr>
+<td style="text-align: left;">深速</td>
+<td style="text-align: left;">14.52</td>
+<td style="text-align: left;">1.30</td>
+<td style="text-align: left;">0.01</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen</td>
+<td style="text-align: left;">53.29</td>
+<td style="text-align: left;">16.01</td>
+<td style="text-align: left;">1.36</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen（c）</td>
+<td style="text-align: left;">56.72</td>
+<td style="text-align: left;">16.86</td>
+<td style="text-align: left;">2.26</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">序列长度</th>
+<th colspan="3" style="text-align: center;">512</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span>2-4</span> 型号尺寸</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+</tr>
+<tr>
+<td style="text-align: left;">加速</td>
+<td style="text-align: left;">25.12</td>
+<td style="text-align: left;">0.62</td>
+<td style="text-align: left;">0.01</td>
+</tr>
+<tr>
+<td style="text-align: left;">深速</td>
+<td style="text-align: left;">9.28</td>
+<td style="text-align: left;">0.60</td>
+<td style="text-align: left;">0.01</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen</td>
+<td style="text-align: left;">25.26</td>
+<td style="text-align: left;">7.32</td>
+<td style="text-align: left;">0.69</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen（c）</td>
+<td style="text-align: left;">29.12</td>
+<td style="text-align: left;">8.70</td>
+<td style="text-align: left;">1.12</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">序列长度</th>
+<th colspan="3" style="text-align: center;">1024</th>
+<th style="text-align: left;"></th>
+<th style="text-align: left;"></th>
+<th style="text-align: left;"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span>2-4</span>（lr）<span>5-7</span> 型号尺寸</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">加速</td>
+<td style="text-align: left;">13.01</td>
+<td style="text-align: left;">0.31</td>
+<td style="text-align: left;">0.01</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">深速</td>
+<td style="text-align: left;">4.59</td>
+<td style="text-align: left;">0.29</td>
+<td style="text-align: left;">OOM</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen</td>
+<td style="text-align: left;">13.72</td>
+<td style="text-align: left;">3.50</td>
+<td style="text-align: left;">0.35</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen（c）</td>
+<td style="text-align: left;">13.18</td>
+<td style="text-align: left;">3.98</td>
+<td style="text-align: left;">0.42</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">序列长度</th>
+<th colspan="3" style="text-align: center;">128 + 128</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span>2-4</span> 型号尺寸</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+</tr>
+<tr>
+<td style="text-align: left;">加速</td>
+<td style="text-align: left;">73.411</td>
+<td style="text-align: left;">1.547</td>
+<td style="text-align: left;">0.021</td>
+</tr>
+<tr>
+<td style="text-align: left;">深速</td>
+<td style="text-align: left;">19.193</td>
+<td style="text-align: left;">1.717</td>
+<td style="text-align: left;">0.024</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen</td>
+<td style="text-align: left;">106.404</td>
+<td style="text-align: left;">24.634</td>
+<td style="text-align: left;">2.409</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen（c）</td>
+<td style="text-align: left;">92.568</td>
+<td style="text-align: left;">39.141</td>
+<td style="text-align: left;">4.264</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">序列长度</th>
+<th colspan="3" style="text-align: center;">512 + 8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span>2-4</span> 型号尺寸</td>
+<td style="text-align: left;">6.7B</td>
+<td style="text-align: left;">30B</td>
+<td style="text-align: left;">175B</td>
+</tr>
+<tr>
+<td style="text-align: left;">加速</td>
+<td style="text-align: left;">17.290</td>
+<td style="text-align: left;">0.628</td>
+<td style="text-align: left;">0.009</td>
+</tr>
+<tr>
+<td style="text-align: left;">深速</td>
+<td style="text-align: left;">9.055</td>
+<td style="text-align: left;">0.872</td>
+<td style="text-align: left;">0.007</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen</td>
+<td style="text-align: left;">16.425</td>
+<td style="text-align: left;">3.938</td>
+<td style="text-align: left;">0.451</td>
+</tr>
+<tr>
+<td style="text-align: left;">FlexGen（c）</td>
+<td style="text-align: left;">14.244</td>
+<td style="text-align: left;">4.019</td>
+<td style="text-align: left;">0.559</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th colspan="4" style="text-align: center;">175B（世代吞吐量/延迟）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"><span>1-4</span> 加速</td>
+<td style="text-align: right;">深速</td>
+<td style="text-align: right;">FlexGen</td>
+<td style="text-align: right;">FlexGen （c）</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.052 / <strong>612</strong> (1)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.198 / 647 (4)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.369 / 693 (8)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.779 / 1973 (48)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.025 / 2555 (2)</td>
+<td style="text-align: right;">1.092 / 2813 (96)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.254 / 4028 (32)</td>
+<td style="text-align: right;"><strong>1.122</strong> / 4072 (144)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.006 / 5024 (1)</td>
+<td style="text-align: right;">0.421 / 4864 (64)</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.572 / 7159 (128)</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">0.004 / 7508 (1)</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">0.008 / 7633 (2)</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.687 / 11916 (256)</td>
+<td style="text-align: right;">-</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th colspan="4" style="text-align: center;">30B（世代吞吐量/延迟）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"><span>1-4</span> 加速</td>
+<td style="text-align: right;">深速</td>
+<td style="text-align: right;">FlexGen</td>
+<td style="text-align: right;">FlexGen （c）</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.21 / <strong>153</strong> (1)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.42 / 154 (2)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.20 / 159 (1)</td>
+<td style="text-align: right;">0.82 / 155 (4)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.37 / 172 (2)</td>
+<td style="text-align: right;">1.58 / 162 (8)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.73 / 174 (4)</td>
+<td style="text-align: right;">2.88 / 178 (16)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.16 / 203 (1)</td>
+<td style="text-align: right;">1.40 / 183 (8)</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.31 / 204 (2)</td>
+<td style="text-align: right;">2.70 / 190 (16)</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">0.62 / 206 (4)</td>
+<td style="text-align: right;">4.05 / 253 (32)</td>
+<td style="text-align: right;">4.63 / 277 (40)</td>
+</tr>
+<tr>
+<td style="text-align: right;">0.08 / 405 (1)</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">5.71 / 359 (64)</td>
+<td style="text-align: right;">6.72 / 381 (80)</td>
+</tr>
+<tr>
+<td style="text-align: right;">0.31 / 408 (4)</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">0.62 / 413 (8)</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">7.32 / 559 (144)</td>
+<td style="text-align: right;">-</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">7.96 / 644 (160)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">8.49 / 904 (240)</td>
+</tr>
+<tr>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;"><strong>8.70</strong> / 1177 (320)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: right;"><span class="math inline">\(gbs\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(\#gb\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(wg\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(wc\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(cg\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(cc\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(hg\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(hc\)</span></th>
+<th style="text-align: right;">30B（token/秒）</th>
+<th style="text-align: right;">175B（token/秒）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;"><strong>7.32</strong></td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">7.26</td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">5.40</td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">1.66</td>
+<td style="text-align: right;"><strong>0.49</strong></td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">1.55</td>
+<td style="text-align: right;">0.44</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0.88</td>
+<td style="text-align: right;">0.23</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.20</td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.04</td>
+<td style="text-align: right;">0.01</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.57</td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.05</td>
+<td style="text-align: right;">0.01</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: right;"><span class="math inline">\(gbs\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(\#gb\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(wg\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(wc\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(cg\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(cc\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(hg\)</span></th>
+<th style="text-align: right;"><span class="math inline">\(hc\)</span></th>
+<th style="text-align: right;">30B (s)</th>
+<th style="text-align: right;">175B (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">559</td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">635</td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">284</td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">4930</td>
+<td style="text-align: right;">16611</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">5287</td>
+<td style="text-align: right;">18704</td>
+</tr>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">1164</td>
+<td style="text-align: right;">4476</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">80</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><strong>160</strong></td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">737</td>
+<td style="text-align: right;"><strong>3107</strong></td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">170</td>
+<td style="text-align: right;">OOM</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1215</td>
+<td style="text-align: right;">6072</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">模型尺寸</th>
+<th style="text-align: left;">30B</th>
+<th style="text-align: left;">175B</th>
+<th style="text-align: left;"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">所有优化</td>
+<td style="text-align: left;">7.32</td>
+<td style="text-align: left;">0.69</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">无需查保单</td>
+<td style="text-align: left;">7.26</td>
+<td style="text-align: left;">0.27</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">没有重叠</td>
+<td style="text-align: left;">5.86</td>
+<td style="text-align: left;">0.59</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">没有CPU计算</td>
+<td style="text-align: left;">4.03</td>
+<td style="text-align: left;">0.62</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">没有磁盘</td>
+<td style="text-align: left;">7.32</td>
+<td style="text-align: left;">OOM</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">配合DeepSpeed政策</td>
+<td style="text-align: left;">1.57</td>
+<td style="text-align: left;">0.01</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">磁盘规格</th>
+<th style="text-align: right;">30B</th>
+<th style="text-align: right;">175B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">1.6GB/s读取，1.3GB/s写入（本地SSD，主论文中使用的那款）</td>
+<td style="text-align: right;">7.32</td>
+<td style="text-align: right;">0.69</td>
+</tr>
+<tr>
+<td style="text-align: left;">0.5GB/s读取，0.5GB/s写入（持久SSD，新设置）</td>
+<td style="text-align: right;">7.32</td>
+<td style="text-align: right;">0.30</td>
+</tr>
+<tr>
+<td style="text-align: left;">1.6GB/s读取，1.3GB/s写入（本地SSD，使用PageCacheManagement）</td>
+<td style="text-align: right;">7.32</td>
+<td style="text-align: right;">0.49</td>
+</tr>
+<tr>
+<td style="text-align: left;">0.5GB/s读取，0.5GB/s写入（持久SSD，使用PageCacheManagement）</td>
+<td style="text-align: right;">7.32</td>
+<td style="text-align: right;">0.292</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table*">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">任务</th>
+<th style="text-align: right;">填充输入序列长度</th>
+<th style="text-align: right;">填充输出序列长度</th>
+<th style="text-align: right;">填充吞吐量</th>
+<th style="text-align: right;">实际吞吐量</th>
+<th style="text-align: right;">效率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">MMLU</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">（abstract_algebra）</td>
+<td style="text-align: right;">512</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">251.5</td>
+<td style="text-align: right;">188.6</td>
+<td style="text-align: right;">75.0%</td>
+</tr>
+<tr>
+<td style="text-align: left;">XSUM</td>
+<td style="text-align: right;">1984</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">60.5</td>
+<td style="text-align: right;">47.6</td>
+<td style="text-align: right;">78.7%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<section class="footnotes footnotes-end-of-document" id="footnotes" role="doc-endnotes">
+<hr/>
+<ol>
+<li id="fn1"><p>我们忽略了相对较小的嵌入层。<a class="footnote-back" href="#fnref1" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>batch大小为1并未带来明显的延迟改善。<a class="footnote-back" href="#fnref2" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>大小值是离散的，我们无法精确达到 <span class="math inline">\(M'\)</span>，但当参数足够大时，这样的差距可以设定为只影响总值的幅度小 <span class="math inline">\(1\%\)</span>。例如，层可以处于张量层级，使方形极其细粒。<a class="footnote-back" href="#fnref3" role="doc-backlink">↩︎</a></p></li>
+</ol>
 </section>
-</main>
-</body>
-</html>
+<h2>完整图表补充</h2><p>以下图表在原 LaTeX 中由自定义宏或多子图环境生成，正文转换时未能自动嵌入，现按源文件顺序补全。</p><figure class="figure" id="fig:vs_petals"><img alt="全延迟和每GPU吞吐量，以及不同网络延迟和带宽中的Petals。" loading="lazy" src="../assets/papers/flexgen-full/figure-961.png"/><figcaption class="caption">全延迟和每GPU吞吐量，以及不同网络延迟和带宽中的Petals。</figcaption></figure><h2>参考文献</h2><div class="refs-note">
+<p><span>45</span> urlstyle</p>
+<p>Aminabadi, R. Y., Rajbhandari, S., Awan, A. A., Li, C., Li, D., Zheng, E., Ruwase, O., Smith, S., Zhang, M., Rasley, J., et al. Deepspeed-inference: Enabling efficient inference of transformer models at unprecedented scale. In <em>2022 SC22: International Conference for High Performance Computing, Networking, Storage and Analysis (SC)</em>, pp. 646–660. IEEE Computer Society, 2022.</p>
+<p>Bommasani, R., Hudson, D. A., Adeli, E., Altman, R., Arora, S., von Arx, S., Bernstein, M. S., Bohg, J., Bosselut, A., Brunskill, E., et al. On the opportunities and risks of foundation models. <em>arXiv preprint arXiv:2108.07258</em>, 2021.</p>
+<p>Borzunov, A., Baranchuk, D., Dettmers, T., Ryabinin, M., Belkada, Y., Chumachenko, A., Samygin, P., and Raffel, C. Petals: Collaborative inference and fine-tuning of large models. <em>arXiv preprint arXiv:2209.01188</em>, 2022.</p>
+<p>Brown, T., Mann, B., Ryder, N., Subbiah, M., Kaplan, J. D., Dhariwal, P., Neelakantan, A., Shyam, P., Sastry, G., Askell, A., et al. Language models are few-shot learners. <em>Advances in neural information processing systems</em>, 33: 1877–1901, 2020.</p>
+<p>Chen, X., Maniatis, P., Singh, R., Sutton, C., Dai, H., Lin, M., and Zhou, D. Spreadsheetcoder: Formula prediction from semi-structured context. In <em>International Conference on Machine Learning</em>, pp. 1661–1672. PMLR, 2021.</p>
+<p>Chowdhery, A., Narang, S., Devlin, J., Bosma, M., Mishra, G., Roberts, A., Barham, P., Chung, H. W., Sutton, C., Gehrmann, S., et al. Palm: Scaling language modeling with pathways. <em>arXiv preprint arXiv:2204.02311</em>, 2022.</p>
+<p>Demmel, J. Communication-avoiding algorithms for linear algebra and beyond. In <em>2013 IEEE 27th International Symposium on Parallel and Distributed Processing</em>, pp. 585–585. IEEE, 2013.</p>
+<p>Dettmers, T. and Zettlemoyer, L. The case for 4-bit precision: k-bit inference scaling laws. <em>arXiv preprint arXiv:2212.09720</em>, 2022.</p>
+<p>Dettmers, T., Lewis, M., Belkada, Y., and Zettlemoyer, L. Llm.int8(): 8-bit matrix multiplication for transformers at scale. In Oh, A. H., Agarwal, A., Belgrave, D., and Cho, K. (eds.), <em>Advances in Neural Information Processing Systems</em>, 2022.</p>
+<p>Fang, J., Yu, Y., Zhao, C., and Zhou, J. Turbotransformers: an efficient gpu serving system for transformer models. In <em>Proceedings of the 26th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming</em>, pp. 389–402, 2021.</p>
+<p>Fedus, W., Zoph, B., and Shazeer, N. Switch transformers: Scaling to trillion parameter models with simple and efficient sparsity. <em>Journal of Machine Learning Research</em>, 23 (120): 1–39, 2022.</p>
+<p>Frantar, E. and Alistarh, D. Massive language models can be accurately pruned in one-shot. <em>arXiv preprint arXiv:2301.00774</em>, 2023.</p>
+<p>Frantar, E., Ashkboos, S., Hoefler, T., and Alistarh, D. Gptq: Accurate post-training quantization for generative pre-trained transformers. <em>arXiv preprint arXiv:2210.17323</em>, 2022.</p>
+<p>Hoefler, T., Alistarh, D., Ben-Nun, T., Dryden, N., and Peste, A. Sparsity in deep learning: Pruning and growth for efficient inference and training in neural networks. <em>J. Mach. Learn. Res.</em>, 22 (241): 1–124, 2021.</p>
+<p>Huang, C.-C., Jin, G., and Li, J. Swapadvisor: Pushing deep learning beyond the gpu memory limit via smart swapping. In <em>Proceedings of the Twenty-Fifth International Conference on Architectural Support for Programming Languages and Operating Systems</em>, pp. 1341–1355, 2020.</p>
+<p>Huang, Y., Cheng, Y., Bapna, A., Firat, O., Chen, D., Chen, M., Lee, H., Ngiam, J., Le, Q. V., Wu, Y., et al. Gpipe: Efficient training of giant neural networks using pipeline parallelism. <em>Advances in neural information processing systems</em>, 32, 2019.</p>
+<p>HuggingFace. Hugging face accelerate. <code>https://huggingface.co/docs/accelerate/index</code>, 2022.</p>
+<p>Iyer, S., Lin, X. V., Pasunuru, R., Mihaylov, T., Simig, D., Yu, P., Shuster, K., Wang, T., Liu, Q., Koura, P. S., et al. Opt-iml: Scaling language model instruction meta learning through the lens of generalization. <em>arXiv preprint arXiv:2212.12017</em>, 2022.</p>
+<p>Jia-Wei, H. and Kung, H.-T. I/o complexity: The red-blue pebble game. In <em>Proceedings of the thirteenth annual ACM symposium on Theory of computing</em>, pp. 326–333, 1981.</p>
+<p>Kwon, S. J., Kim, J., Bae, J., Yoo, K. M., Kim, J.-H., Park, B., Kim, B., Ha, J.-W., Sung, N., and Lee, D. Alphatuning: Quantization-aware parameter-efficient adaptation of large-scale pre-trained language models. <em>arXiv preprint arXiv:2210.03858</em>, 2022.</p>
+<p>Li, Y., Phanishayee, A., Murray, D., Tarnawski, J., and Kim, N. S. Harmony: Overcoming the hurdles of gpu memory capacity to train massive dnn models on commodity servers. <em>arXiv preprint arXiv:2202.01306</em>, 2022.</p>
+<p>Liang, P., Bommasani, R., Lee, T., Tsipras, D., Soylu, D., Yasunaga, M., Zhang, Y., Narayanan, D., Wu, Y., Kumar, A., et al. Holistic evaluation of language models. <em>arXiv preprint arXiv:2211.09110</em>, 2022.</p>
+<p>Merity, S., Xiong, C., Bradbury, J., and Socher, R. Pointer sentinel mixture models. <em>arXiv preprint arXiv:1609.07843</em>, 2016.</p>
+<p>Morton, A. Pagecachemangagement. <code>https://code.google.com/archive/p/pagecache-mangagement/source/default/source</code>, 2008.</p>
+<p>Narayan, A., Chami, I., Orr, L., and R<span>é</span>, C. Can foundation models wrangle your data? <em>arXiv preprint arXiv:2205.09911</em>, 2022.</p>
+<p>Narayan, S., Cohen, S. B., and Lapata, M. Don’t give me the details, just the summary! topic-aware convolutional neural networks for extreme summarization. <em>arXiv preprint arXiv:1808.08745</em>, 2018.</p>
+<p>Narayanan, D., Shoeybi, M., Casper, J., LeGresley, P., Patwary, M., Korthikanti, V., Vainbrand, D., Kashinkunti, P., Bernauer, J., Catanzaro, B., et al. Efficient large-scale language model training on gpu clusters using megatron-lm. In <em>Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis</em>, pp. 1–15, 2021.</p>
+<p>NVIDIA. Fastertransformer. <code>https://github.com/NVIDIA/FasterTransformer</code>, 2022.</p>
+<p>Paperno, D., Kruszewski, G., Lazaridou, A., Pham, N.-Q., Bernardi, R., Pezzelle, S., Baroni, M., Boleda, G., and Fern<span>á</span>ndez, R. The lambada dataset: Word prediction requiring a broad discourse context. In <em>Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)</em>, pp. 1525–1534, 2016.</p>
+<p>Park, G., Park, B., Kwon, S. J., Kim, B., Lee, Y., and Lee, D. nuqmm: Quantized matmul for efficient inference of large-scale generative language models. <em>arXiv preprint arXiv:2206.09557</em>, 2022.</p>
+<p>Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J., Chanan, G., Killeen, T., Lin, Z., Gimelshein, N., Antiga, L., et al. Pytorch: An imperative style, high-performance deep learning library. <em>Advances in neural information processing systems</em>, 32, 2019.</p>
+<p>Pope, R., Douglas, S., Chowdhery, A., Devlin, J., Bradbury, J., Levskaya, A., Heek, J., Xiao, K., Agrawal, S., and Dean, J. Efficiently scaling transformer inference. <em>arXiv preprint arXiv:2211.05102</em>, 2022.</p>
+<p>Rajbhandari, S., Ruwase, O., Rasley, J., Smith, S., and He, Y. Zero-infinity: Breaking the gpu memory wall for extreme scale deep learning. In <em>Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis</em>, pp. 1–14, 2021.</p>
+<p>Ren, J., Rajbhandari, S., Aminabadi, R. Y., Ruwase, O., Yang, S., Zhang, M., Li, D., and He, Y. Zero-offload: Democratizing billion-scale model training. In <em>2021 USENIX Annual Technical Conference (USENIX ATC 21)</em>, pp. 551–564, 2021.</p>
+<p>Ryabinin, M., Dettmers, T., Diskin, M., and Borzunov, A. Swarm parallelism: Training large models can be surprisingly communication-efficient. <em>arXiv preprint arXiv:2301.11913</em>, 2023.</p>
+<p>Scao, T. L., Fan, A., Akiki, C., Pavlick, E., Ili<span>ć</span>, S., Hesslow, D., Castagn<span>é</span>, R., Luccioni, A. S., Yvon, F., Gall<span>é</span>, M., et al. Bloom: A 176b-parameter open-access multilingual language model. <em>arXiv preprint arXiv:2211.05100</em>, 2022.</p>
+<p>Shen, S., Dong, Z., Ye, J., Ma, L., Yao, Z., Gholami, A., Mahoney, M. W., and Keutzer, K. Q-bert: Hessian based ultra low precision quantization of bert. In <em>Proceedings of the AAAI Conference on Artificial Intelligence</em>, volume 34, pp. 8815–8821, 2020.</p>
+<p>Steiner, B., Elhoushi, M., Kahn, J., and Hegarty, J. Olla: Optimizing the lifetime and location of arrays to reduce the memory usage of neural networks. . doi: 10.48550/arXiv.2210.12924.</p>
+<p>Wang, L., Ye, J., Zhao, Y., Wu, W., Li, A., Song, S. L., Xu, Z., and Kraska, T. Superneurons: Dynamic gpu memory management for training deep neural networks. In <em>Proceedings of the 23rd ACM SIGPLAN symposium on principles and practice of parallel programming</em>, pp. 41–53, 2018.</p>
+<p>Wang, X., Xiong, Y., Wei, Y., Wang, M., and Li, L. Lightseq: A high performance inference library for transformers. In <em>Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies: Industry Papers</em>, pp. 113–120, 2021.</p>
+<p>Xiao, G., Lin, J., Seznec, M., Demouth, J., and Han, S. Smoothquant: Accurate and efficient post-training quantization for large language models. <em>arXiv preprint arXiv:2211.10438</em>, 2022.</p>
+<p>Yao, Z., Aminabadi, R. Y., Zhang, M., Wu, X., Li, C., and He, Y. Zeroquant: Efficient and affordable post-training quantization for large-scale transformers. In Oh, A. H., Agarwal, A., Belgrave, D., and Cho, K. (eds.), <em>Advances in Neural Information Processing Systems</em>, 2022.</p>
+<p>Yu, G.-I., Jeong, J. S., Kim, G.-W., Kim, S., and Chun, B.-G. Orca: A distributed serving system for <span class="math inline">\(\{\)</span>Transformer-Based<span class="math inline">\(\}\)</span> generative models. In <em>16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)</em>, pp. 521–538, 2022.</p>
+<p>Zhang, S., Roller, S., Goyal, N., Artetxe, M., Chen, M., Chen, S., Dewan, C., Diab, M., Li, X., Lin, X. V., et al. Opt: Open pre-trained transformer language models. <em>arXiv preprint arXiv:2205.01068</em>, 2022.</p>
+<p>Zheng, L., Li, Z., Zhang, H., Zhuang, Y., Chen, Z., Huang, Y., Wang, Y., Xu, Y., Zhuo, D., Gonzalez, J. E., et al. Alpa: Automating inter-and intra-operator parallelism for distributed deep learning. In <em>16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22)</em>, 2022.</p>
+</div><div class="qa-link"><a href="paper-qa/flexgen-2303.06865-qa.html">继续阅读 Q1-Q7 详细问答</a></div></section></main></body></html>
