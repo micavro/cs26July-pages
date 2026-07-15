@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sarathi-Serve：用 Chunked-Prefills 驯服 LLM 推理的吞吐量-延迟权衡：中文精读与校订</title>
+<style>
+:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+
+.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-34px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a{color:var(--accent);text-decoration:none}.paper-nav a:hover{text-decoration:underline}
+.overview{margin:0 0 28px;padding:20px 22px;border:1px solid #cddbe6;border-radius:8px;background:linear-gradient(135deg,#f7fbfd,#fff)}.overview h2{margin:0 0 10px;padding:0;font-size:21px}.overview ul{margin-bottom:0}.doing{font-size:18px;line-height:1.75}.equation{margin:24px 0;padding:18px 20px;border-left:4px solid var(--accent);background:var(--soft);overflow-x:auto}.equation .math{margin:6px 0 10px;text-align:center;font-size:1.05em}.source-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}.source-actions a{display:inline-block;padding:8px 12px;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:14px}.source-actions a.primary{background:var(--accent);color:#fff}.figure img{width:auto;max-height:760px}.revision-note{color:var(--muted);font-size:13px}.qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.qa-links a{padding:5px 9px;border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:13px}
+@media(max-width:820px){.paper-nav{margin:-8px 0 24px}.overview{padding:16px}.doing{font-size:16px}}
+
+</style>
+<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<main class="paper">
+<nav class="paper-nav" data-six-paper-revision><a href="../index.html">← 论文目录</a><a href="paper-qa/sarathi-serve-2403.02310-qa.html">Q1–Q7 详细问答 →</a></nav>
+<h1>Sarathi-Serve：用 Chunked-Prefills 驯服 LLM 推理的吞吐量-延迟权衡：中文精读与校订</h1>
+<div class="authors">Amey Agrawal, Nitin Kedia, Ashish Panwar, Jayashree Mohan, Nipun Kwatra, Bhargav S. Gulavani, Alexey Tumanov, Ramachandran Ramjee</div>
+<div class="meta">源文件：arXiv 2403.02310 | 18 页 | 保留术语：chunked-prefills、stall-free scheduling、prefill、decode、TBT (time-between-tokens)、iteration-level batching、pipeline parallelism</div>
+<section class="columns">
+<section class="overview"><h2>这篇论文做什么？</h2><p class="doing">不拆分 P/D 机器，而是把长 prefill 切成计算量接近的块，在每轮 decode batch 中只搭载有限 prefill 工作，形成 stall-free、形状更均匀的调度。</p><ul><li>问题：优先 decode 会饿死 prefill，优先 prefill 又会让流式 decode 产生长停顿。</li><li>方法：chunked prefill、decode-maximal batching 与 stall-free schedule。</li><li>结果：在尾延迟约束下，单/多 GPU serving capacity 提高 2.6×–5.6×。</li></ul><p class="revision-note">校订说明：本页按原论文的论证顺序重写术语与因果关系；图均裁自论文原图，数据结论保留论文适用条件，不把峰值结果泛化为固定加速。</p></section>
+<section class="abstract"><p><strong>摘要。</strong>每个 LLM 服务请求经历两个阶段：prefill（处理整个输入 prompt 并生成首个输出 token）和 decode（逐个生成剩余输出 token）。Prefill 迭代延迟高但因并行处理 prompt 能饱和 GPU 算力；decode 迭代延迟低但计算利用率也低。批处理多个请求时，prefill 和 decode 迭代的交错使同时实现高吞吐和低延迟变得困难。论文提出 Sarathi-Serve，通过 chunked-prefills（将 prefill 请求拆分为近似等大的块）和 stall-free scheduling（在不暂停进行中 decode 的情况下将新请求加入 batch）来应对这一权衡。均匀的 batch 还缓解了迭代间的不平衡，减少了流水线气泡。在 Mistral-7B 上实现 2.6 倍、在 Yi-34B 上实现 3.7 倍的 serving capacity 提升，在 Falcon-180B 流水线并行部署中实现 5.6 倍端到端提升。</p></section>
+
+<h2>1 引言</h2>
+<p>LLM 推理的吞吐量可通过批处理提升，但现有系统在吞吐量和延迟之间面临根本权衡。论文将现有调度器分为两类。</p>
+
+<h3>1.1 Decode-Prioritizing 调度</h3>
+<p>传统请求级批处理系统（如 FasterTransformer）采用 decode-prioritizing 策略：先计算 batch 中所有请求的 prefill，再调度它们的 decode，直到最后一个请求完成 decode 才允许新 prefill 进入。这种策略优化了 TBT（time-between-tokens）——新请求不影响进行中请求的 decode。但严重牺牲吞吐量：即使部分请求提前完成，执行仍以缩减的 batch size 继续直到最后请求结束。</p>
+
+<h3>1.2 Prefill-Prioritizing 调度</h3>
+<p>Orca 引入迭代级批处理（iteration-level batching），请求可在单迭代粒度动态进出 batch。Orca 和 vLLM 等系统将其与 prefill-prioritizing 调度结合：只要 GPU 内存可用就急切调度 prefill。这提升了吞吐量（先算 prefill 使后续 decode 在大 batch size 下运行），但导致高延迟——prefill 可能耗时很长（取决于 prompt 长度），会暂停进行中的 decode，产生论文所称的<span class="term">generation stall</span>（生成停顿）。实验中 vLLM 的 generation stall 可持续数秒。</p>
+
+<h2>2 Chunked-Prefills</h2>
+<p>Sarathi-Serve 的第一个关键思想是 chunked-prefills：将一个 prefill 请求拆分为近似等大的 compute-sized 块，在多个迭代中分块计算 prompt 的 prefill 阶段。每个迭代只处理 prompt token 的一个子集。这样每个迭代的计算量被限制在预设的 chunk size 附近，使迭代延迟近乎独立于输入 prompt 的总长度。</p>
+<p>Chunked-prefills 打破了 prefill 迭代延迟与 prompt 长度的耦合：无论 prompt 有 128 还是 8192 个 token，每个迭代都只处理固定数量，延迟可控。</p>
+
+<h2>3 Stall-Free Scheduling</h2>
+<p>第二个关键思想是 stall-free scheduling：允许新请求加入运行中的 batch 而不暂停进行中的 decode。具体做法是构建一个 batch，将所有进行中的 decode 与一个或多个来自新请求的 prefill chunk 合并，使 batch 达到预设的 chunk size。</p>
+<p>这构建了混合 batch（同时包含 prefill 和 decode token），每个 batch 的计算量近似均匀。关键区别在于：Sarathi-Serve 在每次迭代中限制 prefill token 数量同时允许新请求加入运行中的 batch。这不仅限制了每次迭代的延迟，还使其近乎独立于输入 prompt 总长度，从而最小化新 prefill 对进行中 decode 的 TBT 影响。</p>
+
+<h2>4 流水线并行与均匀 Batch</h2>
+<p>在流水线并行（pipeline parallelism）部署中，标准微批调度因 LLM 推理混合不同长度 prefill 和 decode 而产生流水线气泡——不同微批的运行时间差异巨大，浪费 GPU 周期。Sarathi-Serve 的混合 batch 具有近似均匀的计算需求，使得基于均匀微批的调度能显著减少流水线气泡，提高 GPU 利用率。</p>
+<p>这一点对于跨多节点的可扩展部署尤其重要。张量并行（TP）在高速互连（如 DGX A100）下可支持最多 8 个 GPU，但在没有超集群互连时延迟过高。流水线并行（PP）是商品网络上的替代方案，而 Sarathi-Serve 的均匀 batch 使 PP 部署更加高效。</p>
+
+<h2>5 实验评估</h2>
+<p>评估覆盖多种模型和硬件配置：Mistral-7B 单 A100、Yi-34B 双 A100（2-way TP）、LLaMA2-70B 8x A40、Falcon-180B 8x A100（2-way PP + 4-way TP）。</p>
+<p>主要结果：Yi-34B 在不同 SLO 目标下 serving capacity 提升 3.7 倍；Mistral-7B 提升 2.6 倍；Falcon-180B 流水线并行部署端到端 serving capacity 提升 5.6 倍。Sarathi-Serve 同时消除了 generation stall，在所有负载水平下保持低 TBT 尾延迟。</p>
+
+<h2>6 与其他系统的对比</h2>
+<p>论文将 Splitwise 和 DistServe 归为第三类"解耦"调度器——它们将 prefill 和 decode 分配到不同 GPU。解耦消除了干扰但引入跨 GPU 通信开销和资源碎片。Sarathi-Serve 选择在相同 GPU 上通过 chunked-prefills 和 stall-free scheduling 在迭代级别控制干扰，无需跨 GPU 传输 KV cache，更适合资源受限场景。</p>
+
+<h2>7 局限与选题启发</h2>
+<p>Sarathi-Serve 的 chunk size 是一个需要调优的超参数：过小则 prefill 被过度拆分增加开销，过大则退化为 prefill-prioritizing 的 generation stall 问题。最优 chunk size 取决于模型大小、硬件配置和 SLO 要求。此外，stall-free scheduling 假设 decode 和 prefill chunk 可以自由合并，但当 GPU 内存接近上限时，合并决策仍受 KV cache 容量约束。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>Sarathi-Serve 展示了在不解耦 prefill/decode 的前提下，通过细粒度迭代调度控制干扰的可行性。在 agentic workflow 中，多个 agent 的请求可能在同一 GPU 上交错执行，Sarathi-Serve 的 stall-free 思想可以直接用于工作流调度器，避免一个 agent 的长 prefill 阻塞其他 agent 的 decode，从而保证工作流的端到端延迟。</p></div>
+
+<h2>公式与目标函数</h2><div class="equation"><div class="math">\[B_{\mathrm{token}}=B_{\mathrm{decode}}+\min\!\left(C,\ B_{\max}-B_{\mathrm{decode}}\right)\]</div><p>每轮先容纳所有可运行 decode，再用剩余 token budget 填入至多一个或若干 prefill chunk。chunk 上限 C 控制单轮执行时间，从而限制 token 间停顿。</p></div><h2>原论文图解</h2><figure class="figure wide"><img src="../assets/papers/sarathi/fig-01-capacity.png" alt="图 1：在 TTFT/TBT SLO 下，Sarathi-Serve 的 serving capacity 与尾延迟表现。" loading="lazy"><figcaption class="caption">图 1：在 TTFT/TBT SLO 下，Sarathi-Serve 的 serving capacity 与尾延迟表现。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/papers/sarathi/fig-02-tradeoff.png" alt="图 2：prefill-prioritizing 与 decode-prioritizing 位于吞吐—TBT 权衡两端。" loading="lazy"><figcaption class="caption">图 2：prefill-prioritizing 与 decode-prioritizing 位于吞吐—TBT 权衡两端。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/papers/sarathi/fig-03-04-throughput.png" alt="图 3–4：prefill/decode 的 batch 扩展性与序列长度对执行时间的影响。" loading="lazy"><figcaption class="caption">图 3–4：prefill/decode 的 batch 扩展性与序列长度对执行时间的影响。</figcaption></figure><h2>证据边界与校订结论</h2><p>论文把容量定义为满足尾 TTFT/TBT SLO 的最大请求率。chunked prefill 的价值不只是降低单次 prefill 延迟，还让每轮 batch 的 token 数更稳定，特别能减少流水线并行的 stage imbalance。具体提升随 chunk size、模型、并行方式和 SLO 变化。</p>
+<h2>参考说明</h2>
+<pre class="note">参考文献保留在原 PDF 中。本文译稿覆盖摘要、两类调度器分析、chunked-prefills、stall-free scheduling、流水线并行优化和实验结果。</pre>
+
+<div class="source-actions"><a class="primary" href="paper-qa/sarathi-serve-2403.02310-qa.html">阅读 Q1–Q7 详细问答</a><a href="https://arxiv.org/abs/2403.02310">查看原论文</a><a href="../index.html">返回目录</a></div>
+</section>
+</main>
+</body>
+</html>

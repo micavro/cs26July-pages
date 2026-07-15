@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Splitwise：基于阶段拆分的高效生成式 LLM 推理：中文精读与校订</title>
+<style>
+:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+
+.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-34px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a{color:var(--accent);text-decoration:none}.paper-nav a:hover{text-decoration:underline}
+.overview{margin:0 0 28px;padding:20px 22px;border:1px solid #cddbe6;border-radius:8px;background:linear-gradient(135deg,#f7fbfd,#fff)}.overview h2{margin:0 0 10px;padding:0;font-size:21px}.overview ul{margin-bottom:0}.doing{font-size:18px;line-height:1.75}.equation{margin:24px 0;padding:18px 20px;border-left:4px solid var(--accent);background:var(--soft);overflow-x:auto}.equation .math{margin:6px 0 10px;text-align:center;font-size:1.05em}.source-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}.source-actions a{display:inline-block;padding:8px 12px;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:14px}.source-actions a.primary{background:var(--accent);color:#fff}.figure img{width:auto;max-height:760px}.revision-note{color:var(--muted);font-size:13px}.qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.qa-links a{padding:5px 9px;border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:13px}
+@media(max-width:820px){.paper-nav{margin:-8px 0 24px}.overview{padding:16px}.doing{font-size:16px}}
+
+</style>
+<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<main class="paper">
+<nav class="paper-nav" data-six-paper-revision><a href="../index.html">← 论文目录</a><a href="paper-qa/splitwise-2311.18677-qa.html">Q1–Q7 详细问答 →</a></nav>
+<h1>Splitwise：基于阶段拆分的高效生成式 LLM 推理：中文精读与校订</h1>
+<div class="authors">Pratyush Patel, Esha Choukse, Chaojie Zhang, Aashaka Shah, Inigo Goiri, Saeed Maleki, Ricardo Bianchini</div>
+<div class="meta">源文件：arXiv 2311.18677 | ISCA 2024 | 15 页 | 保留术语：phase splitting、prompt computation、token generation、KV cache、SLO、heterogeneous cluster、InfiniBand</div>
+<section class="columns">
+<section class="overview"><h2>这篇论文做什么？</h2><p class="doing">依据 prompt 阶段计算密集、token generation 阶段带宽密集的差异，把两阶段放到专属机器，并允许用不同代际 GPU 独立配置，以优化吞吐、成本或功耗。</p><ul><li>观察：decode 常低算力利用率，昂贵的新 GPU 的计算能力被浪费。</li><li>方法：prompt/token 两池、KV 状态传输和三种集群配置目标。</li><li>结果：同构配置可达 1.4× 吞吐且成本低 20%；等成本功耗下最高 2.35× 吞吐。</li></ul><p class="revision-note">校订说明：本页按原论文的论证顺序重写术语与因果关系；图均裁自论文原图，数据结论保留论文适用条件，不把峰值结果泛化为固定加速。</p></section>
+<section class="abstract"><p><strong>摘要。</strong>生成式大语言模型（LLM）应用的快速增长导致大规模部署昂贵且高功耗的 GPU。论文对 LLM 推理的特征化分析表明，每个推理请求经历两个阶段：计算密集的 prompt 处理阶段和内存密集的 token 生成阶段，各自具有截然不同的延迟、吞吐量、内存和功耗特征。尽管有最先进的批处理和调度，token 生成阶段仍严重浪费计算资源。与 prompt 处理不同，token 生成不需要最新 GPU 的计算能力，可以在更低功耗和成本下运行。基于这些观察，论文提出 Splitwise——一种将 LLM 推理请求的两阶段拆分到不同机器上的模型部署和调度技术。Splitwise 支持使用适合各阶段的硬件进行阶段特定资源管理，并通过集群后端互连高效传输请求状态。相比现有设计，Splitwise 集群在成本降低 20% 的同时实现 1.4 倍吞吐量，或在相同功耗和成本预算下实现 2.35 倍吞吐量。</p></section>
+
+<h2>1 引言</h2>
+<p>生成式 LLM 推理包含两个截然不同的计算阶段。<span class="term">Prompt 处理阶段</span>将全部输入 prompt token 并行通过前向传播生成首个输出 token，计算密集，需要最新 GPU 的高 FLOPS。<span class="term">Token 生成阶段</span>基于前向传播逐步生成后续 token，由于缺乏计算并行性，内存带宽和容量受限，尽管有最先进的批处理仍严重浪费计算资源。</p>
+<p>在相同机器上运行两阶段常因 prompt 和 token 阶段的任意批处理导致端到端延迟不一致。服务方不得不过度配置昂贵 GPU 来满足交互式应用的严格 SLO。同时，云服务商面临 GPU 需求激增和功耗墙问题。</p>
+
+<h3>1.1 GPU 代际间的计算与内存失衡</h3>
+<p>从 A100 到 H100，TFLOPS 增加 3.43 倍，功耗增加 1.75 倍，但 HBM 带宽仅增长 1.64 倍，内存容量不变（80GB）。计算能力增长远快于内存带宽和容量。这意味着 token 生成阶段的内存瓶颈在新一代 GPU 上更加突出，而 prompt 处理阶段才能充分利用新 GPU 的算力。</p>
+
+<h2>2 Splitwise 设计</h2>
+<p>Splitwise 将推理请求的两阶段拆分到不同机器上运行。Prompt 处理在计算密集型机器上执行，token 生成在内存优化型机器上执行。两阶段之间通过优化的网络库在后端 InfiniBand 互连上传输 KV cache。</p>
+
+<h3>2.1 阶段特定资源管理</h3>
+<p>由于两阶段的资源需求不同，Splitwise 允许为各阶段配置不同硬件。Prompt 机器使用最新高算力 GPU（如 H100），token 机器可使用旧一代 GPU（如 A100）或设置功耗上限。这种异构配置提高了性能/美元（Perf/$）和性能/瓦特（Perf/W）。</p>
+
+<h3>2.2 状态传输</h3>
+<p>Prompt 处理完成后，生成的 KV cache 需从 prompt 机器传输到 token 机器。Splitwise 使用优化的 RDMA 传输在 InfiniBand 上完成这一操作。对于 13B 模型、512 token 的 prompt，KV cache 约 864 MB，在 400 Gbps 带宽下传输仅需约 17 ms，相对于 prompt 处理的数百毫秒可以接受。通过流水线化传输与计算，实际开销进一步降低。</p>
+
+<h2>3 集群设计</h2>
+<p>Splitwise 探索了同构和异构集群部署。同构集群中所有机器使用相同 GPU，但分别承担 prompt 或 token 角色；异构集群中 prompt 机器和 token 机器使用不同 GPU 型号或功耗配置。</p>
+
+<h3>3.1 吞吐量优化</h3>
+<p>通过生产环境 trace 分析，论文发现 prompt 和 token 阶段的利用率差异显著。Splitwise 根据工作负载特征调整两阶段的机器比例和硬件配置，在满足 SLO 的前提下最大化总吞吐量。</p>
+
+<h3>3.2 功耗与成本优化</h3>
+<p>异构 Splitwise 集群可以使用低功耗 GPU 承担 token 生成，降低总体功耗。在相同功耗和成本预算下，Splitwise 集群实现 2.35 倍吞吐量；在相同 SLO 下，实现 1.4 倍吞吐量并降低 20% 成本。</p>
+
+<h2>4 实验评估</h2>
+<p>评估使用生产环境 LLM 推理 trace，覆盖 OPT-66B、LLaMA-7B 等模型。对比基线为传统共置部署（所有请求在同一机器上完成两阶段）。Splitwise 在各种配置下均优于基线，改善幅度随 prompt 长度和生成长度增加而增大——因为长 prompt 的 prefill 计算密集特征更突出，长生成的 decoding 内存密集特征更突出，拆分的收益更明显。</p>
+
+<h2>5 与 DistServe 的关系</h2>
+<p>Splitwise 与 DistServe 都采用 prefill-decoding 解耦思路，但侧重点不同。DistServe 侧重在相同硬件上通过 GPU 级解耦消除干扰并优化 goodput；Splitwise 侧重在集群级利用异构硬件为各阶段配置不同资源，优化成本、功耗和吞吐量的三维目标。两者互补：DistServe 的调度算法可以结合 Splitwise 的异构硬件配置。</p>
+
+<h2>6 局限与选题启发</h2>
+<p>Splitwise 的阶段拆分是机器级的，在 prompt 和 token 机器之间引入网络传输依赖。虽然单次传输开销小，但在高并发下网络可能成为瓶颈。此外，异构硬件配置增加了集群管理复杂度。对于 agentic workflow 场景，一个 agent 的输出可能是下一个 agent 的输入，跨机器的状态传输延迟会累积。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>Splitwise 将 prefill-decoding 解耦从 GPU 级扩展到集群级，引入了异构硬件配置的维度。在多 LLM agent 工作流中，不同 agent 可能使用不同模型，各阶段的资源需求各异。Splitwise 的异构部署思想可以指导工作流调度器在异构云 GPU 上做成本最优的模型分配——这正是 Coral（异构云 GPU 多 LLM 服务）的核心理念。</p></div>
+
+<h2>公式与目标函数</h2><div class="equation"><div class="math">\[T_{\mathrm{request}}=T_{\mathrm{prompt}}+T_{\mathrm{KV\ transfer}}+\sum_{t=1}^{N_o}T_{\mathrm{token},t}\]</div><p>拆分只有在阶段专属批处理和硬件匹配带来的收益大于 KV 传输与额外排队时才成立；因此高速 backplane 是设计前提。</p></div><h2>原论文图解</h2><figure class="figure wide"><img src="../assets/papers/splitwise/fig-01-characterization.png" alt="图 1：LLM 请求由 prompt 计算和逐 token 生成组成，用户关心 E2E、TTFT 与 TBT。" loading="lazy"><figcaption class="caption">图 1：LLM 请求由 prompt 计算和逐 token 生成组成，用户关心 E2E、TTFT 与 TBT。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/papers/splitwise/fig-02-03-design.png" alt="图 2–3：请求级、混合式与阶段拆分 batch，以及不同 GPU 的功耗/生成特性。" loading="lazy"><figcaption class="caption">图 2–3：请求级、混合式与阶段拆分 batch，以及不同 GPU 的功耗/生成特性。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/papers/splitwise/fig-04-08-evaluation.png" alt="图 4–8：真实 prompt/output 分布、阶段延迟、batch 与内存需求的实测。" loading="lazy"><figcaption class="caption">图 4–8：真实 prompt/output 分布、阶段延迟、batch 与内存需求的实测。</figcaption></figure><h2>证据边界与校订结论</h2><p>Splitwise 的主要论证来自硬件 characterization 与容量规划：prefill 能吃满算力，decode 更依赖显存带宽和 batch。论文给出的最佳配置依赖流量长度分布、机器代际、互连和目标函数；它不是宣称旧 GPU 在任何 decode 场景都更快，而是说明旧/低功耗 GPU 可能具有更好的成本效率。</p>
+<h2>参考说明</h2>
+<pre class="note">参考文献保留在原 PDF 中。本文译稿覆盖摘要、两阶段特征化分析、Splitwise 设计、集群优化和实验结果。</pre>
+
+<div class="source-actions"><a class="primary" href="paper-qa/splitwise-2311.18677-qa.html">阅读 Q1–Q7 详细问答</a><a href="https://arxiv.org/abs/2311.18677">查看原论文</a><a href="../index.html">返回目录</a></div>
+</section>
+</main>
+</body>
+</html>

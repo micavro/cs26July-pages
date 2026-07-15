@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DistServe：解耦 Prefill 与 Decoding 的 Goodput 优化 LLM 服务：中文精读与校订</title>
+<style>
+:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+
+.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-34px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a{color:var(--accent);text-decoration:none}.paper-nav a:hover{text-decoration:underline}
+.overview{margin:0 0 28px;padding:20px 22px;border:1px solid #cddbe6;border-radius:8px;background:linear-gradient(135deg,#f7fbfd,#fff)}.overview h2{margin:0 0 10px;padding:0;font-size:21px}.overview ul{margin-bottom:0}.doing{font-size:18px;line-height:1.75}.equation{margin:24px 0;padding:18px 20px;border-left:4px solid var(--accent);background:var(--soft);overflow-x:auto}.equation .math{margin:6px 0 10px;text-align:center;font-size:1.05em}.source-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}.source-actions a{display:inline-block;padding:8px 12px;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:14px}.source-actions a.primary{background:var(--accent);color:#fff}.figure img{width:auto;max-height:760px}.revision-note{color:var(--muted);font-size:13px}.qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.qa-links a{padding:5px 9px;border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:13px}
+@media(max-width:820px){.paper-nav{margin:-8px 0 24px}.overview{padding:16px}.doing{font-size:16px}}
+
+</style>
+<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<main class="paper">
+<nav class="paper-nav" data-six-paper-revision><a href="../index.html">← 论文目录</a><a href="paper-qa/distserve-2401.09670-qa.html">Q1–Q7 详细问答 →</a></nav>
+<h1>DistServe：解耦 Prefill 与 Decoding 的 Goodput 优化 LLM 服务：中文精读与校订</h1>
+<div class="authors">Yinmin Zhong, Shengyu Liu, Junda Chen, Jianbo Hu, Yibo Zhu, Xuanzhe Liu, Xin Jin, Hao Zhang</div>
+<div class="meta">源文件：arXiv 2401.09670 | OSDI 2024 | 18 页 | 保留术语：disaggregation、prefill、decoding、TTFT、TPOT、goodput、continuous batching、model parallelism</div>
+<section class="columns">
+<section class="overview"><h2>这篇论文做什么？</h2><p class="doing">把计算密集的 prefill 与带宽密集的 decode 放到不同 GPU 池，分别选择并行度和副本数，再以 TTFT/TPOT 双 SLO 下的 per-GPU goodput 为目标做资源规划。</p><ul><li>问题：共置执行会产生 prefill/decode 干扰，并把两个阶段的并行与扩容策略错误地绑在一起。</li><li>方法：P/D 实例解耦、KV 传输、阶段专属并行策略与带宽感知放置。</li><li>结果：可服务请求率最高提高 7.4×，或在相同负载下提供 12.6× 更紧的 SLO。</li></ul><p class="revision-note">校订说明：本页按原论文的论证顺序重写术语与因果关系；图均裁自论文原图，数据结论保留论文适用条件，不把峰值结果泛化为固定加速。</p></section>
+<section class="abstract"><p><strong>摘要。</strong>DistServe 通过解耦 prefill 和 decoding 计算来改善 LLM 服务性能。现有系统将两个阶段共置（colocate）并跨所有用户和请求批量处理。论文发现这种策略不仅导致强烈的 prefill-decoding 干扰，还耦合了两阶段的资源分配和并行方案。LLM 应用通常关注各阶段的单独延迟：prefill 阶段的 TTFT（time to first token）和 decoding 阶段的 TPOT（time per output token）。DistServe 将 prefill 和 decoding 分配到不同 GPU，消除干扰，并针对每个阶段协同优化资源分配和并行策略，同时根据集群带宽优化两阶段的物理放置以最小化解耦带来的通信开销。评估表明，DistServe 相比 SOTA 可服务 7.4 倍更多请求或实现 12.6 倍更紧的 SLO。</p></section>
+
+<h2>1 引言</h2>
+<p>LLM 服务的延迟由两个指标衡量：TTFT（首 token 延迟，即 prefill 阶段时长）和 TPOT（每输出 token 平均时间，即 decoding 阶段指标）。不同应用对两者的侧重不同：实时聊天机器人优先低 TTFT，文档摘要优先低 TPOT。有效的服务系统应在满足 TTFT 和 TPOT 约束的前提下最大化每 GPU goodput——即满足 SLO 达标率（如 90%）的最大请求速率。</p>
+<p>现有系统将 prefill 和 decoding 共置在 GPU 上，通过连续批处理（continuous batching）跨请求合并两阶段计算以最大化总吞吐量。但这种共置存在两个根本问题。</p>
+
+<h3>1.1 Prefill-Decoding 干扰</h3>
+<p>一个 prefill 步骤通常远长于 decoding 步骤。当两者被批量处理在一起时，decoding 步骤被 prefill 步骤拖延，显著延长 TPOT；反之，decoding 步骤的加入也增加了 TTFT。即使分开调度，两阶段仍竞争资源：等待执行的 decoding 任务因进行中的 prefill 任务而排队延迟增加，反之亦然。优先调度某一阶段则可能违反另一阶段的延迟要求。实验显示，在 13B 模型上，单独运行 prefill 可达 5.6 rps/GPU，单独运行 decoding 可达 10 rps/GPU，但共置仅 1.6 rps/GPU。</p>
+
+<h3>1.2 资源分配耦合</h3>
+<p>Prefill 和 decoding 对并行策略有不同偏好。Prefill 是计算密集型，适合 intra-operator 并行（张量并行）来减少执行时间；decoding 是内存带宽密集型，适合 inter-operator 并行（流水线并行）来扩展速率容量。共置两阶段则耦合了资源分配，无法为各阶段实施最适合的并行策略。</p>
+
+<h2>2 解耦架构</h2>
+<p>DistServe 将 prefill 和 decoding 分配到不同 GPU，各自独立运行。这带来两个好处：消除 prefill-decoding 干扰；允许各阶段独立扩展，采用量身定制的资源分配和模型并行策略。</p>
+<p>解耦的代价是两阶段之间需要传输中间状态（KV cache）。但论文论证，在现代 GPU 集群中这一通信开销不大——Prefill 和 decoding 实例之间通过 RDMA/NCCL 传输 KV cache，在 A100 的 400 Gbps 带宽下，传输 512 token 的 KV cache 仅需几毫秒，相对于 prefill 本身的执行时间可以忽略。</p>
+
+<h2>3 Goodput 优化</h2>
+<h3>3.1 单实例优化</h3>
+<p>给定应用的 TTFT 和 TPOT 要求，DistServe 首先为单个模型副本协同优化 GPU 分配和并行策略。Prefill 实例优先选择张量并行以降低 TTFT；decoding 实例可选择流水线并行以线性扩展速率容量。优化目标是在满足 SLO 的前提下最大化每 GPU goodput。两个阶段可能获得不同的 GPU 数量和并行配置。</p>
+
+<h3>3.2 多实例扩展</h3>
+<p>单实例优化后，DistServe 通过复制（replication）扩展到多个实例，直到满足用户要求的总流量速率。放置算法根据集群带宽拓扑选择最优的 prefill 和 decoding 实例位置，最小化跨阶段通信延迟。</p>
+
+<h2>4 Prefill-Decoding 干扰的量化</h2>
+<p>论文用实验量化了干扰的严重性。在已有 decoding 请求的 batch 中加入一个 prefill 请求，TPOT 可增加 2-10 倍，具体取决于 prefill 长度。prefill 越长，干扰越严重。即使在 chunked-prefill 方案中将长 prefill 拆分为小块并 piggyback 到 decoding 上，也只能在 TTFT 和 TPOT 之间做权衡，无法消除干扰。</p>
+
+<h2>5 实现与实验</h2>
+<p>DistServe 作为编排层实现在 LLM 推理引擎之上。评估覆盖 chatbot、编程助手和文档摘要三类工作负载，使用 LLaMA-13B、LLaMA-70B 等模型。对比 vLLM 和 Sarathi-Serve。结果显示：DistServe 在各种延迟约束下可服务 7.4 倍更多请求，或实现 12.6 倍更紧的 SLO，同时保持 90% 以上请求在延迟约束内。改进来自消除干扰和独立优化的叠加效果。</p>
+
+<h2>6 局限与选题启发</h2>
+<p>DistServe 的解耦策略是静态的——prefill 和 decoding 实例的 GPU 分配在部署时确定，不随负载动态变化。在突发流量下，某一阶段可能成为瓶颈而另一阶段资源闲置。此外，跨阶段的 KV cache 传输虽然单次开销小，但在高 QPS 下累积带宽消耗不可忽视。后续工作如 Splitwise 进一步探索了异构硬件和集群级优化。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>DistServe 确立了 prefill-decoding 解耦这一重要设计范式。在 agentic workflow 场景下，一个 agent 的 prefill 可能是另一个 agent 的 decoding 输入，解耦后可以分别为各阶段优化调度策略。这为工作流级调度器（如 SAIL 的状态亲和插入、FATE 的未来状态感知）提供了底层资源管理的理论依据。</p></div>
+
+<h2>公式与目标函数</h2><div class="equation"><div class="math">\[G=\max_{\lambda}\left\{\lambda\;\middle|\;\Pr(T_{\mathrm{TTFT}}\le S_p)\ge 0.9,\ \Pr(T_{\mathrm{TPOT}}\le S_d)\ge 0.9\right\}\]</div><p>Goodput 不是裸吞吐：只有同时满足首 token 和逐 token 延迟目标的请求才算有效。DistServe 优化的是每张 GPU 能承载的合规到达率。</p></div><h2>原论文图解</h2><figure class="figure wide"><img src="../assets/papers/distserve/fig-01-interference.png" alt="图 1：共置系统中提高请求率会同时破坏 TTFT 与 TPOT SLO。" loading="lazy"><figcaption class="caption">图 1：共置系统中提高请求率会同时破坏 TTFT 与 TPOT SLO。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/papers/distserve/fig-03-04-goodput.png" alt="图 3–4：prefill/decode 的批量扩展性不同，且 prefill 排队直接推高 TTFT。" loading="lazy"><figcaption class="caption">图 3–4：prefill/decode 的批量扩展性不同，且 prefill 排队直接推高 TTFT。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/papers/distserve/fig-06-architecture.png" alt="图 6：控制器、prefill 实例、decode 实例与 KV 传输组成的运行时架构。" loading="lazy"><figcaption class="caption">图 6：控制器、prefill 实例、decode 实例与 KV 传输组成的运行时架构。</figcaption></figure><h2>证据边界与校订结论</h2><p>论文把离线 profiling、单实例并行方案搜索、多实例副本配置和集群放置串成规划器。需要注意：7.4× 是特定模型、工作负载和 SLO 组合下的最高 goodput 改善，而不是所有场景的固定加速；当网络不足以隐藏 KV 传输时，解耦收益会被通信成本侵蚀。</p>
+<h2>参考说明</h2>
+<pre class="note">参考文献保留在原 PDF 中。本文译稿覆盖摘要、干扰问题、解耦架构、goodput 优化、干扰量化和实验结果。</pre>
+
+<div class="source-actions"><a class="primary" href="paper-qa/distserve-2401.09670-qa.html">阅读 Q1–Q7 详细问答</a><a href="https://arxiv.org/abs/2401.09670">查看原论文</a><a href="../index.html">返回目录</a></div>
+</section>
+</main>
+</body>
+</html>

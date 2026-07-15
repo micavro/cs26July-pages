@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AlpaServe：基于模型并行性的统计复用深度学习服务：中文精读与校订</title>
+<style>
+:root{--ink:#171717;--muted:#5d6570;--rule:#dfe3e8;--paper:#fff;--bg:#f4f6f8;--accent:#1d5b79;--soft:#f7fafc}
+*{box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun","Microsoft YaHei","Times New Roman",serif;line-height:1.74;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+main.paper{width:min(1080px,calc(100vw - 36px));margin:34px auto;padding:68px 82px 86px;background:var(--paper);border:1px solid #e4e7eb;box-shadow:0 18px 46px rgba(20,28,38,.10)}
+h1{margin:0 auto 20px;max-width:880px;text-align:center;font-size:31px;line-height:1.3;font-weight:700;letter-spacing:0;text-wrap:balance;overflow-wrap:anywhere}.authors{margin:0 auto 22px;max-width:840px;text-align:center;font-size:15px;line-height:1.55}.meta{margin:0 0 34px;color:var(--muted);text-align:center;font-size:13px;line-height:1.55}.columns{max-width:840px;margin:0 auto;font-size:17px;line-height:1.78;text-align:left}
+h2,h3,h4{break-after:avoid;line-height:1.35;letter-spacing:0}h2{margin:36px 0 12px;padding-top:4px;font-size:24px}h3{margin:26px 0 10px;font-size:20px}h4{margin:20px 0 8px;font-size:17px}p{margin:0 0 13px;overflow-wrap:anywhere}ul,ol{margin:0 0 16px 1.45em;padding:0}li{margin:0 0 8px;padding-left:.1em}.abstract{margin:0 0 22px;padding:16px 18px;background:var(--soft);border-left:4px solid var(--accent);border-radius:4px}
+.figure{break-inside:avoid;max-width:720px;margin:28px auto 32px;text-align:center}.figure.wide{max-width:840px}.figure.narrow{max-width:560px}.figure img{display:block;max-width:100%;height:auto;margin:0 auto 10px;border:1px solid #e1e5ea;border-radius:4px;background:#fff}.caption{max-width:780px;margin:0 auto;font-size:15px;font-weight:700;line-height:1.5;text-align:left;color:#202124}
+.callout{margin:18px 0 20px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--soft);border-radius:4px}.term{font-weight:700}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:22px auto 28px}.twocol .figure{margin:0}.refs-block{white-space:pre-wrap;max-height:420px;overflow:auto;padding:14px 16px;background:#fbfcfd;border:1px solid var(--rule);border-radius:4px;font-family:"Times New Roman","Noto Serif SC",serif;font-size:13.5px;line-height:1.5}.note{color:var(--muted);font-size:13px}
+@media(max-width:820px){main.paper{width:100%;margin:0;padding:34px 28px 50px;border:0;box-shadow:none}h1{font-size:22px;line-height:1.35}.columns{font-size:16px;line-height:1.84}.twocol{grid-template-columns:1fr}.figure{max-width:100%}.refs-block{max-height:none;font-size:12.5px}}
+
+.paper-nav{display:flex;justify-content:space-between;gap:12px;margin:-34px 0 30px;padding-bottom:14px;border-bottom:1px solid var(--rule);font-family:"Microsoft YaHei",sans-serif;font-size:14px}.paper-nav a{color:var(--accent);text-decoration:none}.paper-nav a:hover{text-decoration:underline}
+.overview{margin:0 0 28px;padding:20px 22px;border:1px solid #cddbe6;border-radius:8px;background:linear-gradient(135deg,#f7fbfd,#fff)}.overview h2{margin:0 0 10px;padding:0;font-size:21px}.overview ul{margin-bottom:0}.doing{font-size:18px;line-height:1.75}.equation{margin:24px 0;padding:18px 20px;border-left:4px solid var(--accent);background:var(--soft);overflow-x:auto}.equation .math{margin:6px 0 10px;text-align:center;font-size:1.05em}.source-actions{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}.source-actions a{display:inline-block;padding:8px 12px;border:1px solid var(--accent);border-radius:5px;color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:14px}.source-actions a.primary{background:var(--accent);color:#fff}.figure img{width:auto;max-height:760px}.revision-note{color:var(--muted);font-size:13px}.qa-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}.qa-links a{padding:5px 9px;border-radius:4px;background:var(--soft);color:var(--accent);text-decoration:none;font-family:"Microsoft YaHei",sans-serif;font-size:13px}
+@media(max-width:820px){.paper-nav{margin:-8px 0 24px}.overview{padding:16px}.doing{font-size:16px}}
+
+</style>
+<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<main class="paper">
+<nav class="paper-nav" data-six-paper-revision><a href="../index.html">← 论文目录</a><a href="paper-qa/alpaserve-2302.11665-qa.html">Q1–Q7 详细问答 →</a></nav>
+<h1>AlpaServe：基于模型并行性的统计复用深度学习服务：中文精读与校订</h1>
+<div class="authors">Zhuohan Li, Lianmin Zheng, Yinmin Zhong, Vincent Liu, Ying Sheng, Xin Jin, Yanping Huang, Zhifeng Chen, Hao Zhang, Joseph E. Gonzalez, Ion Stoica</div>
+<div class="meta">源文件：arXiv 2302.11665 | OSDI 2023 | 17 页 | 保留术语：statistical multiplexing、model parallelism、intra-operator parallelism、inter-operator parallelism、colocation、SLO、bursty workload</div>
+<section class="columns">
+<section class="overview"><h2>这篇论文做什么？</h2><p class="doing">把模型并行从“模型放不下时的被迫选择”变成多模型 serving 的统计复用工具：用跨设备模型副本吸收不同模型的突发峰值，并联合优化放置与并行策略。</p><ul><li>问题：每模型独占副本会在突发、低相关到达流下产生严重容量闲置。</li><li>方法：在复制开销与跨设备统计复用收益之间搜索 model placement。</li><li>结果：在 >99% 请求满足延迟约束时，承载率最高提高 10×或可容忍 6× 更强突发。</li></ul><p class="revision-note">校订说明：本页按原论文的论证顺序重写术语与因果关系；图均裁自论文原图，数据结论保留论文适用条件，不把峰值结果泛化为固定加速。</p></section>
+<section class="abstract"><p><strong>摘要。</strong>模型并行性传统上被视为将单个大型深度学习模型扩展到超出单设备内存限制的方法。论文证明，模型并行性还可用于在服务多个模型时实现多设备的统计复用（statistical multiplexing），即使单个模型可以放入单个设备。研究揭示了模型并行性引入的开销与突发工作负载下利用统计复用降低服务延迟的机会之间的基本权衡。论文探索了这一新的权衡空间，提出 AlpaServe 系统，自动确定跨分布式集群放置和并行化大型深度学习模型集合的高效策略。在生产工作负载上评估显示，AlpaServe 可以在满足 99% 以上请求延迟约束的前提下，处理高达 10 倍更高的请求速率或 6 倍更大的突发性。</p></section>
+
+<h2>1 引言</h2>
+<p>服务大型模型面临双重挑战：模型参数量指数增长（如 GPT-3 需 325GB 内存），且请求到达具有高度突发性——生产 trace 显示峰值可达平均值的 50 倍。满足延迟 SLO 通常意味着为峰值负载配置资源，而额外设备大部分时间闲置。更复杂的是，实践中常需同时服务多个模型和同一模型的多个变体（如 A/B 测试或领域微调模型）。</p>
+
+<h3>1.1 核心观察</h3>
+<p>考虑两个模型和两个 GPU 的场景，每个 GPU 内存足以容纳一个完整模型。传统做法是为每个模型分配一个专用 GPU（图 1a）。这看似合理——模型分区跨 GPU 会引入通信开销增加延迟。但论文发现，引入额外模型并行性（即使单样本执行时间增加）可以启用更广泛的放置策略（如模型共置），在突发工作负载下改善统计复用。</p>
+<p>具体地，假设单模型执行时间为 y。不共置时，4 个突发请求的平均延迟为 (1y+2y+3y+4y)/4 = 2.5y。使用模型并行共置后（假设 10% 开销），平均延迟降至 (1.1y+1.6y+2.1y+2.6y)/4 = 1.85y。共置加模型并行可以利用更多设备处理突发请求，尽管有额外开销，仍降低了平均完成时间。</p>
+
+<h2>2 模型并行性在服务中的权衡</h2>
+<h3>2.1 Intra-Operator 并行</h3>
+<p>将单个算子（如矩阵乘法）分区到多个设备上并行执行。好处是减少单请求端到端延迟，扩展可用内存。代价是参与 GPU 间的通信开销（如 all-reduce）。对于 TTFT 敏感的 prefill 阶段，intra-operator 并行通过减少执行时间来降低延迟。</p>
+
+<h3>2.2 Inter-Operator 并行</h3>
+<p>将模型的不同算子分配到不同设备上以流水线方式执行。不减少单请求执行时间（通常因阶段间通信而增加），主要用于突破单 GPU 内存限制。但在服务场景中，pipeline parallelism 可以线性扩展系统的速率容量——每个新增 GPU 线性增加可服务的请求速率。</p>
+
+<h3>2.3 统计复用效应</h3>
+<p>关键洞察是：模型并行性减少每设备内存使用，从而可以在一台设备上放入更多模型，在处理突发请求时实现更好的统计复用。当多个模型的请求突发到达时，共置的模型可以利用所有可用 GPU 并行处理，而专用分配方案下每个模型只能使用自己的 GPU。这种统计复用在突发性越高时收益越大。</p>
+
+<h2>3 权衡空间分析</h2>
+<p>论文通过排队理论分析了模型并行性的开销与统计复用收益之间的权衡。关键发现：模型并行性的有效性取决于多个因素——每 GPU 内存容量（决定可共置的模型数量）、请求到达模式（突发性越高收益越大）、SLO 严格程度（越严格越能从降低延迟中受益）。当工作负载突发性低时，模型并行开销可能超过统计复用收益；当突发性高时，统计复用收益显著超过开销。</p>
+
+<h2>4 AlpaServe 系统设计</h2>
+<h3>4.1 模型放置算法</h3>
+<p>AlpaServe 接收集群资源规格、模型集合和周期性工作负载 profile，输出模型分区和放置策略以优化 SLO 达标率。核心是一个迭代模拟器引导的模型放置算法：在每轮迭代中，模拟器评估当前放置策略下的服务性能，指导算法调整模型共置和并行度配置。</p>
+
+<h3>4.2 分组分区算法</h3>
+<p>集群被划分为不相交的模型并行组。每组内的 GPU 共同服务共置的模型集合。分组分区算法搜索最优的组划分方式，平衡组内模型并行开销与跨组的统计复用收益。</p>
+
+<h3>4.3 自动并行化</h3>
+<p>AlpaServe 扩展了训练自动并行化算法以适应推理场景。训练场景优化吞吐量，而推理场景需要同时考虑延迟和速率容量，对并行策略的选择有不同偏好。</p>
+
+<h2>5 实验评估</h2>
+<p>在 64-GPU 集群上使用生产工作负载评估。结果显示，当逐个优化指标时，AlpaServe 可以将请求处理速率提高 10 倍、将延迟截止时间收紧 2.5 倍、或容忍 6 倍更突发的工作负载，同时保持 99% 以上请求在 SLO 内。这些收益在突发性高的工作负载下尤为显著，因为统计复用的价值随突发性增长。</p>
+
+<h2>6 局限与选题启发</h2>
+<p>AlpaServe 的放置策略是静态的，基于周期性工作负载 profile 确定，不随实时负载动态调整。在模型数量众多且工作负载变化频繁的场景下，静态放置可能次优。此外，AlpaServe 主要关注传统 DL 模型服务，未深入 LLM 特有的 prefill-decoding 两阶段特征和 KV cache 管理问题。</p>
+<div class="callout"><p><strong>对本仓库方向的意义。</strong>AlpaServe 揭示了模型并行性在服务场景中的统计复用价值——这不仅是扩展大模型的手段，更是处理突发工作负载的资源优化策略。在多 LLM agent 工作流中，不同 agent 可能使用不同模型，请求到达高度突发。AlpaServe 的共置与统计复用思想可以指导工作流调度器在异构 GPU 上做模型放置决策，这正是 Chimera（异构多智能体服务）和 Coral（异构云 GPU 多 LLM 服务）的理论基础。</p></div>
+
+<h2>公式与目标函数</h2><div class="equation"><div class="math">\[\min_{\mathcal P}\ \Pr\!\left(T_{\mathcal P}>S\right)\quad\text{s.t. device memory and placement constraints}\]</div><p>目标不是让单次推理最快，而是选择放置方案 P，使突发流量下超过 SLO 的概率尽可能低。适量模型并行会增加单请求开销，却扩大可共享设备池。</p></div><h2>原论文图解</h2><figure class="figure wide"><img src="../assets/papers/alpaserve/fig-01-placement.png" alt="图 1：无共置的复制方案与模型并行共置方案；后者让两模型共享两张 GPU 的容量。" loading="lazy"><figcaption class="caption">图 1：无共置的复制方案与模型并行共置方案；后者让两模型共享两张 GPU 的容量。</figcaption></figure>
+<figure class="figure wide"><img src="../assets/papers/alpaserve/fig-02-06-multiplexing.png" alt="图 2–6：负载、到达率、突发程度与显存条件变化时的延迟和 SLO 表现。" loading="lazy"><figcaption class="caption">图 2–6：负载、到达率、突发程度与显存条件变化时的延迟和 SLO 表现。</figcaption></figure><h2>证据边界与校订结论</h2><p>AlpaServe 的结论针对多模型在线推理，不是 LLM token-level P/D serving。关键前提是不同模型的突发并非完全同步，因而共享池能平滑峰值；如果流量高度相关或模型并行通信过重，统计复用优势会下降。</p>
+<h2>参考说明</h2>
+<pre class="note">参考文献保留在原 PDF 中。本文译稿覆盖摘要、模型并行性权衡分析、统计复用效应、AlpaServe 系统设计和实验结果。</pre>
+
+<div class="source-actions"><a class="primary" href="paper-qa/alpaserve-2302.11665-qa.html">阅读 Q1–Q7 详细问答</a><a href="https://arxiv.org/abs/2302.11665">查看原论文</a><a href="../index.html">返回目录</a></div>
+</section>
+</main>
+</body>
+</html>
